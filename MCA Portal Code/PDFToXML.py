@@ -192,7 +192,7 @@ def CheckHiddenAttachemnts(xml_file_path,folder_path,pdf_path,file_name):
                     get_embedded_pdfs(pdf_path, subsidiary_folder_name,file_name)
                     files_in_Subsidiary_Folder = os.listdir(subsidiary_folder_name)
                     for files in files_in_Subsidiary_Folder:
-                        if "Subsidiaries" not in files:
+                        if "Subsidiaries" or "Holding" or "Associate" not in files:
                             file_path = os.path.join(subsidiary_folder_name, files)
                             os.remove(file_path)
                             print("Deleted", file_path)
@@ -201,8 +201,10 @@ def CheckHiddenAttachemnts(xml_file_path,folder_path,pdf_path,file_name):
                         business_xml_file_path = os.path.join(subsidiary_folder_name,
                                                               subsidiary_files.replace('.pdf', '.xml'))
                         subsidiary_pdf_path = os.path.join(subsidiary_folder_name, subsidiary_files)
-                        PDFtoXML(subsidiary_folder_name, subsidiary_pdf_path, subsidiary_files)
-                        return True
+                        if "Subsidiaries" or "Holding" or "Associate" in subsidiary_files:
+                            PDFtoXML(subsidiary_folder_name, subsidiary_pdf_path, subsidiary_files)
+                            return True
+                    return True
                 else:
                     print("No Subsidiary Found")
             except ET.ParseError as e:
