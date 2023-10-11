@@ -8,6 +8,7 @@ import glob
 import fitz
 import datetime
 import shutil
+import mysql.connector
 # Get the current date
 current_date = datetime.date.today()
 
@@ -235,21 +236,7 @@ def fetch_form_extraction_file_data_from_table(connection,Cin,Company,Category):
     except mysql.connector.Error as error:
         print("Error:", error)
         return None
-if __name__ == '__main__':
-    list = ['MGT','CHG']
-    for item in list:
-        folder_path = os.path.join('C:\MCA portal Test', item,formatted_date)
-        print(folder_path)
-        pdf_files = glob.glob(os.path.join(folder_path, "*.pdf"))
-        print(pdf_files)
-        # Print the file names
-        for file_name in pdf_files:
-            pdf_path = os.path.join(folder_path, file_name)
-            print(pdf_path)
-            base_file_name = os.path.basename(file_name)
-            xml_file_path = PDFtoXML(folder_path, pdf_path, file_name)
-            if xml_file_path:
-                CheckHiddenAttachemnts(xml_file_path, folder_path, pdf_path, base_file_name)
+
 
 
 
