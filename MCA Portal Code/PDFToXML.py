@@ -122,6 +122,8 @@ def PDFtoXML(folder_path,pdf_path,file_name):
     if xfa_data:
         # If XFA data is found, use the existing code to save it as XML
         xml_file_path = os.path.join(folder_path , file_name.replace('.pdf', '.xml'))
+        if '.xml' not in xml_file_path:
+            xml_file_path = xml_file_path + '.xml'
         write_xml_data(xfa_data, xml_file_path)
         print("Extracted XFA data for ", file_name)
         print("Saved to", xml_file_path)

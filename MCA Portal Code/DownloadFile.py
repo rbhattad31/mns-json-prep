@@ -286,34 +286,38 @@ def update_form_extraction_status(db_config, cin, category,CompanyName):
         for details in file_details:
             file_date = details[5]
             file_name = details[4]
-            date = datetime.datetime.strptime(file_date, '%d-%m-%Y')
-            today_date_with_timestamp = datetime.datetime.today()
-            days_difference = (today_date_with_timestamp - date).days
-            print(days_difference)
-            if abs(days_difference) <= 365:
-                update_query = "update documents set form_data_extraction_needed=%s where document=%s"
-                update_values = ('Y', file_name)
-                cursor.execute(update_query, update_values)
-                print("Latest File Found")
-                connection.commit()
-                break
-            else:
-                near_date_flag = False
+            if 'MGT' in file_name:
+                date = datetime.datetime.strptime(file_date, '%d-%m-%Y')
+                today_date_with_timestamp = datetime.datetime.today()
+                days_difference = (today_date_with_timestamp - date).days
+                print(days_difference)
+                if abs(days_difference) <= 365:
+                    update_query = "update documents set form_data_extraction_needed=%s where document=%s"
+                    update_values = ('Y', file_name)
+                    cursor.execute(update_query, update_values)
+                    print("Latest File Found")
+                    connection.commit()
+                    break
+                else:
+                    near_date_flag = False
 
-            if not near_date_flag:
-                if days_difference >= 365 and days_difference <= 730:
-                    print("Days difference more")
-                    update_query = "update documents set form_data_extraction_needed=%s where document=%s"
-                    update_values = ('Y', file_name)
-                    cursor.execute(update_query, update_values)
-                    connection.commit()
-                    break
-                elif days_difference >= 730 and days_difference <= 1460:
-                    update_query = "update documents set form_data_extraction_needed=%s where document=%s"
-                    update_values = ('Y', file_name)
-                    cursor.execute(update_query, update_values)
-                    connection.commit()
-                    break
+                if not near_date_flag:
+                    if days_difference >= 365 and days_difference <= 730:
+                        print("Days difference more")
+                        update_query = "update documents set form_data_extraction_needed=%s where document=%s"
+                        update_values = ('Y', file_name)
+                        cursor.execute(update_query, update_values)
+                        connection.commit()
+                        break
+                    elif days_difference >= 730 and days_difference <= 1460:
+                        update_query = "update documents set form_data_extraction_needed=%s where document=%s"
+                        update_values = ('Y', file_name)
+                        cursor.execute(update_query, update_values)
+                        connection.commit()
+                        break
+            else:
+                continue
+
     except Exception as e:
         print(f"Error updating login status in the database: {str(e)}")
     finally:
