@@ -1,3 +1,4 @@
+import time
 import traceback
 import mysql.connector
 import mysql.connector
@@ -193,6 +194,7 @@ def main():
                                 continue
                             if file_download:
                                 PDF_Form_Extraction = update_form_extraction_status(db_config,Cin,item,CompanyName)
+                                time.sleep(5)
                                 if PDF_Form_Extraction:
                                     files_to_be_extracted,Fetch_File_Data_Status = fetch_form_extraction_file_data_from_table(connection,Cin,CompanyName,item)
                                     if Fetch_File_Data_Status == "Pass":

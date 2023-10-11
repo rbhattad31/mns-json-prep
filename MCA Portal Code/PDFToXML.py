@@ -1,3 +1,5 @@
+import time
+
 import PyPDF2 as pypdf
 import re
 from pathlib import Path
@@ -221,7 +223,8 @@ def fetch_form_extraction_file_data_from_table(connection,Cin,Company,Category):
     try:
         if connection:
             cursor = connection.cursor()
-
+            connection.commit()
+            time.sleep(5)
             # Construct the SQL query
             query = "select * from documents where cin=%s and company=%s and Category=%s and form_data_extraction_needed='Y'"
             values = (Cin,Company,Category)
