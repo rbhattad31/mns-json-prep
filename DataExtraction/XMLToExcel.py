@@ -83,7 +83,7 @@ def sql_insert(db_cursor, sql_table_name, column_names_list, df_row):
     db_cursor.execute(insert_query, tuple(df_row.values))
 
 
-def xml_to_excel(db_connection, db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
+def xml_to_excel(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
                  output_file_path):
     output_dataframes_list = []
     df_map = pd.read_excel(map_file_path, engine='openpyxl', sheet_name=map_file_sheet_name)
@@ -113,8 +113,6 @@ def xml_to_excel(db_connection, db_cursor, config_dict, map_file_path, map_file_
         if type_value == config_dict['single_type_indicator']:
             value = get_single_value(xml_root, parent_node, child_nodes)
             single_df.at[index, 'Value'] = value
-            # if sql_table_name == config_dict['principal_business_activities_table_name']:
-            #     year_end_date = value
             results.append([field_name, value, sql_table_name, column_name, column_json_node])
     # print(single_df)
 
@@ -167,15 +165,17 @@ def xml_to_excel(db_connection, db_cursor, config_dict, map_file_path, map_file_
             table_node_name = parent_node
             table_in_list = extract_table_values(xml_root, table_node_name, child_nodes)
             table_df = pd.DataFrame(table_in_list)
-            hold_sub_assoc_table = table_df.copy()
-            table_df[cin_column_name_in_db] = cin_column_value
-            table_df[company_name_column_name_in_db] = company_name
+
             column_names_list = column_names.split(',')
-            column_names_list.append(cin_column_name_in_db)
-            column_names_list.append(company_name_column_name_in_db)
             column_names_list = [x.strip() for x in column_names_list]
-            # print(column_names_list)
-            if not field_name == config_dict['Hold_Sub_Assoc_field_name']:
+
+            if field_name != config_dict['Hold_Sub_Assoc_field_name']:
+                table_df[cin_column_name_in_db] = cin_column_value
+                table_df[company_name_column_name_in_db] = company_name
+
+                column_names_list.append(cin_column_name_in_db)
+                column_names_list.append(company_name_column_name_in_db)
+                column_names_list = [x.strip() for x in column_names_list]
                 table_df.columns = column_names_list
 
             # update group values in datatable
@@ -186,24 +186,7 @@ def xml_to_excel(db_connection, db_cursor, config_dict, map_file_path, map_file_
                 table_df = table_df[table_df[column_names_list[0]].notna()]
                 # print(table_df)
                 for _, df_row in table_df.iterrows():
-                    insert_query = f"""
-                    INSERT INTO {sql_table_name}
-                    SET {', '.join([f'{col} = %s' for col in table_df.columns])};
-                    """
-                    # print(insert_query)
-                    # print(df_row.values)
-                    db_cursor.execute(insert_query, tuple(df_row.values))
-
-                # Another way but not working
-                # Generate the SQL query for updating data
-                # insert_query = f"INSERT INTO {sql_table_name} SET "
-                # insert_query += ', '.join([f'{col} = %s' for col in table_df.columns])
-                # print(insert_query)
-                # # Create a list of tuples for parameterized query
-                # data_to_update = [tuple(row) for row in table_df.values]
-                # print(data_to_update)
-                # db_cursor.executemany(insert_query, data_to_update)
-                # db_connection.commit()
+                    sql_insert(db_cursor, sql_table_name, table_df.columns, df_row)
                 print("DB execution is complete for principal business activities")
             elif field_name == config_dict['director_shareholdings_field_name']:
                 year_end_date = single_df[single_df['Field_Name'] == config_dict['year_field_name']]['Value'].values[0]
@@ -212,16 +195,11 @@ def xml_to_excel(db_connection, db_cursor, config_dict, map_file_path, map_file_
                 table_df = table_df[table_df[column_names_list[0]].notna()]
                 # print(table_df)
                 for _, df_row in table_df.iterrows():
-                    insert_query = f"""
-                    INSERT INTO {sql_table_name}
-                    SET {', '.join([f'{col} = %s' for col in table_df.columns])};
-                    """
-                    # print(insert_query)
-                    # print(df_row.values)
-                    db_cursor.execute(insert_query, tuple(df_row.values))
+                    sql_insert(db_cursor, sql_table_name, table_df.columns, df_row)
                 print("DB execution is complete for director shareholdings table")
             elif field_name == config_dict['Hold_Sub_Assoc_field_name']:
                 # print(hold_sub_assoc_table)
+                hold_sub_assoc_table = table_df
                 hold_sub_assoc_table.columns = [column_names_list[0], column_names_list[1],
                                                 config_dict['Hold_Sub_Assoc_column_name'], column_names_list[2]]
                 hold_sub_assoc_table = hold_sub_assoc_table[hold_sub_assoc_table[column_names_list[0]].notna()]
@@ -244,14 +222,17 @@ def xml_to_excel(db_connection, db_cursor, config_dict, map_file_path, map_file_
                     # removing value of hold sub assoc value to have only the values to append to datatables
                     df_row.pop(config_dict['Hold_Sub_Assoc_column_name'])
 
+                    # These values are for testing, uncomment all for all tables testing
                     # hold_sub_assoc_value = 'ASSOC'
                     if hold_sub_assoc_value == config_dict['associate_keyword_in_xml']:
-                        associate_tables_list = [item for item in sql_tables_list if str(hold_sub_assoc_value).lower() in
+                        associate_tables_list = [item for item in sql_tables_list if
+                                                 str(hold_sub_assoc_value).lower() in
                                                  item.lower()]
-                        # cin_length = 21    # These values are for testing, uncomment for all the tables testing
+                        # cin_length = 21  # These values are for testing, uncomment for all the tables testing
                         if cin_length == 21:
                             # companies
-                            sql_table_companies = [item for item in associate_tables_list if 'companies' in item.lower()][0]
+                            sql_table_companies = \
+                            [item for item in associate_tables_list if 'companies' in item.lower()][0]
                             sql_insert(db_cursor, sql_table_companies, hold_sub_assoc_db_table_columns, df_row)
                         # cin_length = 8
                         if cin_length == 8:
@@ -271,7 +252,8 @@ def xml_to_excel(db_connection, db_cursor, config_dict, map_file_path, map_file_
                         # cin_length = 21
                         if cin_length == 21:
                             # companies
-                            sql_table_companies = [item for item in holding_tables_list if 'companies' in item.lower()][0]
+                            sql_table_companies = [item for item in holding_tables_list if 'companies' in item.lower()][
+                                0]
                             sql_insert(db_cursor, sql_table_companies, hold_sub_assoc_db_table_columns, df_row)
                         # cin_length = 8
                         if cin_length == 8:
@@ -306,12 +288,14 @@ def xml_to_excel(db_connection, db_cursor, config_dict, map_file_path, map_file_
 
                     # hold_sub_assoc_value = 'SUBS'
                     if hold_sub_assoc_value == config_dict['subsidiary_keyword_in_xml']:
-                        subsidiary_tables_list = [item for item in sql_tables_list if str(hold_sub_assoc_value).lower() in
+                        subsidiary_tables_list = [item for item in sql_tables_list if
+                                                  str(hold_sub_assoc_value).lower() in
                                                   item.lower()]
                         # cin_length = 21
                         if cin_length == 21:
                             # companies
-                            sql_table_companies = [item for item in subsidiary_tables_list if 'companies' in item.lower()][0]
+                            sql_table_companies = \
+                            [item for item in subsidiary_tables_list if 'companies' in item.lower()][0]
                             sql_insert(db_cursor, sql_table_companies, hold_sub_assoc_db_table_columns, df_row)
                         # cin_length = 8
                         if cin_length == 8:
@@ -326,10 +310,17 @@ def xml_to_excel(db_connection, db_cursor, config_dict, map_file_path, map_file_
                     else:
                         pass
 
-                print("DB execution is complete for director shareholdings table")
+                print("DB execution is complete for Holding/Subsidiary/Associate/Joint Venture tables")
                 pass
             elif field_name == config_dict['director_remuneration_field_name']:
-                pass
+                year_end_date = single_df[single_df['Field_Name'] == config_dict['year_field_name']]['Value'].values[0]
+                # print(f'{year_end_date=}')
+                table_df['Year'] = year_end_date
+                table_df = table_df[table_df[column_names_list[0]].notna()]
+                # print(table_df)
+                for _, df_row in table_df.iterrows():
+                    sql_insert(db_cursor, sql_table_name, table_df.columns, df_row)
+                print("DB execution is complete for director remuneration table")
             else:
                 pass
             output_dataframes_list.append(table_df)

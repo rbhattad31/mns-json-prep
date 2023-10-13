@@ -42,6 +42,6 @@ else:
 
 print(output_file_path)
 
-xml_to_excel(db_connection, db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path, output_file_path)
+xml_to_excel(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path, output_file_path)
 
 
