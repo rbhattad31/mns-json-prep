@@ -3,6 +3,7 @@ from XMLToExcel import xml_to_excel
 from CreateConfigDictionary import create_main_config_dictionary
 from datetime import date
 import os
+from WriteToDB import db_connection, db_cursor
 
 # read config file
 config_file_path = 'Input/Config.xlsx'
@@ -41,4 +42,6 @@ else:
 
 print(output_file_path)
 
-xml_to_excel(config_dict, map_file_path, map_file_sheet_name, xml_file_path, output_file_path)
+xml_to_excel(db_connection, db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path, output_file_path)
+
+
