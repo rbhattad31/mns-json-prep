@@ -1,3 +1,5 @@
+from xml.dom import minidom
+
 import pandas as pd
 import xml.etree.ElementTree as Et
 import json
@@ -42,6 +44,7 @@ def update_datatable_single_value(db_cursor, table_name, cin_column_name, cin_va
                                                                                       )
         print(update_query)
         db_cursor.execute(update_query)
+
     else:
         # print("Value does not exist")
         insert_query = "INSERT INTO {} ({}, {}, {}) VALUES ('{}', '{}', '{}')".format(table_name, cin_column_name,
@@ -87,11 +90,20 @@ def xml_to_excel(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml
                  output_file_path):
     output_dataframes_list = []
     df_map = pd.read_excel(map_file_path, engine='openpyxl', sheet_name=map_file_sheet_name)
+    print(df_map)
     df_map['Value'] = None
     single_df = df_map[df_map['Type'] == config_dict['single_type_indicator']]
     group_df = df_map[df_map['Type'] == config_dict['group_type_indicator']]
+
+    print(xml_file_path)
     xml_tree = Et.parse(xml_file_path)
     xml_root = xml_tree.getroot()
+    xml_str = Et.tostring(xml_root, encoding='unicode')
+    xml_pretty = minidom.parseString(xml_str).toprettyxml(indent="    ")
+
+    # Print the prettified XML
+    print(xml_pretty)
+    print(xml_root)
 
     cin_column_name_in_db = config_dict['cin_column_name_in_db']
     cin_column_value = 'L32102KA1945PLC020800'
@@ -163,7 +175,9 @@ def xml_to_excel(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml
         column_json_node = str(row['Column_JSON_Node']).strip()
         if type_value == config_dict['group_type_indicator']:
             table_node_name = parent_node
+            print(table_node_name)
             table_in_list = extract_table_values(xml_root, table_node_name, child_nodes)
+            print(table_in_list)
             table_df = pd.DataFrame(table_in_list)
 
             column_names_list = column_names.split(',')
@@ -176,15 +190,24 @@ def xml_to_excel(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml
                 column_names_list.append(cin_column_name_in_db)
                 column_names_list.append(company_name_column_name_in_db)
                 column_names_list = [x.strip() for x in column_names_list]
+                print(column_names_list)
+                print(table_df)
                 table_df.columns = column_names_list
 
             # update group values in datatable
             if field_name == config_dict['principal_business_activities_field_name']:
-                year_end_date = single_df[single_df['Field_Name'] == config_dict['year_field_name']]['Value'].values[0]
-                # print(f'{year_end_date=}')
+                try:
+                    year_end_date = \
+                    single_df[single_df['Field_Name'] == config_dict['year_field_name']]['Value'].values[0]
+                    # print(f'{year_end_date=}')
+                except IndexError:
+                    print(IndexError)
+                    year_end_date = '2022-03-31'
+                    print(year_end_date)
                 table_df['Year'] = year_end_date
                 table_df = table_df[table_df[column_names_list[0]].notna()]
                 # print(table_df)
+                print(table_df)
                 for _, df_row in table_df.iterrows():
                     sql_insert(db_cursor, sql_table_name, table_df.columns, df_row)
                 print("DB execution is complete for principal business activities")
@@ -215,24 +238,29 @@ def xml_to_excel(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml
                     hold_sub_assoc_value = df_row[config_dict['Hold_Sub_Assoc_column_name']]
                     cin_value = df_row[column_names_list[1]]
                     cin_length = len(cin_value)
-                    # print(hold_sub_assoc_value)
-                    # print(cin_value)
-                    # print(cin_length)
+                    print(hold_sub_assoc_value)
+                    print(cin_value)
+                    print(cin_length)
 
+                    # print(df_row)
                     # removing value of hold sub assoc value to have only the values to append to datatables
                     df_row.pop(config_dict['Hold_Sub_Assoc_column_name'])
+                    # print(df_row)
 
                     # These values are for testing, uncomment all for all tables testing
                     # hold_sub_assoc_value = 'ASSOC'
-                    if hold_sub_assoc_value == config_dict['associate_keyword_in_xml']:
+                    if ((hold_sub_assoc_value == config_dict['associate_keyword_in_xml']) or
+                        (hold_sub_assoc_value in config_dict['associate_keyword_in_xml']) or
+                        (config_dict['associate_keyword_in_xml'] in hold_sub_assoc_value)):
                         associate_tables_list = [item for item in sql_tables_list if
                                                  str(hold_sub_assoc_value).lower() in
                                                  item.lower()]
+                        # print(associate_tables_list)
                         # cin_length = 21  # These values are for testing, uncomment for all the tables testing
                         if cin_length == 21:
                             # companies
                             sql_table_companies = \
-                            [item for item in associate_tables_list if 'companies' in item.lower()][0]
+                                [item for item in associate_tables_list if 'companies' in item.lower()][0]
                             sql_insert(db_cursor, sql_table_companies, hold_sub_assoc_db_table_columns, df_row)
                         # cin_length = 8
                         if cin_length == 8:
@@ -246,9 +274,12 @@ def xml_to_excel(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml
                             sql_insert(db_cursor, sql_table_others, hold_sub_assoc_db_table_columns, df_row)
 
                     # hold_sub_assoc_value = 'HOLD'
-                    if hold_sub_assoc_value == config_dict['holding_keyword_in_xml']:
+                    if ((hold_sub_assoc_value == config_dict['holding_keyword_in_xml']) or
+                        (hold_sub_assoc_value in config_dict['holding_keyword_in_xml']) or
+                        (config_dict['holding_keyword_in_xml'] in hold_sub_assoc_value)):
                         holding_tables_list = [item for item in sql_tables_list if str(hold_sub_assoc_value).lower() in
                                                item.lower()]
+                        # print(holding_tables_list)
                         # cin_length = 21
                         if cin_length == 21:
                             # companies
@@ -267,9 +298,12 @@ def xml_to_excel(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml
                             sql_insert(db_cursor, sql_table_others, hold_sub_assoc_db_table_columns, df_row)
 
                     # hold_sub_assoc_value = 'JOINT'
-                    if hold_sub_assoc_value == config_dict['joint_venture_keyword_in_xml']:
+                    if ((hold_sub_assoc_value == config_dict['joint_venture_keyword_in_xml']) or
+                        (hold_sub_assoc_value in config_dict['joint_venture_keyword_in_xml']) or
+                        (config_dict['joint_venture_keyword_in_xml'] in hold_sub_assoc_value)):
                         joint_tables_list = [item for item in sql_tables_list if str(hold_sub_assoc_value).lower() in
                                              item.lower()]
+                        # print(joint_tables_list)
                         # cin_length = 21
                         if cin_length == 21:
                             # companies
@@ -287,15 +321,18 @@ def xml_to_excel(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml
                             sql_insert(db_cursor, sql_table_others, hold_sub_assoc_db_table_columns, df_row)
 
                     # hold_sub_assoc_value = 'SUBS'
-                    if hold_sub_assoc_value == config_dict['subsidiary_keyword_in_xml']:
+                    if ((hold_sub_assoc_value == config_dict['subsidiary_keyword_in_xml']) or
+                        (hold_sub_assoc_value in config_dict['subsidiary_keyword_in_xml']) or
+                        (config_dict['subsidiary_keyword_in_xml'] in hold_sub_assoc_value)):
                         subsidiary_tables_list = [item for item in sql_tables_list if
                                                   str(hold_sub_assoc_value).lower() in
                                                   item.lower()]
+                        # print(subsidiary_tables_list)
                         # cin_length = 21
                         if cin_length == 21:
                             # companies
                             sql_table_companies = \
-                            [item for item in subsidiary_tables_list if 'companies' in item.lower()][0]
+                                [item for item in subsidiary_tables_list if 'companies' in item.lower()][0]
                             sql_insert(db_cursor, sql_table_companies, hold_sub_assoc_db_table_columns, df_row)
                         # cin_length = 8
                         if cin_length == 8:

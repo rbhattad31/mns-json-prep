@@ -3,7 +3,7 @@ from XMLToExcel import xml_to_excel
 from CreateConfigDictionary import create_main_config_dictionary
 from datetime import date
 import os
-from WriteToDB import db_connection, db_cursor
+from WriteToDB import db_cursor
 
 # read config file
 config_file_path = 'Input/Config.xlsx'
@@ -17,10 +17,13 @@ pdf_file_name = os.path.basename(pdf_file_path)
 print(pdf_file_name)
 print(pdf_file_path)
 xml_file_path = str(pdf_file_path).replace('.pdf', '.xml')
-print(xml_file_path)
+
+
 xfa_data = extract_xfa_data(pdf_file_path)
 save_xfa_data_to_xml(xfa_data, xml_file_path)
 
+# xml_file_path = 'Input/List of Subsidiaries and Associates 2022_tables.xml'
+# print(xml_file_path)
 # xml to Excel
 
 map_file_path = config_dict['mapping file path']

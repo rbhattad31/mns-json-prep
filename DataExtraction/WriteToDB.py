@@ -1,6 +1,9 @@
 import mysql.connector
 
-
+host = ""
+username = ""
+password = ""
+database = ""
 
 db_connection = mysql.connector.connect(
     host=host,
@@ -8,7 +11,7 @@ db_connection = mysql.connector.connect(
     password=password,
     database=database
 )
-db_connection.autocommit = True
 
+db_connection.autocommit = True
 db_cursor = db_connection.cursor()
 
