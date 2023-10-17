@@ -28,7 +28,7 @@ def get_embedded_pdfs(input_pdf_path, output_path,file_name_hidden_pdf):
         item_name_dict[each_item] = doc.embfile_info(each_item)["filename"]
 
     for item_name, file_name in item_name_dict.items():
-        out_pdf =  output_path + "\\" + file_name + file_name_hidden_pdf
+        out_pdf =  output_path + "\\" + file_name.replace('.pdf' ,'') + file_name_hidden_pdf + '.pdf'
         print(out_pdf)
       ## get embeded_file in bytes
         fData = doc.embfile_get(item_name)
@@ -121,7 +121,13 @@ def PDFtoXML(folder_path,pdf_path,file_name):
 
     if xfa_data:
         # If XFA data is found, use the existing code to save it as XML
-        xml_file_path = os.path.join(folder_path , file_name.replace('.pdf', '.xml'))
+        xml_file_path = pdf_path.replace('.pdf', '.xml')
+        """
+        if '.pdf' in file_name:
+            xml_file_path = os.path.join(folder_path, file_name.replace('.pdf', '.xml'))
+        else:
+            xml_file_path = os.path.join(folder_path, file_name)
+        """
         if '.xml' not in xml_file_path:
             xml_file_path = xml_file_path + '.xml'
         write_xml_data(xfa_data, xml_file_path)
@@ -133,16 +139,26 @@ def PDFtoXML(folder_path,pdf_path,file_name):
         tables = extract_tables_from_pdf(pdf_path)
         if tables:
             xml_tree = tables_to_xml(tables)
-            xml_file_path = os.path.join(folder_path,file_name.replace('.pdf', '_tables.xml'))
+            xml_file_path = pdf_path.replace('.pdf', '.xml')
+            """
+            if '.pdf' in file_name:
+                xml_file_path = os.path.join(folder_path, file_name.replace('.pdf', '.xml'))
+            else:
+                xml_file_path = os.path.join(folder_path, file_name)
+            """
+            if '.xml' not in xml_file_path:
+                xml_file_path = xml_file_path + '.xml'
             save_xfa_data_to_xml(xml_tree, xml_file_path)
             print("Extracted table data for ", file_name)
             print("Saved table data to", xml_file_path)
+            return xml_file_path,True
         else:
             print("No XFA data or tables found in the PDF.")
             return None,False
     return None,False
 
 def CheckHiddenAttachemnts(xml_file_path,folder_path,pdf_path,file_name):
+    hidden_xml_list = []
     if os.path.exists(xml_file_path):
         # Check if the file name contains "MGT"
         if "MGT" in os.path.basename(xml_file_path):
@@ -162,7 +178,7 @@ def CheckHiddenAttachemnts(xml_file_path,folder_path,pdf_path,file_name):
                     number_business = int(no_business_act.text)
                     print(number_business)
                     if number_business > 10:
-                        business_activity_folder_name = os.path.join(folder_path, "Business Activity Details")
+                        business_activity_folder_name = os.path.join(folder_path, "MGT","Business Activity Details")
                         if os.path.exists(business_activity_folder_name):
                             shutil.rmtree(business_activity_folder_name)
                         if not os.path.exists(business_activity_folder_name):
@@ -180,14 +196,16 @@ def CheckHiddenAttachemnts(xml_file_path,folder_path,pdf_path,file_name):
                         for business_files in files_in_Business_folder:
                             business_xml_file_path = os.path.join(business_activity_folder_name,business_files.replace('.pdf', '.xml'))
                             business_pdf_path=os.path.join(business_activity_folder_name,business_files)
-                            PDFtoXML(business_activity_folder_name,business_pdf_path,business_files)
+                            result = PDFtoXML(business_activity_folder_name,business_pdf_path,business_files)
+                            hidden_xml_list.append(result[0])
                 else:
                     print("NO_BUSINESS_ACT not found at the specified path.")
 
                 subsidiary_path = ".//HOLD_SUB_ASSOC"
                 subsidiary = root.find(subsidiary_path)
+                print(subsidiary.text)
                 if subsidiary.text is not None:
-                    subsidiary_folder_name = os.path.join(folder_path, "List of Subsidiaries")
+                    subsidiary_folder_name = os.path.join(folder_path, "MGT", "List of Subsidiaries")
                     if os.path.exists(subsidiary_folder_name):
                         shutil.rmtree(subsidiary_folder_name)
                     if not os.path.exists(subsidiary_folder_name):
@@ -196,39 +214,41 @@ def CheckHiddenAttachemnts(xml_file_path,folder_path,pdf_path,file_name):
                     get_embedded_pdfs(pdf_path, subsidiary_folder_name,file_name)
                     files_in_Subsidiary_Folder = os.listdir(subsidiary_folder_name)
                     for files in files_in_Subsidiary_Folder:
-                        if "Subsidiaries" or "Holding" or "Associate" or "Joint Venture" not in files:
+                        if not any(keyword not in files for keyword in ["Subsidiaries", "Holding", "Associate", "Joint Venture"]):
                             file_path = os.path.join(subsidiary_folder_name, files)
                             os.remove(file_path)
                             print("Deleted", file_path)
                     files_in_Subsidiary_Folder = os.listdir(subsidiary_folder_name)
                     for subsidiary_files in files_in_Subsidiary_Folder:
-                        business_xml_file_path = os.path.join(subsidiary_folder_name,
-                                                              subsidiary_files.replace('.pdf', '.xml'))
+                        business_xml_file_path = os.path.join(subsidiary_folder_name,subsidiary_files.replace('.pdf', '.xml'))
                         subsidiary_pdf_path = os.path.join(subsidiary_folder_name, subsidiary_files)
-                        if "Subsidiaries" or "Holding" or "Associate" or "Joint Venture" in subsidiary_files:
-                            PDFtoXML(subsidiary_folder_name, subsidiary_pdf_path, subsidiary_files)
-                            return True
-                    return True
+                        if "Subsidiaries" in subsidiary_files or "Holding" in subsidiary_files or "Associate" in subsidiary_files or "Joint Venture"  in subsidiary_files:
+                            result_subsidiary = PDFtoXML(subsidiary_folder_name, subsidiary_pdf_path, subsidiary_files)
+                            hidden_xml_list.append(result_subsidiary[0])
+                            return hidden_xml_list
+                    return hidden_xml_list
                 else:
                     print("No Subsidiary Found")
+                    return hidden_xml_list
             except ET.ParseError as e:
                 print("Error parsing the XML file:", str(e))
         else:
             print("XML file name does not contain 'MGT'")
     else:
         print("XML file does not exist")
-        return False
-    return False
+        return hidden_xml_list
+    return hidden_xml_list
 
 
 def fetch_form_extraction_file_data_from_table(connection,Cin,Company,Category):
     try:
         if connection:
             cursor = connection.cursor()
+
+            # Construct the SQL query
             connection.commit()
             time.sleep(5)
-            # Construct the SQL query
-            query = "select * from documents where cin=%s and company=%s and Category=%s and form_data_extraction_needed='Y'"
+            query = "select * from documents where cin=%s and company=%s and Category=%s and form_data_extraction_needed='Y' and Download_Status='Downloaded' and form_data_extraction_status='Pending'"
             values = (Cin,Company,Category)
             cursor.execute(query,values)
 
@@ -237,13 +257,13 @@ def fetch_form_extraction_file_data_from_table(connection,Cin,Company,Category):
 
             # Fetch all the rows
             rows = cursor.fetchall()
-            Status="Pass"
+            Status = "Pass"
+            print(rows)
             return rows,Status
 
     except mysql.connector.Error as error:
         print("Error:", error)
         return None
-
 
 
 

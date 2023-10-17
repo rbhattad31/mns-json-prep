@@ -47,6 +47,8 @@ def login(driver, url):
     return True
 """
 
+
+
 def insert_Download_Details(driver,Cin, Company,db_config,category):
     try:
         connection = mysql.connector.connect(**db_config)
@@ -238,7 +240,7 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath):
                     cursor.execute(update_query, values_update)
                     cursor.execute(path_update_query,values_path_update)
                     connection.commit()
-                    if 'MGT-7' or 'MGT-7A' in filename:
+                    if 'MGT-7' in filename or 'MGT-7A' in filename:
                         MGT_folder = os.path.join(folder_path,'MGT')
                         if not os.path.exists(MGT_folder):
                             os.makedirs(MGT_folder)
@@ -263,6 +265,9 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath):
                     next_button_download.click()
                     print("Next Button clicked")
                 except NoSuchElementException:
+                    next_button_download = driver.find_element(By.XPATH, '//span[@id="next"]')
+                    time.sleep(2)
+                    next_button_download.click()
                     print("Next Button not clicking")
                     pass
             else:
@@ -278,11 +283,58 @@ def update_form_extraction_status(db_config, cin, category,CompanyName):
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
     try:
+        rootpath = 'C:\MCA Portal' #need to remover afterwards
+        folder_path = os.path.join(rootpath, cin, CompanyName, category)
+
         get_details_query = "select * from documents where cin=%s and Category=%s and company=%s"
         values = (cin, category, CompanyName)
         print(get_details_query)
         cursor.execute(get_details_query, values)
         file_details = cursor.fetchall()
+        for condition_range in [(0, 365), (365, 730),(730,1460)]:
+            near_date_flag = False
+            start_range, end_range = condition_range
+
+            for details in file_details:
+                file_date = details[5]
+                file_name = details[4]
+                filepath = details[8]
+                #Need to remove 302-309 after while we donwload
+                if 'MGT-7' in file_name or 'MGT-7A' in file_name:
+                    MGT_folder = os.path.join(folder_path, 'MGT')
+                    if not os.path.exists(MGT_folder):
+                        os.makedirs(MGT_folder)
+                    try:
+                        shutil.copy(filepath, MGT_folder)
+                        MGT_file_path = os.path.join(MGT_folder,file_name)
+                        MGT_file_path = MGT_file_path + ".pdf"
+                        update_query_path = "update documents set document_download_path=%s where document=%s"
+                        update_values_path = (MGT_file_path, file_name)
+                        cursor.execute(update_query_path, update_values_path)
+                        connection.commit()
+                        time.sleep(10)
+
+                    except Exception as e:
+                        print(f"Error {e}")
+                if 'MGT' in file_name:
+                    date = datetime.datetime.strptime(file_date, '%d-%m-%Y')
+                    today_date_with_timestamp = datetime.datetime.today()
+                    days_difference = (today_date_with_timestamp - date).days
+
+                    if start_range <= days_difference <= end_range:
+                        update_query = "update documents set form_data_extraction_needed=%s where document=%s"
+                        update_values = ('Y', file_name)
+                        cursor.execute(update_query, update_values)
+                        connection.commit()
+                        print("Latest File Found")
+                        near_date_flag = True
+                        break
+            if near_date_flag:
+                break
+
+            if not near_date_flag:
+                print("Latest File not found checking other files in DB")
+        """
         for details in file_details:
             file_date = details[5]
             file_name = details[4]
@@ -297,29 +349,44 @@ def update_form_extraction_status(db_config, cin, category,CompanyName):
                     cursor.execute(update_query, update_values)
                     print("Latest File Found")
                     connection.commit()
+                    near_date_flag = True
                     break
                 else:
                     near_date_flag = False
+                    print("Latest File not found checking other files in DB")
+                    continue
 
-                if not near_date_flag:
-                    if days_difference >= 365 and days_difference <= 730:
-                        print("Days difference more")
-                        update_query = "update documents set form_data_extraction_needed=%s where document=%s"
-                        update_values = ('Y', file_name)
-                        cursor.execute(update_query, update_values)
-                        connection.commit()
-                        break
-                    elif days_difference >= 730 and days_difference <= 1460:
-                        update_query = "update documents set form_data_extraction_needed=%s where document=%s"
-                        update_values = ('Y', file_name)
-                        cursor.execute(update_query, update_values)
-                        connection.commit()
-                        break
+        for MGT_files in file_details:
+            file_date = MGT_files[5]
+            file_name = MGT_files[4]
+            if not near_date_flag and 'MGT' in MGT_files :
+                date = datetime.datetime.strptime(file_date, '%d-%m-%Y')
+                today_date_with_timestamp = datetime.datetime.today()
+                days_difference = (today_date_with_timestamp - date).days
+                if days_difference >= 365 and days_difference <= 730:
+                    print("Days difference more")
+                    update_query = "update documents set form_data_extraction_needed=%s where document=%s"
+                    update_values = ('Y', file_name)
+                    cursor.execute(update_query, update_values)
+                    connection.commit()
+                    near_date_flag = True
+                    break
+                elif days_difference >= 730 and days_difference <= 1460:
+                    update_query = "update documents set form_data_extraction_needed=%s where document=%s"
+                    update_values = ('Y', file_name)
+                    cursor.execute(update_query, update_values)
+                    connection.commit()
+                    near_date_flag = True
+                    break
             else:
+                near_date_flag = False
                 continue
 
+        """
+        return True
     except Exception as e:
         print(f"Error updating login status in the database: {str(e)}")
+        return False
     finally:
         cursor.close()
         connection.close()
@@ -351,108 +418,118 @@ def click_element_with_retry(driver, xpath, retry_count=3):
 
 def download_captcha_and_enter_text(CompanyName, driver, file_path, filename, Cin, dbconfig, category,
                                     retry_count=5):
-    window_handles = driver.window_handles
-    new_window_handle = window_handles[-1]
-    driver.switch_to.window(new_window_handle)
+    try:
+        options = webdriver.ChromeOptions()
+        window_handles = driver.window_handles
+        new_window_handle = window_handles[-1]
+        driver.switch_to.window(new_window_handle)
 
-    for attempt in range(1, retry_count + 1):
-        try:
-            captcha_image = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.XPATH, '//img[@alt="Captcha" and @id="captcha"]')))
-            captcha_image.screenshot("download_captcha.png")
-            time.sleep(2)
-            # captcha_text = pytesseract.image_to_string(Image.open("download_captcha.png"))
-            reader = easyocr.Reader(["en"])
-            image = 'download_captcha.png'
-            result = reader.readtext(image)
-            captcha_text = " ".join([text[1] for text in result])
-            print(f"Captcha Text: {captcha_text}")
-            time.sleep(3)
-
-            captcha_enter_download = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.XPATH, '//input[@type="text" and @name="userEnteredCaptcha"]')))
-            captcha_enter_download.clear()
-            time.sleep(1)
-            captcha_enter_download.send_keys(captcha_text)
-            time.sleep(2)
-            Captcha_submit_xpath = '//input[@type="submit" and @value="Submit"]'
-            click_element_with_retry(driver, Captcha_submit_xpath, retry_count)
-            print("Clicked on Submit")
-            time.sleep(5)
+        for attempt in range(1, retry_count + 1):
             try:
-                incorrect_captcha = driver.find_element(By.XPATH, '//li[text()="Enter valid Letters shown."]')
-                if incorrect_captcha.is_displayed():
-                    print("Incorrect Captcha entered")
-                    time.sleep(3)
-                    close_box_button = driver.find_element(By.XPATH, '//a[@class="boxclose" and @id="msgboxclose"]')
-                    time.sleep(2)
-                    close_box_button.click()
-                    time.sleep(2)
-                    Keys.ESCAPE
-                    continue
-                else:
+                prefs = {"download.default_directory": file_path}
+                options.add_experimental_option("prefs", prefs)
+                captcha_image = WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.XPATH, '//img[@alt="Captcha" and @id="captcha"]')))
+                captcha_image.screenshot("download_captcha.png")
+                time.sleep(2)
+                # captcha_text = pytesseract.image_to_string(Image.open("download_captcha.png"))
+                reader = easyocr.Reader(["en"])
+                image = 'download_captcha.png'
+                result = reader.readtext(image)
+                captcha_text = " ".join([text[1] for text in result])
+                print(f"Captcha Text: {captcha_text}")
+                time.sleep(3)
+
+                captcha_enter_download = WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.XPATH, '//input[@type="text" and @name="userEnteredCaptcha"]')))
+                captcha_enter_download.clear()
+                time.sleep(1)
+                captcha_enter_download.send_keys(captcha_text)
+                time.sleep(2)
+                Captcha_submit_xpath = '//input[@type="submit" and @value="Submit"]'
+                click_element_with_retry(driver, Captcha_submit_xpath, retry_count)
+                print("Clicked on Submit")
+                time.sleep(5)
+                try:
+                    incorrect_captcha = driver.find_element(By.XPATH, '//li[text()="Enter valid Letters shown."]')
+                    if incorrect_captcha.is_displayed():
+                        print("Incorrect Captcha entered")
+                        time.sleep(3)
+                        close_box_button = driver.find_element(By.XPATH, '//a[@class="boxclose" and @id="msgboxclose"]')
+                        time.sleep(2)
+                        close_box_button.click()
+                        time.sleep(2)
+                        Keys.ESCAPE
+                        continue
+                    else:
+                        break
+                except:
                     break
             except:
-                break
-        except:
-            print(f"Failed attempt {attempt} to download captcha and enter text")
-    time.sleep(5)
-    try:
-        # Wait up to 30 seconds for the Save As dialog to appear
-        #save_as_dialog = WebDriverWait(driver, 30).until(
-            #EC.alert_is_present())
+                print(f"Failed attempt {attempt} to download captcha and enter text")
+        time.sleep(5)
+        """
+        try:
+            # Wait up to 30 seconds for the Save As dialog to appear
+            #save_as_dialog = WebDriverWait(driver, 30).until(
+                #EC.alert_is_present())
 
-        # Send the file path to the dialog and accept it
-        #save_as_dialog.send_keys(file_path)
-        #save_as_dialog.accept()
-        dialog = driver.switch_to.active_element
-        #dialog.send_keys(Keys.ALT + 's')
+            # Send the file path to the dialog and accept it
+            #save_as_dialog.send_keys(file_path)
+            #save_as_dialog.accept()
+            dialog = driver.switch_to.active_element
+            #dialog.send_keys(Keys.ALT + 's')
+            time.sleep(4)
+            dialog.send_keys(file_path)  # Replace with the desired path
+            dialog.send_keys(Keys.ENTER)
+
+            # Wait for the download to complete (you may need to implement a proper wait)
+            # After download, you can continue with your automation tasks
+        except Exception as e:
+            print(f"Save As dialog did not appear within the specified timeout {e}")
+        """
+        #time.sleep(2)
+        #pyautogui.typewrite(file_path)
+        #time.sleep(3)
+        #pyautogui.hotkey('enter')
+        #time.sleep(1)
+        #pyautogui.hotkey('enter')
+
+        # Store the handles of all open windows
+        """
+        actions = ActionChains(driver)
+        time.sleep(2)
+        # Send keystrokes to the active window
+        actions.send_keys(file_path)
+        time.sleep(5)
+        actions.send_keys(Keys.RETURN)
+        actions.perform()
+        """
+        time.sleep(5)
+        driver.close()
+
+        # Assuming the original window is the first one in the list
+        original_window_handle = window_handles[0]
+
+        # Switch back to the original window
+        driver.switch_to.window(original_window_handle)
+
         time.sleep(4)
-        dialog.send_keys(file_path)  # Replace with the desired path
-        dialog.send_keys(Keys.ENTER)
 
-        # Wait for the download to complete (you may need to implement a proper wait)
-        # After download, you can continue with your automation tasks
+        if os.path.exists(file_path):
+            Download_Status = "Downloaded"
+            print("Downloaded successfully")
+            # insert_Download_Details(Cin, CompanyName, category, filename, dbconfig, file_path, date)
+            return True
+        else:
+            print("Not Downloaded successfully")
+
+        time.sleep(2)
+
     except Exception as e:
-        print(f"Save As dialog did not appear within the specified timeout {e}")
+        print(f"Exception Occured {e}")
+        return False
 
-    """
-    pyautogui.typewrite(file_path)
-    time.sleep(3)
-    pyautogui.hotkey('enter')
-    time.sleep(1)
-    pyautogui.hotkey('enter')
-    
-    # Store the handles of all open windows
-    actions = ActionChains(driver)
-    time.sleep(2)
-    # Send keystrokes to the active window
-    actions.send_keys(file_path)
-    time.sleep(5)
-    actions.send_keys(Keys.RETURN)
-    actions.perform()
-    """
-    time.sleep(5)
-    driver.close()
-
-
-    # Assuming the original window is the first one in the list
-    original_window_handle = window_handles[0]
-
-    # Switch back to the original window
-    driver.switch_to.window(original_window_handle)
-
-    time.sleep(4)
-
-    if os.path.exists(file_path):
-        Download_Status = "Downloaded"
-        print("Downloaded successfully")
-        #insert_Download_Details(Cin, CompanyName, category, filename, dbconfig, file_path, date)
-        return True
-    else:
-        print("Not Downloaded successfully")
-
-    time.sleep(2)
 
 
 def sign_out(driver):
@@ -470,3 +547,4 @@ def sign_out(driver):
     if 'driver' in locals():
         driver.delete_all_cookies()
         driver.quit()
+
