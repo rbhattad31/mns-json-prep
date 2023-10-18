@@ -89,9 +89,9 @@ def insert_datatable_with_table(db_cursor, sql_table_name, column_names_list, df
     combined = list(zip(column_names_list, df_row))
     # Create a dictionary from the list of tuples
     result_dict = dict(combined)
-    print(result_dict)
+    # print(result_dict)
 
-    where_clause = f'SELECT COUNT(*) FROM {sql_table_name} WHERE '
+    where_clause = f'SELECT * FROM {sql_table_name} WHERE '
     for key, value in result_dict.items():
         if value is not None:
             where_clause += f"`{key}` = '{value}' AND "
@@ -101,15 +101,18 @@ def insert_datatable_with_table(db_cursor, sql_table_name, column_names_list, df
     select_query = where_clause[:-4]
     print(select_query)
     db_cursor.execute(select_query)
-    if db_cursor.fetchone()[0] == 0:  # If no matching record found
+    result = db_cursor.fetchall()
+    print(len(result))
+    if len(result) == 0:  # If no matching record found
         # Insert the record
         insert_query = f"""
                         INSERT INTO {sql_table_name}
                         SET {', '.join([f'{col} = %s' for col in column_names_list])};
                         """
         db_cursor.execute(insert_query, tuple(df_row.values))
+        # print(f"Data row values are saved in table {sql_table_name} with \n {df_row}")
     else:
-        print("Entry with these values already exists.")
+        print(f"Entry with values already exists in table {sql_table_name}")
 
 
 def xml_to_excel(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
@@ -278,6 +281,7 @@ def xml_to_excel(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml
         column_names_list = [x.strip() for x in column_names_list]
 
         if field_name != config_dict['Hold_Sub_Assoc_field_name']:
+            # create new columns cin and company name in each group table to store cin and company name
             table_df[cin_column_name_in_db] = cin_column_value
             table_df[company_name_column_name_in_db] = company_name
 
@@ -295,7 +299,7 @@ def xml_to_excel(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml
             # print(f'{year_end_date=}')
         except Exception as e:
             print(f"Exception {e} occurred while extracting date from xml, setting year to default '00-00-0000'")
-            year_end_date = '00-00-0000'
+            year_end_date = '2000-01-01'
 
         # update group values in datatable
         if field_name == config_dict['principal_business_activities_field_name']:
