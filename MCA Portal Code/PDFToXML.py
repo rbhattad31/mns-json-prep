@@ -36,7 +36,7 @@ def get_embedded_pdfs(input_pdf_path, output_path,file_name_hidden_pdf):
         #print(fData)
         with open(out_pdf, 'wb') as outfile:
             outfile.write(fData)
-def extract_xfa_data(pdf_path):
+def extract_xfa_data(pdf_path,filename):
     def findInDict(needle, haystack):
         for key in haystack.keys():
             try:
@@ -54,8 +54,12 @@ def extract_xfa_data(pdf_path):
     pdf = pypdf.PdfReader(pdfobject)
     xfa = findInDict('/XFA', pdf.resolved_objects)
     if xfa is not None:
-        xml = xfa[9].get_object().get_data()
-        return xml
+        if 'MSME' in filename:
+            xml = xfa[7].get_object().get_data()
+            return xml
+        else:
+            xml = xfa[9].get_object().get_data()
+            return xml
     else:
         return None
 
@@ -117,7 +121,7 @@ def write_xml_data(xfa_data,output_xml_path):
 
 def PDFtoXML(folder_path,pdf_path,file_name):
     # file_names = [file.name for file in folder_path.iterdir() if file.is_file()]
-    xfa_data = extract_xfa_data(pdf_path)
+    xfa_data = extract_xfa_data(pdf_path,file_name)
 
     if xfa_data:
         # If XFA data is found, use the existing code to save it as XML
@@ -234,6 +238,7 @@ def CheckHiddenAttachemnts(xml_file_path,folder_path,pdf_path,file_name):
                 print("Error parsing the XML file:", str(e))
         else:
             print("XML file name does not contain 'MGT'")
+            return hidden_xml_list
     else:
         print("XML file does not exist")
         return hidden_xml_list

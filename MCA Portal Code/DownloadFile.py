@@ -291,6 +291,8 @@ def update_form_extraction_status(db_config, cin, category,CompanyName):
         print(get_details_query)
         cursor.execute(get_details_query, values)
         file_details = cursor.fetchall()
+        print(file_details)
+        i=0
         for condition_range in [(0, 365), (365, 730),(730,1460)]:
             near_date_flag = False
             start_range, end_range = condition_range
@@ -313,23 +315,39 @@ def update_form_extraction_status(db_config, cin, category,CompanyName):
                         cursor.execute(update_query_path, update_values_path)
                         connection.commit()
                         time.sleep(10)
-
                     except Exception as e:
                         print(f"Error {e}")
                 if 'MGT' in file_name:
                     date = datetime.datetime.strptime(file_date, '%d-%m-%Y')
                     today_date_with_timestamp = datetime.datetime.today()
                     days_difference = (today_date_with_timestamp - date).days
-
+                    print(days_difference)
                     if start_range <= days_difference <= end_range:
                         update_query = "update documents set form_data_extraction_needed=%s where document=%s"
                         update_values = ('Y', file_name)
                         cursor.execute(update_query, update_values)
                         connection.commit()
-                        print("Latest File Found")
+                        print("Latest MGT File Found")
                         near_date_flag = True
                         break
+
+                elif 'MSME' in file_name:
+                    date = datetime.datetime.strptime(file_date, '%d-%m-%Y')
+                    today_date_with_timestamp = datetime.datetime.today()
+                    days_difference = (today_date_with_timestamp - date).days
+                    if start_range <= days_difference <= end_range:
+                        update_query = "update documents set form_data_extraction_needed=%s where document=%s"
+                        update_values = ('Y', file_name)
+                        cursor.execute(update_query, update_values)
+                        connection.commit()
+                        print(f"{i} Latest File Found for MSME")
+                        i = i+1
+                    if i == 2:
+                        near_date_flag = True
+                        break
+
             if near_date_flag:
+                print("Successfully found all files so breaking")
                 break
 
             if not near_date_flag:
@@ -419,15 +437,16 @@ def click_element_with_retry(driver, xpath, retry_count=3):
 def download_captcha_and_enter_text(CompanyName, driver, file_path, filename, Cin, dbconfig, category,
                                     retry_count=5):
     try:
-        options = webdriver.ChromeOptions()
+        #options = webdriver.ChromeOptions()
         window_handles = driver.window_handles
         new_window_handle = window_handles[-1]
         driver.switch_to.window(new_window_handle)
-
+        options = webdriver.ChromeOptions()
         for attempt in range(1, retry_count + 1):
             try:
                 prefs = {"download.default_directory": file_path}
                 options.add_experimental_option("prefs", prefs)
+                time.sleep(2)
                 captcha_image = WebDriverWait(driver, 10).until(
                     EC.presence_of_element_located((By.XPATH, '//img[@alt="Captcha" and @id="captcha"]')))
                 captcha_image.screenshot("download_captcha.png")
