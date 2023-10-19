@@ -115,7 +115,7 @@ def insert_datatable_with_table(db_cursor, sql_table_name, column_names_list, df
         print(f"Entry with values already exists in table {sql_table_name}")
 
 
-def xml_to_excel(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
+def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
                  output_file_path, cin_column_value, company_name):
     config_dict_keys = ['single_type_indicator',
                         'group_type_indicator',
@@ -541,3 +541,15 @@ def xml_to_excel(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml
             row_index += len(dataframe.index) + 2
 
     output_dataframes_list.clear()
+
+
+def mgt7_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
+                 output_file_path, cin_column_value, company_name):
+    try:
+        xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
+                 output_file_path, cin_column_value, company_name)
+    except Exception as e:
+        print("Below Exception occurred while processing mgt7 file: \n ", e)
+        return False
+    else:
+        return True
