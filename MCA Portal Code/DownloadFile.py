@@ -35,20 +35,6 @@ def initialize_driver(chrome_driver_path):
     service = Service(chrome_driver_path)
     driver = webdriver.Chrome(service=service, options=options)
     return driver
-
-
-"""
-def login(driver, url):
-    driver.get(url)
-    username_input = driver.find_element(By.XPATH, '//input[@type="text" and @id="userName"]')
-    time.sleep(2)
-    print("Starting process for login")
-    exec(open('Login_1.py').read())
-    return True
-"""
-
-
-
 def insert_Download_Details(driver,Cin, Company,db_config,category):
     try:
         connection = mysql.connector.connect(**db_config)
@@ -150,7 +136,7 @@ def insert_Download_Details(driver,Cin, Company,db_config,category):
                                 values = (
                                 Cin, Company, category, document_name, formatted_date, 'Pending', current_date,
                                 user_name, 'N', j,'Pending')
-                                print(query)
+                                print(query % values)
                                 cursor.execute(query, values)
                                 connection.commit()
                             else:
@@ -215,6 +201,7 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath):
                     break
             download_details_query = 'select * from documents where cin=%s and company=%s and Category=%s and Page_Number=%s and Download_Status=%s'
             values = (Cin, CompanyName, Category, j, 'Pending')
+            print(download_details_query % values)
             cursor.execute(download_details_query, values)
             result = cursor.fetchall()
             for element in result:
@@ -253,7 +240,7 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath):
                     continue
             check_pending_query = 'select * from documents where cin=%s and company=%s and Category=%s and Page_Number=%s and Download_Status=%s'
             pending_values = (Cin, CompanyName, Category, j, 'Pending')
-            print(pending_values)
+            print(check_pending_query % pending_values)
             cursor.execute(check_pending_query, pending_values)
             pending_result = cursor.fetchall()
             print(pending_result)
@@ -279,21 +266,18 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath):
 
 
 
-def update_form_extraction_status(db_config, cin, category,CompanyName):
+def update_form_extraction_status(db_config, cin,CompanyName):
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
     try:
-        rootpath = 'C:\MCA Portal' #need to remover afterwards
-        folder_path = os.path.join(rootpath, cin, CompanyName, category)
-
-        get_details_query = "select * from documents where cin=%s and Category=%s and company=%s"
-        values = (cin, category, CompanyName)
-        print(get_details_query)
+        get_details_query = "select * from documents where cin=%s and company=%s"
+        values = (cin, CompanyName)
+        print(get_details_query % values)
         cursor.execute(get_details_query, values)
         file_details = cursor.fetchall()
         print(file_details)
         i=0
-        for condition_range in [(0, 365), (365, 730),(730,1460)]:
+        for condition_range in [(0, 365), (365, 730),(730,1460),(1460,2920)]:
             near_date_flag = False
             start_range, end_range = condition_range
 
@@ -301,43 +285,25 @@ def update_form_extraction_status(db_config, cin, category,CompanyName):
                 file_date = details[5]
                 file_name = details[4]
                 filepath = details[8]
-                #Need to remove 302-309 after while we donwload
-                if 'MGT-7' in file_name or 'MGT-7A' in file_name:
-                    MGT_folder = os.path.join(folder_path, 'MGT')
-                    if not os.path.exists(MGT_folder):
-                        os.makedirs(MGT_folder)
-                    try:
-                        shutil.copy(filepath, MGT_folder)
-                        MGT_file_path = os.path.join(MGT_folder,file_name)
-                        MGT_file_path = MGT_file_path + ".pdf"
-                        update_query_path = "update documents set document_download_path=%s where document=%s"
-                        update_values_path = (MGT_file_path, file_name)
-                        cursor.execute(update_query_path, update_values_path)
-                        connection.commit()
-                        time.sleep(10)
-                    except Exception as e:
-                        print(f"Error {e}")
+                date = datetime.datetime.strptime(file_date, '%d-%m-%Y')
+                today_date_with_timestamp = datetime.datetime.today()
+                days_difference = (today_date_with_timestamp - date).days
+                print(days_difference)
                 if 'MGT' in file_name:
-                    date = datetime.datetime.strptime(file_date, '%d-%m-%Y')
-                    today_date_with_timestamp = datetime.datetime.today()
-                    days_difference = (today_date_with_timestamp - date).days
-                    print(days_difference)
                     if start_range <= days_difference <= end_range:
                         update_query = "update documents set form_data_extraction_needed=%s where document=%s"
                         update_values = ('Y', file_name)
+                        print(update_query % update_values)
                         cursor.execute(update_query, update_values)
                         connection.commit()
                         print("Latest MGT File Found")
                         near_date_flag = True
                         break
-
                 elif 'MSME' in file_name:
-                    date = datetime.datetime.strptime(file_date, '%d-%m-%Y')
-                    today_date_with_timestamp = datetime.datetime.today()
-                    days_difference = (today_date_with_timestamp - date).days
                     if start_range <= days_difference <= end_range:
                         update_query = "update documents set form_data_extraction_needed=%s where document=%s"
                         update_values = ('Y', file_name)
+                        print(update_query % update_values)
                         cursor.execute(update_query, update_values)
                         connection.commit()
                         print(f"{i} Latest File Found for MSME")
@@ -346,61 +312,42 @@ def update_form_extraction_status(db_config, cin, category,CompanyName):
                         near_date_flag = True
                         break
 
+                elif 'AOC-4' in file_name or 'AOC-4 CFS NBFC' in file_name or 'AOC-4 NBFC' in file_name:
+                    if start_range <= days_difference <= end_range:
+                        update_query = "update documents set form_data_extraction_needed=%s where document=%s"
+                        update_values = ('Y', file_name)
+                        print(update_query % update_values)
+                        cursor.execute(update_query, update_values)
+                        connection.commit()
+                        print(f"{i} Latest File Found for AOC")
+                        i = i+1
+                    if i == 4:
+                        near_date_flag = True
+                        break
+
+                elif 'CHG' in file_name or 'DIR' in file_name or 'CHANGE OF NAME' in file_name:
+                    print("Proocessing all files")
+                    update_query = "update documents set form_data_extraction_needed=%s where document=%s"
+                    update_values = ('Y', file_name)
+                    print(update_query % update_values)
+                    cursor.execute(update_query, update_values)
+                    connection.commit()
+                    near_date_flag = True
+
+                else:
+                    print("Proocessing all files")
+                    update_query = "update documents set form_data_extraction_needed=%s where document=%s"
+                    update_values = ('Y', file_name)
+                    print(update_query % update_values)
+                    cursor.execute(update_query, update_values)
+                    connection.commit()
+                    near_date_flag = True
+                #else condition put temporarily
             if near_date_flag:
                 print("Successfully found all files so breaking")
                 break
-
             if not near_date_flag:
                 print("Latest File not found checking other files in DB")
-        """
-        for details in file_details:
-            file_date = details[5]
-            file_name = details[4]
-            if 'MGT' in file_name:
-                date = datetime.datetime.strptime(file_date, '%d-%m-%Y')
-                today_date_with_timestamp = datetime.datetime.today()
-                days_difference = (today_date_with_timestamp - date).days
-                print(days_difference)
-                if abs(days_difference) <= 365:
-                    update_query = "update documents set form_data_extraction_needed=%s where document=%s"
-                    update_values = ('Y', file_name)
-                    cursor.execute(update_query, update_values)
-                    print("Latest File Found")
-                    connection.commit()
-                    near_date_flag = True
-                    break
-                else:
-                    near_date_flag = False
-                    print("Latest File not found checking other files in DB")
-                    continue
-
-        for MGT_files in file_details:
-            file_date = MGT_files[5]
-            file_name = MGT_files[4]
-            if not near_date_flag and 'MGT' in MGT_files :
-                date = datetime.datetime.strptime(file_date, '%d-%m-%Y')
-                today_date_with_timestamp = datetime.datetime.today()
-                days_difference = (today_date_with_timestamp - date).days
-                if days_difference >= 365 and days_difference <= 730:
-                    print("Days difference more")
-                    update_query = "update documents set form_data_extraction_needed=%s where document=%s"
-                    update_values = ('Y', file_name)
-                    cursor.execute(update_query, update_values)
-                    connection.commit()
-                    near_date_flag = True
-                    break
-                elif days_difference >= 730 and days_difference <= 1460:
-                    update_query = "update documents set form_data_extraction_needed=%s where document=%s"
-                    update_values = ('Y', file_name)
-                    cursor.execute(update_query, update_values)
-                    connection.commit()
-                    near_date_flag = True
-                    break
-            else:
-                near_date_flag = False
-                continue
-
-        """
         return True
     except Exception as e:
         print(f"Error updating login status in the database: {str(e)}")
@@ -487,26 +434,7 @@ def download_captcha_and_enter_text(CompanyName, driver, file_path, filename, Ci
             except:
                 print(f"Failed attempt {attempt} to download captcha and enter text")
         time.sleep(5)
-        """
-        try:
-            # Wait up to 30 seconds for the Save As dialog to appear
-            #save_as_dialog = WebDriverWait(driver, 30).until(
-                #EC.alert_is_present())
 
-            # Send the file path to the dialog and accept it
-            #save_as_dialog.send_keys(file_path)
-            #save_as_dialog.accept()
-            dialog = driver.switch_to.active_element
-            #dialog.send_keys(Keys.ALT + 's')
-            time.sleep(4)
-            dialog.send_keys(file_path)  # Replace with the desired path
-            dialog.send_keys(Keys.ENTER)
-
-            # Wait for the download to complete (you may need to implement a proper wait)
-            # After download, you can continue with your automation tasks
-        except Exception as e:
-            print(f"Save As dialog did not appear within the specified timeout {e}")
-        """
         #time.sleep(2)
         #pyautogui.typewrite(file_path)
         #time.sleep(3)
@@ -514,16 +442,6 @@ def download_captcha_and_enter_text(CompanyName, driver, file_path, filename, Ci
         #time.sleep(1)
         #pyautogui.hotkey('enter')
 
-        # Store the handles of all open windows
-        """
-        actions = ActionChains(driver)
-        time.sleep(2)
-        # Send keystrokes to the active window
-        actions.send_keys(file_path)
-        time.sleep(5)
-        actions.send_keys(Keys.RETURN)
-        actions.perform()
-        """
         time.sleep(5)
         driver.close()
 
@@ -542,21 +460,13 @@ def download_captcha_and_enter_text(CompanyName, driver, file_path, filename, Ci
             return True
         else:
             print("Not Downloaded successfully")
-
-        time.sleep(2)
-
+            return False
     except Exception as e:
         print(f"Exception Occured {e}")
         return False
 
 
-
 def sign_out(driver):
-    """
-    driver.close()
-    original_window_handle = driver.window_handles[0]
-    driver.switch_to.window(original_window_handle)
-    """
     sign_out_button = driver.find_element(By.XPATH, '//a[@id="loginAnchor" and text()="Signout"]')
 
     if sign_out_button.is_displayed():
