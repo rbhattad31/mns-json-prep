@@ -1,9 +1,7 @@
 import pandas as pd
 import xml.etree.ElementTree as Et
-import json
 import os
-import mysql.connector
-import numpy as np
+
 
 pd.set_option('display.max_columns', None)
 
@@ -153,12 +151,12 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
     # extract group values
     for index, row in group_df.iterrows():
-        field_name = str(row.iloc[0]).strip()
+        # field_name = str(row.iloc[0]).strip()
         parent_node = str(row.iloc[3]).strip()
         child_nodes = str(row.iloc[4]).strip()
         sql_table_name = str(row.iloc[5]).strip()
         column_names = str(row.iloc[6]).strip()
-        column_json_node = str(row.iloc[7]).strip()
+        # column_json_node = str(row.iloc[7]).strip()
 
         table_node_name = parent_node
         # print(table_node_name)
