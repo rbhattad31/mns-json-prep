@@ -10,6 +10,7 @@ from MCAPortalMainFunctions import XMLGeneration
 from MCAPortalMainFunctions import insert_fields_into_db
 from MCAPortalMainFunctions import sign_out
 
+
 def main():
     excel_file = r"C:\MCA Portal\Config.xlsx"
     Sheet_name = "Sheet1"
@@ -40,8 +41,8 @@ def main():
                         print("Successfully Inserted into DB")
                     """
                     if Insert_fields_into_DB:
-                        if driver in locals():
-                            sign_out(driver)
+                        if 'driver' in locals():
+                            sign_out(driver,config_dict,CinData)
                     """
             else:
                 print("Unable to fetch data")

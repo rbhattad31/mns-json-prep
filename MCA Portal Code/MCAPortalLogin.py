@@ -28,7 +28,7 @@ def update_login_status(username, db_config):
 def login_to_website(url, chrome_driver_path,username,password,db_config):
     try:
         options = Options()
-        options.add_argument('--incognito')
+        options.add_argument('--start-maximized')
         service = Service(chrome_driver_path)
         driver = webdriver.Chrome(service=service, options=options)
         driver.get(url)
@@ -88,7 +88,18 @@ def login_to_website(url, chrome_driver_path,username,password,db_config):
             sign_in.click()
             print("Clicked on Sign in")
             time.sleep(5)
-
+            try:
+                no_captcha = driver.find_element(By.XPATH,'//li[text()="Please enter letters shown."]')
+                if no_captcha.is_displayed():
+                    print("No Captcha Entered")
+                    time.sleep(2)
+                    no_captcha_close_button = driver.find_element((By.XPATH,'//a[@class="boxclose" and @id="alertboxclose"]'))
+                    time.sleep(2)
+                    no_captcha_close_button.click()
+                    time.sleep(1)
+                    continue
+            except:
+                pass
             try:
                 incorrect_captcha = driver.find_element(By.XPATH, '//li[text()="Enter valid Letters shown."]')
                 if incorrect_captcha.is_displayed():
@@ -114,7 +125,7 @@ def login_to_website(url, chrome_driver_path,username,password,db_config):
                 update_login_status(username, db_config)
 
                 time.sleep(5)
-                return Status, driver
+                return Status, driver,options
             except:
                 print("Login failed. Retrying...")
 
@@ -122,7 +133,7 @@ def login_to_website(url, chrome_driver_path,username,password,db_config):
         if attempt == retry_count:
             print("Login failed after 3 attempts.")
             Status = "Fail"
-            return Status, driver
+            return Status, driver,options
 
             # Add a delay before the next attempt
         time.sleep(10)
@@ -130,7 +141,7 @@ def login_to_website(url, chrome_driver_path,username,password,db_config):
     except Exception as e:
         print(f"Error Logging in {e}")
         Status = "Fail"
-        return Status,driver
+        return Status,driver,options
 
 
     # Close the browser window
@@ -139,18 +150,3 @@ def login_to_website(url, chrome_driver_path,username,password,db_config):
         driver.delete_all_cookies()
         driver.quit()
     """
-
-
-
-#url='https://www.mca.gov.in/mcafoportal/login.do'
-#chrome_driver_path=r'C:\Users\BRADSOL123\Downloads\chromedriver-win64\chromedriver-win64\chromedriver.exe'
-#username = 'Shalumns1'
-#password = 'Shalu@123'
-#dbconfig={
-        #"host": "162.241.123.123",
-        #"user": "classle3_deal_saas",
-       # "password": "o2i=hi,64u*I",
-        #"database": "classle3_mns_credit",
-   # }
-
-#login_to_website(url,chrome_driver_path,username,password,dbconfig)
