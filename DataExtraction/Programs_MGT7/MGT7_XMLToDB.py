@@ -1,3 +1,6 @@
+import re
+from datetime import datetime
+
 import pandas as pd
 import xml.etree.ElementTree as Et
 import json
@@ -9,9 +12,20 @@ pd.set_option('display.max_columns', None)
 
 def get_single_value_from_xml(xml_root, parent_node, child_node):
     try:
-        element = xml_root.find(f'.//{parent_node}//{child_node}')
-        # print(element)
-        return element.text if element is not None else None
+        if child_node == 'nan':
+            elements = xml_root.findall(f'.//{parent_node}')
+        else:
+            elements = xml_root.findall(f'.//{parent_node}//{child_node}')
+
+        for element in elements:
+            if element.text is None:
+                continue
+            if element.text is not None:
+                if '\r' in str(element.text):
+                    return str(element.text).replace('\r', '\n')
+                else:
+                    return str(element.text)
+        return None
     except Exception as e:
         print(f"An error occurred: {e}")
         return None
@@ -46,13 +60,19 @@ def update_datatable_single_value(db_cursor, table_name, cin_column_name, cin_va
     # otherwise complete json dictionary
     json_dict = json.loads(column_value)
     num_elements = len(json_dict)
-    if num_elements == 1:
+    print(column_name)
+    if column_name == 'total_equity_shares' or column_name == 'total_preference_shares':
+        temp_column_value = 0
+        for key, value in json_dict.items():
+            temp_column_value += float(value)
+        print(f'{column_value=}')
+        column_value = temp_column_value
+    elif num_elements == 1:
         first_key = next(iter(json_dict))
         first_value = json_dict[first_key]
         column_value = first_value
     else:
         column_value = json.dumps(json_dict)
-
     # check if there is already entry with cin
     query = "SELECT * FROM {} WHERE {} = '{}'".format(table_name, cin_column_name, cin_value)
     # print(query)
@@ -62,7 +82,7 @@ def update_datatable_single_value(db_cursor, table_name, cin_column_name, cin_va
         print(err)
     result = db_cursor.fetchall()
     # print(result)
-
+    print(column_value)
     # if cin value already exists
     if len(result) > 0:
         update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}'".format(table_name, column_name,
@@ -116,7 +136,7 @@ def insert_datatable_with_table(db_cursor, sql_table_name, column_names_list, df
 
 
 def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
-                 output_file_path, cin_column_value, company_name):
+              output_file_path, cin_column_value, company_name):
     config_dict_keys = ['single_type_indicator',
                         'group_type_indicator',
 
@@ -146,6 +166,8 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
     # initializing empty list to save all the result dataframes for saving to output excel
     output_dataframes_list = []
+
+    llp_pattern = r'^[a-zA-Z]{3}-\d{4}$'
 
     if not os.path.exists(map_file_path):
         raise FileNotFoundError(f"The Mapping file '{map_file_path}' is not found.")
@@ -196,7 +218,12 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
         column_json_node = str(row.iloc[7]).strip()
 
         value = get_single_value_from_xml(xml_root, parent_node, child_nodes)
-        single_df.at[index, 'Value'] = value
+        if field_name == 'year':
+            date_obj = datetime.strptime(value, "%Y-%m-%d")
+            year = date_obj.year
+            single_df.at[index, 'Value'] = year
+        else:
+            single_df.at[index, 'Value'] = value
         results.append([field_name, value, sql_table_name, column_name, column_json_node])
     # print(single_df)
 
@@ -205,7 +232,6 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
     sql_tables_list = single_df[single_df.columns[5]].unique()
     # for each distinct table value, filter the df with table value and find columns
     for sql_table_name in sql_tables_list:
-
         if sql_table_name == config_dict['principal_business_activities_table_name']:
             # skip if the table is principle business activities table
             # as the year value used to update in other tables along with other values
@@ -279,19 +305,17 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
         column_names_list = column_names.split(',')
         column_names_list = [x.strip() for x in column_names_list]
+        table_df[cin_column_name_in_db] = cin_column_value
+        table_df[company_name_column_name_in_db] = company_name
+        column_names_list.append(cin_column_name_in_db)
+        column_names_list.append(company_name_column_name_in_db)
+        column_names_list = [x.strip() for x in column_names_list]
 
-        if field_name != config_dict['Hold_Sub_Assoc_field_name']:
-            # create new columns cin and company name in each group table to store cin and company name
-            table_df[cin_column_name_in_db] = cin_column_value
-            table_df[company_name_column_name_in_db] = company_name
-
-            column_names_list.append(cin_column_name_in_db)
-            column_names_list.append(company_name_column_name_in_db)
-            column_names_list = [x.strip() for x in column_names_list]
-            # print(column_names_list)
-            # print(table_df)
-            table_df.columns = column_names_list
-
+        if field_name == config_dict['Hold_Sub_Assoc_field_name']:
+            column_names_list.insert(2, config_dict['Hold_Sub_Assoc_column_name'])
+        # print(column_names_list)
+        table_df.columns = column_names_list
+        # print(table_df)
         try:
             year_end_date = \
                 single_df[single_df[single_df.columns[0]]
@@ -317,8 +341,26 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
                           df_row)
             print("DB execution is complete for principal business activities")
         elif field_name == config_dict['director_shareholdings_field_name']:
-            table_df['Year'] = year_end_date
+            table_df['financial_year'] = year_end_date
+            date_obj = datetime.strptime(year_end_date, "%Y-%m-%d")
+            year = date_obj.year
+            table_df['year'] = year
+
             table_df = table_df[table_df[column_names_list[0]].notna()]
+            print(table_df)
+            total_shares = pd.to_numeric(table_df['no_of_shares']).sum()
+            print(total_shares)
+            table_df['percentage_holding'] = (pd.to_numeric(table_df['no_of_shares'])/total_shares) * 100
+            print(table_df)
+
+             # Define the mapping of values to be replaced
+            designation_mapping = {'DIRT': 'Director',
+                                   'MDIR': 'Managing Director',
+                                   'WTDR': 'Whole-time director',
+                                   'CS': 'Company Secretary'}
+            # print(column_names_list)
+            table_df[column_names_list[2]] = table_df[column_names_list[2]].replace(designation_mapping)
+            # get
             # print(table_df)
             for _, df_row in table_df.iterrows():
                 try:
@@ -330,14 +372,16 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
         elif field_name == config_dict['Hold_Sub_Assoc_field_name']:
             # print(hold_sub_assoc_table)
             hold_sub_assoc_table = table_df
-            hold_sub_assoc_table.columns = [column_names_list[0], column_names_list[1],
-                                            config_dict['Hold_Sub_Assoc_column_name'], column_names_list[2]]
+
             # filter table without nan entries
             hold_sub_assoc_table = hold_sub_assoc_table[hold_sub_assoc_table[column_names_list[0]].notna()]
             # print(hold_sub_assoc_table)
-
-            hold_sub_assoc_db_table_columns = [column_names_list[0], column_names_list[1], column_names_list[2]]
-
+            hold_sub_assoc_table_columns = list(hold_sub_assoc_table.columns)
+            # print(hold_sub_assoc_table_columns)
+            hold_sub_assoc_table_columns.pop(2)
+            # print(hold_sub_assoc_table_columns)
+            hold_sub_assoc_db_table_columns = hold_sub_assoc_table_columns
+            # print(hold_sub_assoc_table)
             # print(sql_table_name)
             sql_tables_list = [x.strip() for x in sql_table_name.split(',')]
             # print(sql_tables_list)
@@ -379,17 +423,17 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
                             print(f'Exception {e} occurred while inserting below table row in table '
                                   f'{sql_table_companies}- \n', df_row)
                     # cin_length = 8
-                    if cin_length == 8:
+                    elif cin_length == 8 and bool(re.match(llp_pattern, cin_value)):
                         # llp
                         sql_table_llp = [item for item in associate_tables_list if 'llp' in item.lower()][0]
                         try:
                             insert_datatable_with_table(db_cursor, sql_table_llp, hold_sub_assoc_db_table_columns,
                                                         df_row)
                         except Exception as e:
-                            print(f'Exception {e} occurred while inserting below table row in table {sql_table_llp}- \n'
-                                  , df_row)
+                            print(f'Exception {e} occurred while inserting below table row in table '
+                                  f'{sql_table_llp}- \n', df_row)
                     # cin_length = 218
-                    if cin_length != 21 and cin_length != 8:
+                    else:
                         # others
                         sql_table_others = [item for item in associate_tables_list if 'others' in item.lower()][0]
                         try:
@@ -418,7 +462,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
                             print(f'Exception {e} occurred while inserting below table row in table '
                                   f'{sql_table_companies}- \n', df_row)
                     # cin_length = 8
-                    if cin_length == 8:
+                    elif cin_length == 8 and bool(re.match(llp_pattern, cin_value)):
                         # llp
                         sql_table_llp = [item for item in holding_tables_list if 'llp' in item.lower()][0]
                         try:
@@ -428,7 +472,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
                             print(f'Exception {e} occurred while inserting below table row in table '
                                   f'{sql_table_llp}- \n', df_row)
                     # cin_length = 218
-                    if cin_length != 21 and cin_length != 8:
+                    else:
                         # others
                         sql_table_others = [item for item in holding_tables_list if 'others' in item.lower()][0]
                         try:
@@ -455,7 +499,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
                             print(f'Exception {e} occurred while inserting below table row in table '
                                   f'{sql_table_companies}- \n', df_row)
                     # cin_length = 8
-                    if cin_length == 8:
+                    elif cin_length == 8 and bool(re.match(llp_pattern, cin_value)):
                         # llp
                         sql_table_llp = [item for item in joint_tables_list if 'llp' in item.lower()][0]
                         try:
@@ -465,7 +509,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
                             print(f'Exception {e} occurred while inserting below table row in table '
                                   f'{sql_table_llp}- \n', df_row)
                     # cin_length = 218
-                    if cin_length != 21 and cin_length != 8:
+                    else:
                         # others
                         sql_table_others = [item for item in joint_tables_list if 'others' in item.lower()][0]
                         try:
@@ -494,7 +538,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
                             print(f'Exception {e} occurred while inserting below table row in table '
                                   f'{sql_table_companies}- \n', df_row)
                     # cin_length = 8
-                    if cin_length == 8:
+                    elif cin_length == 8 and bool(re.match(llp_pattern, cin_value)):
                         # llp
                         sql_table_llp = [item for item in subsidiary_tables_list if 'llp' in item.lower()][0]
                         try:
@@ -504,7 +548,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
                             print(f'Exception {e} occurred while inserting below table row in table '
                                   f'{sql_table_llp}- \n', df_row)
                     # cin_length = 218
-                    if cin_length != 21 and cin_length != 8:
+                    else:
                         # others
                         sql_table_others = [item for item in subsidiary_tables_list if 'others' in item.lower()][0]
                         try:
@@ -544,10 +588,10 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
 
 def mgt7_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
-                 output_file_path, cin_column_value, company_name):
+                   output_file_path, cin_column_value, company_name):
     try:
         xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
-                 output_file_path, cin_column_value, company_name)
+                  output_file_path, cin_column_value, company_name)
     except Exception as e:
         print("Below Exception occurred while processing mgt7 file: \n ", e)
         return False
