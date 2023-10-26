@@ -125,11 +125,15 @@ def insert_datatable_with_table(db_cursor, sql_table_name, column_names_list, df
     print(len(result))
     if len(result) == 0:  # If no matching record found
         # Insert the record
-        insert_query = f"""
-                        INSERT INTO {sql_table_name}
-                        SET {', '.join([f'{col} = %s' for col in column_names_list])};
-                        """
-        db_cursor.execute(insert_query, tuple(df_row.values))
+        insert_query = f"""INSERT INTO {sql_table_name} SET """
+        for key, value in result_dict.items():
+            if value is None:
+                insert_query += f"`{key}` = NULL , "
+            else:
+                insert_query += f"`{key}` = '{value}' , "
+        insert_query = insert_query[:-2]
+        print(insert_query)
+        db_cursor.execute(insert_query)
         # print(f"Data row values are saved in table {sql_table_name} with \n {df_row}")
     else:
         print(f"Entry with values already exists in table {sql_table_name}")
@@ -334,6 +338,8 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
             # print(table_df)
 
             for _, df_row in table_df.iterrows():
+                # print(df_row)
+                # print(table_df.columns)
                 try:
                     insert_datatable_with_table(db_cursor, sql_table_name, table_df.columns, df_row)
                 except Exception as e:
@@ -347,11 +353,11 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
             table_df['year'] = year
 
             table_df = table_df[table_df[column_names_list[0]].notna()]
-            print(table_df)
+            # print(table_df)
             total_shares = pd.to_numeric(table_df['no_of_shares']).sum()
-            print(total_shares)
+            # print(total_shares)
             table_df['percentage_holding'] = (pd.to_numeric(table_df['no_of_shares'])/total_shares) * 100
-            print(table_df)
+            # print(table_df)
 
              # Define the mapping of values to be replaced
             designation_mapping = {'DIRT': 'Director',
