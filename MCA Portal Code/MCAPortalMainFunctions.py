@@ -2,7 +2,7 @@ from Config import create_main_config_dictionary
 from DownloadFile import insert_Download_Details,download_documents,update_form_extraction_status
 from PDFToXML import PDFtoXML,CheckHiddenAttachemnts,fetch_form_extraction_file_data_from_table
 from MCAPortalLogin import login_to_website
-from XMLToDB import xml_to_excel
+from MGT_XMLToDB import mgt7_xml_to_db
 from DBFunctions import connect_to_database
 from DBFunctions import fetch_order_data_from_table
 from DBFunctions import update_status
@@ -11,13 +11,16 @@ from DBFunctions import fetch_user_credentials_from_db
 from DBFunctions import get_db_credentials
 from DBFunctions import update_xml_extraction_status
 from DBFunctions import get_xml_to_insert
+from DBFunctions import update_locked_by
 from DownloadFile import Navigate_to_Company
+from DownloadFile import select_category
 import os
 import mysql.connector
 from selenium.webdriver.common.by import By
 from MSME_XMLToDB import msme_xml_to_db
 from AOC_XMLtoDB import AOC_xml_to_db
 from ChangeOfName_XMLtoDB import ChangeOfName_xml_to_db
+from CHG1_XMLToDB import chg1_xml_to_db
 def sign_out(driver,config_dict,CinData):
     try:
         sign_out_button = driver.find_element(By.XPATH, '//a[@id="loginAnchor" and text()="Signout"]')
@@ -31,7 +34,7 @@ def sign_out(driver,config_dict,CinData):
             driver.quit()
         db_config = get_db_credentials(config_dict)
         username = CinData[15]
-        update_logout_status(db_config,username)
+        update_logout_status(username,db_config)
     except Exception as e:
         print(f"Error Signing out {e}")
         if 'driver' in locals():
@@ -48,6 +51,7 @@ def Login_and_Download(config_dict,CinData):
         Url = config_dict['Url']
         Cin, CompanyName, User = CinData[2], CinData[3], CinData[15]
         db_config = get_db_credentials(config_dict)
+        update_locked_by(db_config,Cin)
         last_logged_in_user = None
         if last_logged_in_user is None or last_logged_in_user != User:
             username, password, Status = fetch_user_credentials_from_db(db_config, User)
@@ -66,41 +70,34 @@ def Login_and_Download(config_dict,CinData):
                 return False,None
         else:
             print("Already Logged in so carrying on with the same credentials")
-        category_list = ['Annual Returns and Balance Sheet eForms']
+        Navigation = Navigate_to_Company(Cin, CompanyName, driver, db_config)
+        if Navigation:
+            print(f"Navigated succesfully to {CompanyName}")
+        else:
+            raise Exception(f"Failed to Navigate to {CompanyName}")
+        category_list = ['Annual Returns and Balance Sheet eForms','Certificates','Change in Directors','Incorporation Documents','Charge Documents','LLP Forms(Conversion of company to LLP)','Other eForm Documents','Other Attachments']
         for item in category_list:
             try:
-                Navigation = Navigate_to_Company(Cin,CompanyName,item,driver,db_config)
-                if Navigation:
+                category_selection = select_category(item,driver)
+                if category_selection:
                     download_status = insert_Download_Details(driver, Cin, CompanyName, db_config, item)
-                    Download_Status = "Pass"
                 else:
-                    Download_Status = "Fail"
-                    return False,None
+                    continue
                 if download_status:
                     update_extraction_status = update_form_extraction_status(db_config, Cin, CompanyName)
-                    Download_Status = "Pass"
                 else:
-                    Download_Status = "Fail"
                     continue
                 if update_extraction_status:
                     file_download = download_documents(driver, db_config, Cin, CompanyName, item, root_path,options)
-                    Download_Status = "Pass"
                 else:
-                    Download_Status = "Fail"
                     continue
                 if file_download:
-                    Download_Status = "Pass"
                     print(f"Downloaded for {item} ")
                 else:
-                    Download_Status = "Fail"
                     continue
             except Exception as e:
                 print(f"Exception Occured {e}")
                 continue
-        if Download_Status == "Pass":
-            return True,driver
-        else:
-            return False,driver
     except Exception as e:
         print(f"Exception Occured {e}")
         connection = mysql.connector.connect(**db_config)
@@ -116,6 +113,8 @@ def Login_and_Download(config_dict,CinData):
             return True, driver
         else:
             return False, None
+    else:
+        return True,driver
 
 def XMLGeneration(db_config,CinData,config_dict):
     try:
@@ -123,7 +122,6 @@ def XMLGeneration(db_config,CinData,config_dict):
         Cin, CompanyName, User = CinData[2], CinData[3], CinData[15]
         print(Cin)
         print(CompanyName)
-        update_extraction_status = update_form_extraction_status(db_config, Cin, CompanyName)
         root_path = config_dict['Root path']
         files_to_be_extracted, Fetch_File_Data_Status = fetch_form_extraction_file_data_from_table(connection, Cin,CompanyName)
         if Fetch_File_Data_Status == "Pass":
@@ -172,13 +170,14 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
                 output_excel_name = str(hiddenattachment).replace('.xml', '.xlsx')
                 folder_path = os.path.dirname(hiddenattachment)
                 output_excel_path = os.path.join(folder_path, output_excel_name)
-                xml_to_excel(db_cursor, config_dict, map_file_path, map_file_sheet_name, hiddenattachment,
+                mgt7_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, hiddenattachment,
                              output_excel_path, Cin, CompanyName)
 
         xml_files_to_insert = get_xml_to_insert(Cin, config_dict)
         for xml in xml_files_to_insert:
             try:
                 path = xml[8]
+                date = xml[5]
                 xml_file_path = str(path).replace('.pdf', '.xml')
                 output_excel_path = str(path).replace('.pdf', '.xlsx')
                 if 'MGT'.lower() in str(path).lower():
@@ -187,7 +186,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
                     config_dict_MGT, config_status = create_main_config_dictionary(excel_file, Sheet_name)
                     map_file_path = config_dict_MGT['map_file_path']
                     map_file_sheet_name = config_dict_MGT['map_file_sheet_name']
-                    xml_to_excel(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,output_excel_path, Cin, CompanyName)
+                    mgt7_xml_to_db(db_cursor, config_dict_MGT, map_file_path, map_file_sheet_name, xml_file_path,output_excel_path, Cin, CompanyName)
                 elif 'MSME'.lower() in str(path).lower():
                     excel_file = r"C:\MCA Portal\Config.xlsx"
                     Sheet_name = "MSME"
@@ -210,6 +209,13 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
                     map_file_path_Change_of_name = config_dict_Change_of_name['mapping_file_path']
                     map_sheet_name_Change_of_name = config_dict_Change_of_name['mapping _file_sheet_name']
                     ChangeOfName_xml_to_db(db_config,config_dict_Change_of_name,map_file_path_Change_of_name,map_sheet_name_Change_of_name,xml_file_path,output_excel_path,Cin,CompanyName)
+                elif 'CHG'.lower() in str(path).lower():
+                    excel_file = r"C:\MCA Portal\Config.xlsx"
+                    Sheet_name = "CHG1"
+                    config_dict_CHG,config_status = create_main_config_dictionary(excel_file,Sheet_name)
+                    map_file_path_CHG = config_dict_CHG['mapping_file_path']
+                    map_sheet_name_CHG = config_dict_CHG['mapping_file_sheet_name']
+                    chg1_xml_to_db(db_cursor,config_dict_CHG,map_file_path_CHG,map_sheet_name_CHG,xml_file_path,output_excel_path,Cin,CompanyName,date)
             except Exception as e:
                 print(f"Exception occured while inserting into DB {e}")
                 continue

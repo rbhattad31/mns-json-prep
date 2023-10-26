@@ -30,70 +30,83 @@ def initialize_driver(chrome_driver_path):
     driver = webdriver.Chrome(service=service, options=options)
     return driver
 
-def Navigate_to_Company(Cin,CompanyName,Category,driver,dbconfig):
-    my_workspace_button_xpath = '//a[@href="/mcafoportal/" and text()="My Workspace"]'
-    if click_element_with_retry(driver, my_workspace_button_xpath):
-        print("Clicked on My Workspace")
-        time.sleep(5)
-        k = 1
-        page_number = 1
-        main_page_number = 1
-        while True:
-            CompanyName = CompanyName.lower()
-            download_button_xpath = f'//table[@id="publicDocuments" and @name="publicDocuments"]/tbody/tr[contains(translate(., "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz"), "{CompanyName}")]/td/a'
-            if click_element_with_retry(driver, download_button_xpath):
-                print("Clicked on Download")
-                time.sleep(5)
-                break
-            else:
-                try:
-                    main_page_number_xpath = driver.find_element(By.XPATH,f'//span[@id="pg{k}" and @class="pg-selected"]')
-                    main_page_number = main_page_number_xpath.text
-                    main_page_number = int(main_page_number)
-                    print("Page Number", main_page_number)
-                except NoSuchElementException:
-                    print("No page number found")
-                    pass
-                print("Loop Counter", k)
-                if k != page_number and k != 1:
-                    print("Completed Navigation")
-                    connection = mysql.connector.connect(**dbconfig)
-                    cursor = connection.cursor()
-                    Update_no_company_query = "update orders set workflow_status='Download Failed and bot_comments='Company Not found' where cin = %s"
-                    Update_no_company_values = (Cin,)
-                    print(Update_no_company_query % Update_no_company_values)
-                    cursor.execute(Update_no_company_query,Update_no_company_values)
-                    connection.commit()
-                    cursor.close()
-                    connection.close()
-                    return False
-                try:
-                    # Find and click the "Next" button using XPath
-                    next_button = driver.find_element(By.XPATH, '//a[@id="publicDocuments_next"]')
-                    next_button.click()
-                    k = k + 1
-                    continue
-                except ElementNotInteractableException or NoSuchElementException:
-                    # If the button is not clickable, you've reached the last page
-                    connection = mysql.connector.connect(**dbconfig)
-                    cursor = connection.cursor()
-                    Update_no_company_query = "update orders set workflow_status='Download Failed and bot_comments='Company Not found' where cin = %s"
-                    Update_no_company_values = (Cin,)
-                    print(Update_no_company_query % Update_no_company_values)
-                    cursor.execute(Update_no_company_query, Update_no_company_values)
-                    connection.commit()
-                    cursor.close()
-                    connection.close()
-                    print("No Company Found")
-                    return False
-        certificates_button_xpath = f'//a[@class="dashboardlinks" and contains(text(),"{Category}")]'
+def select_category(category,driver):
+    try:
+        certificates_button_xpath = f'//a[@class="dashboardlinks" and contains(text(),"{category}")]'
         current_date = datetime.date.today()
         if click_element_with_retry(driver, certificates_button_xpath):
-            print(f"Clicked on {Category}")
+            print(f"Clicked on {category}")
             time.sleep(4)
             return True
         else:
             return False
+    except Exception as e:
+        print(f"Exception while selecting category {e}")
+        return False
+def Navigate_to_Company(Cin,CompanyName,driver,dbconfig):
+    try:
+        my_workspace_button_xpath = '//a[@href="/mcafoportal/" and text()="My Workspace"]'
+        if click_element_with_retry(driver, my_workspace_button_xpath):
+            print("Clicked on My Workspace")
+            time.sleep(5)
+            k = 1
+            page_number = 1
+            main_page_number = 1
+            while True:
+                CompanyName = CompanyName.lower()
+                download_button_xpath = f'//table[@id="publicDocuments" and @name="publicDocuments"]/tbody/tr[contains(translate(., "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz"), "{CompanyName}")]/td/a'
+                if click_element_with_retry(driver, download_button_xpath):
+                    print("Clicked on Download")
+                    time.sleep(5)
+                    break
+                else:
+                    try:
+                        main_page_number_xpath = driver.find_element(By.XPATH,
+                                                                     f'//span[@id="pg{k}" and @class="pg-selected"]')
+                        main_page_number = main_page_number_xpath.text
+                        main_page_number = int(main_page_number)
+                        print("Page Number", main_page_number)
+                    except NoSuchElementException:
+                        print("No page number found")
+                        pass
+                    print("Loop Counter", k)
+                    if k != page_number and k != 1:
+                        print("Completed Navigation")
+                        connection = mysql.connector.connect(**dbconfig)
+                        cursor = connection.cursor()
+                        Update_no_company_query = "update orders set workflow_status='Download Failed and bot_comments='Company Not found' where cin = %s"
+                        Update_no_company_values = (Cin,)
+                        print(Update_no_company_query % Update_no_company_values)
+                        cursor.execute(Update_no_company_query, Update_no_company_values)
+                        connection.commit()
+                        cursor.close()
+                        connection.close()
+                        return False
+                    try:
+                        # Find and click the "Next" button using XPath
+                        next_button = driver.find_element(By.XPATH, '//a[@id="publicDocuments_next"]')
+                        next_button.click()
+                        k = k + 1
+                        continue
+                    except Exception as e:
+                        # If the button is not clickable, you've reached the last page
+                        connection = mysql.connector.connect(**dbconfig)
+                        cursor = connection.cursor()
+                        Update_no_company_query = "update orders set workflow_status='Download Failed and bot_comments='Company Not found' where cin = %s"
+                        Update_no_company_values = (Cin,)
+                        print(Update_no_company_query % Update_no_company_values)
+                        cursor.execute(Update_no_company_query, Update_no_company_values)
+                        connection.commit()
+                        cursor.close()
+                        connection.close()
+                        print("No Company Found")
+                        return False
+    except Exception as e:
+        print(f"Exception occured while navigating{e}")
+        return False
+    else:
+        return True
+
 
 def insert_Download_Details(driver,Cin, Company,db_config,category):
     try:
@@ -201,6 +214,7 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath,options
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
         page_number = 1
+        download_retry = 0
         while True:
             try:
                 try:
@@ -310,10 +324,44 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath,options
                         print("Next Button not clicking")
                         pass
                 else:
-                    continue
+                    download_retry += 1
+                    if download_retry > 5:
+                        connection = mysql.connector.connect(**dbconfig)
+                        cursor = connection.cursor()
+                        Check_download_files_query = "select * from documents where cin=%s and company=%s and Download_Status='Downloaded' and form_data_extraction_needed='Y'"
+                        Download_Check_Values = (Cin, CompanyName)
+                        print(Check_download_files_query % Download_Check_Values)
+                        cursor.execute(Check_download_files_query, Download_Check_Values)
+                        Downloaded_Files = cursor.fetchall()
+                        cursor.close()
+                        connection.close()
+                        if len(Downloaded_Files) > 0:
+                            print("Exception occured but we got the required files")
+                            return True
+                        else:
+                            return False
+                    else:
+                        continue
             except Exception as e:
                 print(f"Excpetion {e} occured while navigating")
-                continue
+                download_retry += 1
+                if download_retry > 5:
+                    connection = mysql.connector.connect(**dbconfig)
+                    cursor = connection.cursor()
+                    Check_download_files_query = "select * from documents where cin=%s and company=%s and Download_Status='Downloaded' and form_data_extraction_needed='Y'"
+                    Download_Check_Values = (Cin, CompanyName)
+                    print(Check_download_files_query % Download_Check_Values)
+                    cursor.execute(Check_download_files_query, Download_Check_Values)
+                    Downloaded_Files = cursor.fetchall()
+                    cursor.close()
+                    connection.close()
+                    if len(Downloaded_Files) > 0:
+                        print("Exception occured but we got the required files")
+                        return True
+                    else:
+                        return False
+                else:
+                    continue
     except Exception as e:
         print(f"Exception {e} occured")
         connection = mysql.connector.connect(**dbconfig)
@@ -381,6 +429,8 @@ def update_form_extraction_status(db_config, cin,CompanyName):
             update_query_Change_of_name = "UPDATE documents set form_data_extraction_needed = 'Y' where document LIKE '%%CHANGE OF NAME%%' and `cin`=%s and `company`=%s;"
             two_values = (cin,CompanyName)
             cursor.execute(update_query_Change_of_name,two_values)
+            update_query_CHG = "UPDATE documents set form_data_extraction_needed = 'Y' where document LIKE '%%CHG%%' and `cin`=%s and `company`=%s;"
+            cursor.execute(update_query_CHG,two_values)
             connection.commit()
         except Exception as e:
             print("Error Updating form extraction status for MGT")

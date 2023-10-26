@@ -1,4 +1,6 @@
 import mysql.connector
+import json
+import os
 def connect_to_database(db_config):
     try:
         # Connect to the MySQL server
@@ -29,6 +31,7 @@ def fetch_order_data_from_table(connection):
             # Fetch all the rows
             rows = cursor.fetchall()
             Status="Pass"
+            connection.close()
             return column_names, rows,Status
 
     except mysql.connector.Error as error:
@@ -51,7 +54,20 @@ def update_status(user,Status,db_config):
         cursor.close()
         connection.close()
 
-
+def update_locked_by(dbconfig,Cin):
+    connection = mysql.connector.connect(**dbconfig)
+    cursor = connection.cursor()
+    try:
+        update_locked_query = "update orders set locked_by = %s where cin=%s"
+        user = os.getlogin()
+        values = (user, Cin)
+        cursor.execute(update_locked_query, values)
+        connection.commit()
+    except Exception as e:
+        print(f"Excpetion occured while updating locked by {e}")
+    finally:
+        cursor.close()
+        connection.close()
 def update_logout_status(username, db_config):
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
@@ -112,6 +128,7 @@ def get_db_credentials(config_dict):
         "user": db_User,
         "password": Password,
         "database": Database,
+        "connect_timeout": 6000
     }
     return db_config
 
@@ -133,3 +150,50 @@ def get_xml_to_insert(Cin,config_dict):
     cursor.execute(query,value)
     files_to_insert = cursor.fetchall()
     return files_to_insert
+
+def update_database_single_value(db_config, table_name, cin_column_name, cin_value,company_name_column_name,company_name, column_name, column_value):
+    db_connection = mysql.connector.connect(**db_config)
+    db_cursor = db_connection.cursor()
+    json_dict = json.loads(column_value)
+    num_elements = len(json_dict)
+    if num_elements == 1:
+        first_key = next(iter(json_dict))
+        first_value = json_dict[first_key]
+        column_value = first_value
+    else:
+        column_value = json.dumps(json_dict)
+
+    # check if there is already entry with cin
+    query = "SELECT * FROM {} WHERE {} = '{}' and {}='{}'".format(table_name, cin_column_name, cin_value,company_name_column_name,company_name)
+    print(query)
+    try:
+        db_cursor.execute(query)
+    except mysql.connector.Error as err:
+        print(err)
+    result = db_cursor.fetchall()
+    # print(result)
+
+    # if cin value already exists
+    if len(result) > 0:
+        update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}'".format(table_name, column_name,
+                                                                                      column_value, cin_column_name,
+                                                                                      cin_value,
+                                                                                      company_name_column_name,
+                                                                                      company_name)
+        # print(update_query)
+        db_cursor.execute(update_query)
+        print("Updating")
+    # if cin value doesn't exist
+    else:
+        insert_query = "INSERT INTO {} ({}, {}, {}) VALUES ('{}', '{}', '{}')".format(table_name, cin_column_name,
+                                                                                      company_name_column_name,
+                                                                                      column_name,
+                                                                                      cin_value,
+                                                                                      company_name,
+                                                                                      column_value)
+        # print(insert_query)
+        db_cursor.execute(insert_query)
+        print("Inserting")
+    db_connection.commit()
+    db_cursor.close()
+    db_connection.close()
