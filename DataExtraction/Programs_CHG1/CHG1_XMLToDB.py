@@ -31,27 +31,6 @@ def get_single_value_from_xml(xml_root, parent_node, child_node):
         return None
 
 
-def extract_table_values_from_xml(xml_root, table_node_name, child_nodes):
-    data_list = []
-    child_nodes_list = [x.strip() for x in child_nodes.split(',')]
-    # print(child_nodes_list)
-    # print(table_node_name)
-    for data in xml_root.findall(f'.//{table_node_name}'):
-        temp_list = []
-        for node in child_nodes_list:
-            # print(node)
-            try:
-                node_value = data.find(node).text
-            except AttributeError:
-                node_value = None
-            # print(node_value)
-            temp_list.append(node_value)
-        # print(temp_list)
-        data_list.append(temp_list)
-        # print(data_list)
-    return data_list
-
-
 def update_datatable_single_value(db_cursor, table_name, cin_column_name, cin_value,
                                   company_name_column_name,
                                   company_name, column_name, column_value):
@@ -124,7 +103,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
     try:
         df_map = pd.read_excel(map_file_path, engine='openpyxl', sheet_name=map_file_sheet_name)
-        print(df_map)
+        # print(df_map)
     except Exception as e:
         raise Exception("Below exception occurred while reading mapping file " + '\n' + str(e))
 
@@ -133,7 +112,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
     # creating new filtered dataframes for single and group values
     single_df = df_map[df_map[df_map.columns[2]] == config_dict['single_type_indicator']]
-    print(single_df)
+    # print(single_df)
 
     if not os.path.exists(xml_file_path):
         raise FileNotFoundError(f"The XML file '{xml_file_path}' is not found.")
@@ -164,10 +143,10 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
         else:
             value = get_single_value_from_xml(xml_root, parent_node, child_nodes)
         single_df.at[index, 'Value'] = value
-        print(field_name)
-        print(value)
+        # print(field_name)
+        # print(value)
         results.append([field_name, value, sql_table_name, column_name, column_json_node])
-    print(single_df)
+    # print(single_df)
 
     # update single values in datatable
     # get all the tables names for all single values df
@@ -177,8 +156,28 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
         # filter only table
         table_df = single_df[single_df[single_df.columns[5]] == sql_table_name]
-        # print(table_df)
+        print(table_df)
+        if sql_table_name == 'open_charges_latest_event':
+            print(f'{sql_table_name=}')
+            charges_latest_id = table_df.loc[table_df['Column_Name'] == 'charges_latest_id', 'Value'].values[0]
 
+            print(f'{charges_latest_id}')
+            # check if there is already entry with cin
+            charge_id_check_query = "SELECT * FROM {} WHERE {} = '{}' AND {} = {}".format(sql_table_name, cin_column_name_in_db,
+                                                                                          cin_column_value, 'charges_latest_id',
+                                                                                          charges_latest_id)
+            print(f'{charge_id_check_query}')
+            try:
+                db_cursor.execute(charge_id_check_query)
+            except mysql.connector.Error as err:
+                print(err)
+            result = db_cursor.fetchall()
+            # print(result)
+            # if change id value already exists for cin
+            if len(result) > 0:
+                print("Charge ID details are already updated in 'open_charges_latest_event' for charge id {} with cin"
+                      " {}".format(charges_latest_id, cin_column_value))
+                continue
         columns_list = table_df[table_df.columns[6]].unique()
         # print(columns_list)
         for column_name in columns_list:
