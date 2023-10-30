@@ -35,7 +35,7 @@ def update_database_single_value_aoc(db_config, table_name, cin_column_name, cin
     db_cursor = db_connection.cursor()
     json_dict = json.loads(column_value)
     num_elements = len(json_dict)
-    print(num_elements)
+    # print(num_elements)
     if column_name == "nbfc_financials_auditor" and num_elements == 1:
         first_key = next(iter(json_dict))
         first_value_json_list = json_dict[first_key]
@@ -47,12 +47,12 @@ def update_database_single_value_aoc(db_config, table_name, cin_column_name, cin
         column_value = first_value
     else:
         column_value = json.dumps(json_dict)
-    print(column_value)
+    # print(column_value)
     # check if there is already entry with cin
     query = "SELECT * FROM {} WHERE {} = '{}' and {}='{}' and {}='{}'".format(table_name, cin_column_name, cin_value,
                                                                               company_name_column_name, company_name,
                                                                               'year', year)
-    print(query)
+    # print(query)
     try:
         db_cursor.execute(query)
     except mysql.connector.Error as err:
@@ -72,9 +72,9 @@ def update_database_single_value_aoc(db_config, table_name, cin_column_name, cin
                                               company_name,
                                               'Year',
                                               year)
-        print(update_query)
+        # print(update_query)
         db_cursor.execute(update_query)
-        print("Updated")
+        # print("Updated")
     # if cin value doesn't exist
     else:
         insert_query = "INSERT INTO {} ({}, {}, {}) VALUES ('{}', '{}', '{}')".format(table_name, cin_column_name,
@@ -83,9 +83,9 @@ def update_database_single_value_aoc(db_config, table_name, cin_column_name, cin
                                                                                       cin_value,
                                                                                       company_name,
                                                                                       column_value)
-        print(insert_query)
+        # print(insert_query)
         db_cursor.execute(insert_query)
-        print("Inserted")
+        # print("Inserted")
     db_connection.commit()
     db_cursor.close()
     db_connection.close()
@@ -126,7 +126,18 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         raise KeyError(f"The following keys are missing in config file: {', '.join(missing_keys)}")
     cin_column_name = config_dict['cin_column_name_in_db']
     company_column_name = config_dict['company_name_column_name_in_db']
+
     years = []
+
+    # index
+    field_name_index = 0
+    type_index = 2
+    parent_node_index = 3
+    child_nodes_index = 4
+    year_index = 5
+    sql_table_name_index = 6
+    column_name_index = 7
+    column_json_node_index = 8
 
     # initializing empty list to save all the result dataframes for saving to output excel
     output_dataframes_list = []
@@ -144,8 +155,8 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
     df_map['Value'] = None
 
     # creating new filtered dataframes for single and group values
-    single_df = df_map[df_map[df_map.columns[2]] == config_dict['single_type_indicator']]
-    group_df = df_map[df_map[df_map.columns[2]] == config_dict['group_type_indicator']]
+    single_df = df_map[df_map[df_map.columns[type_index]] == config_dict['single_type_indicator']]
+    group_df = df_map[df_map[df_map.columns[type_index]] == config_dict['group_type_indicator']]
 
     if not os.path.exists(xml_file_path):
         raise FileNotFoundError(f"The XML file '{xml_file_path}' is not found.")
@@ -164,63 +175,65 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
     results_common = []
     # print(single_df)
     # extract single values
-    previous_year_df = single_df[single_df[single_df.columns[5]] == config_dict['Previous_year_keyword']]
-    current_year_df = single_df[single_df[single_df.columns[5]] == config_dict['Current_year_keyword']]
-    financial_parameter_df = single_df[single_df[single_df.columns[5]] == config_dict['Financial_Parameter_Keyword']]
-    common_df = single_df[single_df[single_df.columns[5]] == config_dict['Common_Keyword']]
+    previous_year_df = single_df[single_df[single_df.columns[year_index]] == config_dict['Previous_year_keyword']]
+    current_year_df = single_df[single_df[single_df.columns[year_index]] == config_dict['Current_year_keyword']]
+    financial_parameter_df = single_df[single_df[single_df.columns[year_index]] == config_dict['Financial_Parameter_Keyword']]
+    common_df = single_df[single_df[single_df.columns[year_index]] == config_dict['Common_Keyword']]
     single_df_list = []
     print("Processing common data")
     for index, row in common_df.iterrows():
-        field_name = str(row.iloc[0]).strip()
-        parent_node = str(row.iloc[3]).strip()
-        child_nodes = str(row.iloc[4]).strip()
-        sql_table_name = str(row.iloc[7]).strip()
-        column_name = str(row.iloc[8]).strip()
-        column_json_node = str(row.iloc[9]).strip()
-        if field_name == 'filing_type':
-            common_df.at[index, 'Value'] = 'PDF'
-            continue
-        if field_name == 'filing_standard':
-            common_df.at[index, 'Value'] = 'Normal'
-            continue
-        value_common = get_single_value_from_xml(xml_root, parent_node, child_nodes)
-        # print(value)
+        field_name = str(row.iloc[field_name_index]).strip()
+        parent_node = str(row.iloc[parent_node_index]).strip()
+        child_nodes = str(row.iloc[child_nodes_index]).strip()
+        sql_table_name = str(row.iloc[sql_table_name_index]).strip()
+        column_name = str(row.iloc[column_name_index]).strip()
+        column_json_node = str(row.iloc[column_json_node_index]).strip()
+
+        if parent_node == config_dict['Constant_Keyword']:
+            value_common = child_nodes
+        else:
+            value_common = get_single_value_from_xml(xml_root, parent_node, child_nodes)
         common_df.at[index, 'Value'] = value_common
         results_common.append([field_name, value_common, sql_table_name, column_name, column_json_node])
     print("Processing financial parameter data")
     for index, row in financial_parameter_df.iterrows():
-        field_name = str(row.iloc[0]).strip()
-        parent_node = str(row.iloc[3]).strip()
-        child_nodes = str(row.iloc[4]).strip()
-        sql_table_name = str(row.iloc[7]).strip()
-        column_name = str(row.iloc[8]).strip()
-        column_json_node = str(row.iloc[9]).strip()
+        field_name = str(row.iloc[field_name_index]).strip()
+        parent_node = str(row.iloc[parent_node_index]).strip()
+        child_nodes = str(row.iloc[child_nodes_index]).strip()
+        sql_table_name = str(row.iloc[sql_table_name_index]).strip()
+        column_name = str(row.iloc[column_name_index]).strip()
+        column_json_node = str(row.iloc[column_json_node_index]).strip()
 
-        value_financial_parameter = get_single_value_from_xml(xml_root, parent_node, child_nodes)
-        # print(value)
+        if parent_node == config_dict['Constant_Keyword']:
+            value_financial_parameter = child_nodes
+        else:
+            value_financial_parameter = get_single_value_from_xml(xml_root, parent_node, child_nodes)
         financial_parameter_df.at[index, 'Value'] = value_financial_parameter
         results_financial_parameter.append(
             [field_name, value_financial_parameter, sql_table_name, column_name, column_json_node])
     print("Processing previous year data")
     for index, row in previous_year_df.iterrows():
-        field_name = str(row.iloc[0]).strip()
-        parent_node = str(row.iloc[3]).strip()
-        child_nodes = str(row.iloc[4]).strip()
-        sql_table_name = str(row.iloc[7]).strip()
-        column_name = str(row.iloc[8]).strip()
-        column_json_node = str(row.iloc[9]).strip()
+        field_name = str(row.iloc[field_name_index]).strip()
+        parent_node = str(row.iloc[parent_node_index]).strip()
+        child_nodes = str(row.iloc[child_nodes_index]).strip()
+        sql_table_name = str(row.iloc[sql_table_name_index]).strip()
+        column_name = str(row.iloc[column_name_index]).strip()
+        column_json_node = str(row.iloc[column_json_node_index]).strip()
         if parent_node == config_dict['Formula_Keyword']:
             continue
-        value_previous_year = get_single_value_from_xml(xml_root, parent_node, child_nodes)
+        if parent_node == config_dict['Constant_Keyword']:
+            value_previous_year = child_nodes
+        else:
+            value_previous_year = get_single_value_from_xml(xml_root, parent_node, child_nodes)
         # print(value)
         previous_year_df.at[index, 'Value'] = value_previous_year
         results_previous_year.append([field_name, value_previous_year, sql_table_name, column_name, column_json_node])
-    print("previous year df:\n", previous_year_df)
+    # print("previous year df:\n", previous_year_df)
 
     previous_year_formula_df = previous_year_df[
-        previous_year_df[previous_year_df.columns[3]] == config_dict['Formula_Keyword']]
+        previous_year_df[previous_year_df.columns[parent_node_index]] == config_dict['Formula_Keyword']]
     print("Processing previous year formulas")
-    print(previous_year_formula_df)
+    # print(previous_year_formula_df)
     for _, row in previous_year_formula_df.iterrows():
         previous_formula = row['Child_Nodes']
         previous_formula_field_name = row['Field_Name']
@@ -233,7 +246,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 previous_year_df[previous_year_df['Field_Name'] == previous_field_name]['Value'].values[0]),
                                       previous_formula)
             # print(f'{previous_formula=}')
-        print(previous_formula_field_name + ":" + previous_formula)
+        # print(previous_formula_field_name + ":" + previous_formula)
         try:
             # Calculate the value using the provided formula and insert it
             previous_year_df.at[previous_year_df[previous_year_df['Field_Name'] == previous_formula_field_name].index[
@@ -243,15 +256,18 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             print(f"Invalid formula for {previous_formula_field_name}: {previous_formula}")
     print("Processing present year data")
     for index, row in current_year_df.iterrows():
-        field_name = str(row.iloc[0]).strip()
-        parent_node = str(row.iloc[3]).strip()
-        child_nodes = str(row.iloc[4]).strip()
-        sql_table_name = str(row.iloc[7]).strip()
-        column_name = str(row.iloc[8]).strip()
-        column_json_node = str(row.iloc[9]).strip()
+        field_name = str(row.iloc[field_name_index]).strip()
+        parent_node = str(row.iloc[parent_node_index]).strip()
+        child_nodes = str(row.iloc[child_nodes_index]).strip()
+        sql_table_name = str(row.iloc[sql_table_name_index]).strip()
+        column_name = str(row.iloc[column_name_index]).strip()
+        column_json_node = str(row.iloc[column_json_node_index]).strip()
         if parent_node == config_dict['Formula_Keyword']:
             continue
-        value_current_year = get_single_value_from_xml(xml_root, parent_node, child_nodes)
+        if parent_node == config_dict['Constant_Keyword']:
+            value_current_year = child_nodes
+        else:
+            value_current_year = get_single_value_from_xml(xml_root, parent_node, child_nodes)
         # print(child_nodes)
         # print(value_current_year)
         # print(value)
@@ -259,7 +275,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         results_current_year.append([field_name, value_current_year, sql_table_name, column_name, column_json_node])
 
     current_year_formula_df = current_year_df[
-        current_year_df[current_year_df.columns[3]] == config_dict['Formula_Keyword']]
+        current_year_df[current_year_df.columns[parent_node_index]] == config_dict['Formula_Keyword']]
     print("processing present year formulae data ")
     # print(current_year_formula_df)
     for _, row in current_year_formula_df.iterrows():
@@ -273,7 +289,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             current_formula = re.sub(pattern, str(
                 current_year_df[current_year_df['Field_Name'] == field_name]['Value'].values[0]), current_formula)
             # print(f'{current_formula=}')
-        print(current_formula_field_name + ":" + current_formula)
+        # print(current_formula_field_name + ":" + current_formula)
         try:
             # Calculate the value using the provided formula and insert it
             current_year_df.at[
@@ -284,10 +300,12 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             print(f"Invalid formula for {current_formula_field_name}: {current_formula}")
     print("Completed processing present year formulas")
     # print(current_year_df)
+
     current_year = current_year_df[current_year_df['Field_Name'] == 'year']['Value'].values[0]
     years.append(current_year)
     previous_year = previous_year_df[previous_year_df['Field_Name'] == 'year']['Value'].values[0]
     years.append(previous_year)
+    print("Saving Single Values to database")
     single_df_list.append(current_year_df)
     single_df_list.append(previous_year_df)
     single_df_list.append(financial_parameter_df)
@@ -306,18 +324,18 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
     output_dataframes_list.append(financial_output_df)
     for df in single_df_list:
         # print(df)
-        sql_tables_list = df[df.columns[7]].unique()
-        print(sql_tables_list)
+        sql_tables_list = df[df.columns[sql_table_name_index]].unique()
+        # print(sql_tables_list)
         year_value = df[df['Field_Name'] == 'year']['Value'].values[0]
-        print(year_value)
+        # print(year_value)
         for table_name in sql_tables_list:
-            table_df = df[df[df.columns[7]] == table_name]
-            columns_list = table_df[table_df.columns[8]].unique()
+            table_df = df[df[df.columns[sql_table_name_index]] == table_name]
+            columns_list = table_df[table_df.columns[column_name_index]].unique()
             # print(columns_list)
             for column_name in columns_list:
                 # print(column_name)
                 # filter table df with only column value
-                column_df = table_df[table_df[table_df.columns[8]] == column_name]
+                column_df = table_df[table_df[table_df.columns[column_name_index]] == column_name]
                 # print(column_df)
                 # create json dict with keys of field name and values for the same column name entries
                 json_dict = column_df.set_index(table_df.columns[0])['Value'].to_dict()
@@ -331,22 +349,22 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 except Exception as e:
                     print(f"Exception {e} occurred while updating data in dataframe for {table_name} "
                           f"with data {json_string}")
-    common_sql_tables_list = common_df[common_df.columns[7]].unique()
-    print(common_sql_tables_list)
+    common_sql_tables_list = common_df[common_df.columns[sql_table_name_index]].unique()
+    # print(common_sql_tables_list)
     for common_table_name in common_sql_tables_list:
-        common_table_df = common_df[common_df[common_df.columns[7]] == common_table_name]
-        common_columns_list = common_table_df[common_table_df.columns[8]].unique()
-        print(common_columns_list)
+        common_table_df = common_df[common_df[common_df.columns[sql_table_name_index]] == common_table_name]
+        common_columns_list = common_table_df[common_table_df.columns[column_name_index]].unique()
+        # print(common_columns_list)
         for common_column_name in common_columns_list:
-            print(common_column_name)
+            # print(common_column_name)
             # filter table df with only column value
-            common_column_df = common_table_df[common_table_df[common_table_df.columns[8]] == common_column_name]
-            print(common_column_df)
+            common_column_df = common_table_df[common_table_df[common_table_df.columns[column_name_index]] == common_column_name]
+            # print(common_column_df)
             # create json dict with keys of field name and values for the same column name entries
             common_json_dict = common_column_df.set_index(common_table_df.columns[0])['Value'].to_dict()
             # Convert the dictionary to a JSON string
             common_json_string = json.dumps(common_json_dict)
-            print(common_json_string)
+            # print(common_json_string)
             for year in years:
                 try:
                     update_database_single_value_aoc(db_config, common_table_name, cin_column_name, cin_column_value,
@@ -355,27 +373,28 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 except Exception as e:
                     print(f"Exception {e} occurred while updating data in dataframe for {common_table_name} "
                           f"with data {common_json_string}")
-    print("processing group values")
+    print("Saving Single Values to database is complete")
+    print("Saving group values to database")
     for index, row in group_df.iterrows():
-        print(row)
-        field_name = str(row.iloc[0]).strip()
-        parent_node = str(row.iloc[3]).strip()
-        child_nodes = str(row.iloc[4]).strip()
-        sql_table_name = str(row.iloc[7]).strip()
-        column_names = str(row.iloc[8]).strip()
-        # column_json_node = str(row.iloc[9]).strip()
+        # print(row)
+        field_name = str(row.iloc[field_name_index]).strip()
+        parent_node = str(row.iloc[parent_node_index]).strip()
+        child_nodes = str(row.iloc[child_nodes_index]).strip()
+        sql_table_name = str(row.iloc[sql_table_name_index]).strip()
+        column_names = str(row.iloc[column_name_index]).strip()
+        column_json_node = str(row.iloc[column_json_node_index]).strip()
 
         table_node_name = parent_node
         # print(table_node_name)
         try:
             table_in_list = extract_table_values_from_xml(xml_root, table_node_name, child_nodes)
-            print(table_in_list)
+            # print(table_in_list)
         except Exception as e:
             print(f'Exception {e} occurred while extracting data from xml for table {table_node_name}')
             continue
         table_df = pd.DataFrame(table_in_list)
         table_df.dropna(inplace=True)
-        print(table_df)
+        # print(table_df)
         if field_name == 'nbfc_financials_auditor':
             child_nodes_list = [x.strip() for x in child_nodes.split(',')]
             table_df.columns = child_nodes_list
@@ -397,28 +416,28 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 auditor_json_list.append(auditor_json)
             group_df.at[index, 'Value'] = auditor_json_list
 
-    print(group_df)
+    # print(group_df)
     output_dataframes_list.append(group_df)
-    group_sql_tables = group_df[group_df.columns[7]].unique()
+    group_sql_tables = group_df[group_df.columns[sql_table_name_index]].unique()
     for group_table in group_sql_tables:
-        group_table_df = group_df[group_df[group_df.columns[7]] == group_table]
-        group_columns_list = group_table_df[group_table_df.columns[8]].unique()
+        group_table_df = group_df[group_df[group_df.columns[sql_table_name_index]] == group_table]
+        group_columns_list = group_table_df[group_table_df.columns[column_name_index]].unique()
         for group_column_name in group_columns_list:
-            print(group_column_name)
+            # print(group_column_name)
             # filter table df with only column value
-            group_column_df = group_table_df[group_table_df[group_table_df.columns[8]] == group_column_name]
-            print(group_column_df)
+            group_column_df = group_table_df[group_table_df[group_table_df.columns[column_name_index]] == group_column_name]
+            # print(group_column_df)
             # create json dict with keys of field name and values for the same column name entries
             group_json_dict = group_column_df.set_index(group_table_df.columns[0])['Value'].to_dict()
             # Convert the dictionary to a JSON string
             group_json_string = json.dumps(group_json_dict)
-            print(group_json_string)
-            print(years)
+            # print(group_json_string)
+            # print(years)
             for year in years:
                 update_database_single_value_aoc(db_config, group_table, cin_column_name, cin_column_value,
                                                  company_column_name, company_name, group_column_name,
                                                  group_json_string, year)
-
+    print("Saving group values to database is complete")
     with pd.ExcelWriter(output_file_path, engine='xlsxwriter') as writer:
         row_index = 0
         for dataframe in output_dataframes_list:
