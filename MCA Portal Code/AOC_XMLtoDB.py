@@ -32,12 +32,12 @@ def update_database_single_value_AOC(db_config, table_name, cin_column_name, cin
     db_cursor = db_connection.cursor()
     json_dict = json.loads(column_value)
     num_elements = len(json_dict)
-    if column_name == "financials_auditor" and num_elements == 1:
-        first_key = next(iter(json_dict))
-        first_value_json_list = json_dict[first_key]
-        json_string = json.dumps(first_value_json_list)
-        column_value = json_string
-    elif num_elements == 1:
+    # if column_name == "financials_auditor" and num_elements == 1:
+    #     first_key = next(iter(json_dict))
+    #     first_value_json_list = json_dict[first_key]
+    #     json_string = json.dumps(first_value_json_list)
+    #     column_value = json_string
+    if num_elements == 1:
         first_key = next(iter(json_dict))
         first_value = json_dict[first_key]
         column_value = first_value
@@ -81,6 +81,50 @@ def update_database_single_value_AOC(db_config, table_name, cin_column_name, cin
     db_connection.commit()
     db_cursor.close()
     db_connection.close()
+
+
+def insert_datatable_with_table(db_config, sql_table_name, column_names_list, df_row,cin_column_name,cin_value,company_column_name,compnay_value,year):
+    db_connection = mysql.connector.connect(**db_config)
+    db_cursor = db_connection.cursor()
+    db_connection.autocommit = True
+    combined = list(zip(column_names_list, df_row))
+    # Create a dictionary from the list of tuples
+    result_dict = dict(combined)
+    # print(result_dict)
+    result_dict[cin_column_name] = cin_value
+    result_dict[company_column_name] = compnay_value
+    result_dict['year'] = year
+
+    where_clause = f'SELECT * FROM {sql_table_name} WHERE '
+    for key, value in result_dict.items():
+        if value is not None:
+            where_clause += f"`{key}` = '{value}' AND "
+        else:
+            where_clause += f"(`{key}` is NULL OR `{key}` = '') AND "
+
+    select_query = where_clause[:-4]
+    print(select_query)
+    db_cursor.execute(select_query)
+    result = db_cursor.fetchall()
+    print(len(result))
+    if len(result) == 0:  # If no matching record found
+        # Insert the record
+        insert_query = f"""INSERT INTO {sql_table_name} SET """
+        for key, value in result_dict.items():
+            if value is None:
+                insert_query += f"`{key}` = NULL , "
+            else:
+                insert_query += f"`{key}` = '{value}' , "
+        insert_query = insert_query[:-2]
+        print(insert_query)
+        db_cursor.execute(insert_query)
+        # print(f"Data row values are saved in table {sql_table_name} with \n {df_row}")
+    else:
+        print(f"Entry with values already exists in table {sql_table_name}")
+    db_cursor.close()
+    db_connection.close()
+
+
 def extract_table_values_from_xml(xml_root, table_node_name, child_nodes):
     data_list = []
     child_nodes_list = [x.strip() for x in child_nodes.split(',')]
@@ -180,11 +224,12 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
             # print(value)
             if field_name == 'year':
                 try:
-                    date_obj = datetime.strptime(value_financial_parameter, "%Y-%m-%d")
-                    year = date_obj.year
-                    Financial_Parameter_df.at[index, 'Value'] = year
-                except Exception as e:
-                    Financial_Parameter_df.at[index, 'Value'] = value_financial_parameter
+                    datetime_object = datetime.fromisoformat(value_financial_parameter)
+                except ValueError:
+                    datetime_object = datetime.strptime(value_financial_parameter, "%Y-%m-%d")
+                value_financial_parameter = str(datetime_object.year)
+                print(value_financial_parameter)
+                Financial_Parameter_df.at[index, 'Value'] = value_financial_parameter
             elif field_name == 'proposed_dividend':
                 if value_financial_parameter != 0:
                     dividend_value = 'Yes'
@@ -207,13 +252,12 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
             # print(value)
             if field_name == 'year':
                 try:
-                    date_obj = datetime.strptime(value_previous_year, "%Y-%m-%d")
-                    year = date_obj.year
-                    previous_year_df.at[index, 'Value'] = year
-                except Exception as e:
-                    previous_year_df.at[index, 'Value'] = value_previous_year
-            else:
-                previous_year_df.at[index, 'Value'] = value_previous_year
+                    datetime_object = datetime.fromisoformat(value_previous_year)
+                except ValueError:
+                    datetime_object = datetime.strptime(value_previous_year, "%Y-%m-%d")
+                value_previous_year = str(datetime_object.date())
+                print(value_previous_year)
+            previous_year_df.at[index, 'Value'] = value_previous_year
             results_previous_year.append(
                 [field_name, value_previous_year, sql_table_name, column_name, column_json_node])
         previous_year_formula_df = previous_year_df[previous_year_df[previous_year_df.columns[3]] == config_dict['Formula_Keyword']]
@@ -246,13 +290,12 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
             # print(value)
             if field_name == 'year':
                 try:
-                    date_obj = datetime.strptime(value_current_year, "%Y-%m-%d")
-                    year = date_obj.year
-                    current_year_df.at[index, 'Value'] = year
-                except Exception as e:
-                    current_year_df.at[index, 'Value'] = value_current_year
-            else:
-                current_year_df.at[index, 'Value'] = value_current_year
+                    datetime_object = datetime.fromisoformat(value_current_year)
+                except ValueError:
+                    datetime_object = datetime.strptime(value_current_year, "%Y-%m-%d")
+                value_current_year = str(datetime_object.date())
+                print(value_current_year)
+            current_year_df.at[index, 'Value'] = value_current_year
             results_current_year.append([field_name, value_current_year, sql_table_name, column_name, column_json_node])
 
         current_year_formula_df = current_year_df[current_year_df[current_year_df.columns[3]] == config_dict['Formula_Keyword']]
@@ -323,6 +366,8 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                               f"with data {json_string}")
         common_sql_tables_list = common_df[common_df.columns[7]].unique()
         print(common_sql_tables_list)
+        if AOC_4_first_file_found:
+            years = years[1:]
         for common_table_name in common_sql_tables_list:
             common_table_df = common_df[common_df[common_df.columns[7]] == common_table_name]
             common_columns_list = common_table_df[common_table_df.columns[8]].unique()
@@ -337,6 +382,7 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                 # Convert the dictionary to a JSON string
                 common_json_string = json.dumps(common_json_dict)
                 print(common_json_string)
+                print(years)
                 for year in years:
                     if year is None or year == '':
                         continue
@@ -355,7 +401,7 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
             child_nodes = str(row.iloc[4]).strip()
             sql_table_name = str(row.iloc[7]).strip()
             column_names = str(row.iloc[8]).strip()
-            # column_json_node = str(row.iloc[9]).strip()
+            column_json_node = str(row.iloc[9]).strip()
 
             table_node_name = parent_node
             # print(table_node_name)
@@ -367,17 +413,15 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
             table_df = pd.DataFrame(table_in_list)
             table_df.dropna(inplace=True)
             # print(table_df)
-            table_df = pd.DataFrame(table_in_list)
-            table_df.dropna(inplace=True)
-            # print(table_df)
             if field_name == 'financials_auditor':
-                child_nodes_list = [x.strip() for x in child_nodes.split(',')]
-                table_df.columns = child_nodes_list
-                row_dicts = table_df.to_dict(orient='records')
+                column_json_node_list = [x.strip() for x in column_json_node.split(',')]
+                table_df.columns = column_json_node_list
+                first_row_df = table_df.iloc[[0]]
+                remaining_row_df = table_df.iloc[1:]
+                row_dicts = first_row_df.to_dict(orient='records')
 
                 # Convert each dictionary to a JSON string
-                auditor_json_list = []
-
+                auditor_json = None
                 for row_dict in row_dicts:
                     row_dict["ADDRESS"] = {
                         "ADDRESS_LINE_I": row_dict.pop("ADDRESS_LINE_I"),
@@ -388,31 +432,53 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                         "PIN_CODE": row_dict.pop("PIN_CODE")
                     }
                     auditor_json = json.dumps(row_dict)
-                    auditor_json_list.append(auditor_json)
-                group_df.at[index, 'Value'] = auditor_json_list
+                group_df.at[index, 'Value'] = auditor_json
+
+                rows_dicts_remaining = remaining_row_df.to_dict(orient='records')
+
+                for row_dict_remaining in rows_dicts_remaining:
+                    row_dict_remaining["ADDRESS"] = {
+                        "ADDRESS_LINE_I": row_dict_remaining.pop("ADDRESS_LINE_I"),
+                        "ADDRESS_LINE_II": row_dict_remaining.pop("ADDRESS_LINE_II"),
+                        "CITY": row_dict_remaining.pop("CITY"),
+                        "STATE": row_dict_remaining.pop("STATE"),
+                        "COUNTRY": row_dict_remaining.pop("COUNTRY"),
+                        "PIN_CODE": row_dict_remaining.pop("PIN_CODE")
+                    }
+                remaining_row_df_new = pd.DataFrame(rows_dicts_remaining)
+                for year in years:
+                    update_database_single_value_AOC(db_config,sql_table_name, Cin_Column_Name, cin_column_value,Company_column_name, company_name, column_names,auditor_json, year)
+                    for _, df_row in remaining_row_df_new.iterrows():
+                        # print(df_row)
+                        # print(table_df.columns)
+                        try:
+                            insert_datatable_with_table(db_config, config_dict['Additional_Auditor_Table_Name'], remaining_row_df_new.columns, df_row,Cin_Column_Name,cin_column_value,Company_column_name,company_name,year)
+                        except Exception as e:
+                            print(
+                                f'Exception {e} occurred while inserting below table row in table {sql_table_name}- \n',
+                                df_row)
         print(group_df)
         output_dataframes_list.append(group_df)
-        group_sql_tables = group_df[group_df.columns[7]].unique()
-        for group_table in group_sql_tables:
-            group_table_df = group_df[group_df[group_df.columns[7]] == group_table]
-            group_columns_list = group_table_df[group_table_df.columns[8]].unique()
-            for group_column_name in group_columns_list:
-                print(group_column_name)
-                # filter table df with only column value
-                group_column_df = group_table_df[group_table_df[group_table_df.columns[8]] == group_column_name]
-                print(group_column_df)
-                # create json dict with keys of field name and values for the same column name entries
-                group_json_dict = group_column_df.set_index(group_table_df.columns[0])['Value'].to_dict()
-                # Convert the dictionary to a JSON string
-                group_json_string = json.dumps(group_json_dict)
-                print(group_json_string)
-                print(years)
-                if AOC_4_first_file_found:
-                    years = years[1:]
-                for year in years:
-                    update_database_single_value_AOC(db_config, group_table, Cin_Column_Name, cin_column_value,
-                                                     Company_column_name, company_name, group_column_name,
-                                                     group_json_string, year)
+
+        # group_sql_tables = group_df[group_df.columns[7]].unique()
+        # for group_table in group_sql_tables:
+        #     group_table_df = group_df[group_df[group_df.columns[7]] == group_table]
+        #     group_columns_list = group_table_df[group_table_df.columns[8]].unique()
+        #     for group_column_name in group_columns_list:
+        #         print(group_column_name)
+        #         # filter table df with only column value
+        #         group_column_df = group_table_df[group_table_df[group_table_df.columns[8]] == group_column_name]
+        #         print(group_column_df)
+        #         # create json dict with keys of field name and values for the same column name entries
+        #         group_json_dict = group_column_df.set_index(group_table_df.columns[0])['Value'].to_dict()
+        #         # Convert the dictionary to a JSON string
+        #         group_json_string = json.dumps(group_json_dict)
+        #         print(group_json_string)
+        #         print(years)
+        #         for year in years:
+        #             update_database_single_value_AOC(db_config, group_table, Cin_Column_Name, cin_column_value,
+        #                                              Company_column_name, company_name, group_column_name,
+        #                                              group_json_string, year)
                     # if group_table == 'financial_parameters':
                     #     break
 
