@@ -6,9 +6,10 @@ import mysql.connector
 from Config import create_main_config_dictionary
 import re
 from datetime import datetime
+import sys
+import traceback
 def get_single_value_from_xml(xml_root, parent_node, child_node):
     try:
-
         if child_node == 'nan':
             elements = xml_root.findall(f'.//{parent_node}')
         else:
@@ -231,7 +232,7 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                 print(value_financial_parameter)
                 Financial_Parameter_df.at[index, 'Value'] = value_financial_parameter
             elif field_name == 'proposed_dividend':
-                if value_financial_parameter != 0:
+                if value_financial_parameter != 0 and value_financial_parameter is not None:
                     dividend_value = 'Yes'
                 else:
                     dividend_value = 'No'
@@ -272,6 +273,8 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                                           previous_formula)
             print(previous_formula_field_name + ":" + previous_formula)
             try:
+                if 'None' in previous_formula:
+                    previous_formula = previous_formula.replace('None', '0')
                 # Calculate the value using the provided formula and insert it
                 previous_year_df.at[previous_year_df[previous_year_df['Field_Name'] == previous_formula_field_name].index[0], 'Value'] = eval(previous_formula)
             except (NameError, SyntaxError):
@@ -309,14 +312,20 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
             print(current_formula_field_name + ":" + current_formula)
             try:
                 # Calculate the value using the provided formula and insert it
+                if 'None' in current_formula:
+                    current_formula = current_formula.replace('None', '0')
                 current_year_df.at[current_year_df[current_year_df['Field_Name'] == current_formula_field_name].index[0], 'Value'] = eval(current_formula)
             except (NameError, SyntaxError):
                 # Handle the case where the formula is invalid or contains a missing field name
                 print(f"Invalid formula for {current_formula_field_name}: {current_formula}")
         print(current_year_df)
         current_year = current_year_df[current_year_df['Field_Name'] == 'year']['Value'].values[0]
+        if current_year is None:
+            raise Exception(f"Exception occurred while extracting year value {current_year} from current year data")
         years.append(current_year)
         previous_year = previous_year_df[previous_year_df['Field_Name'] == 'year']['Value'].values[0]
+        if previous_year is None:
+            raise Exception(f"Exception occurred while extracting year value {previous_year} from previous year data")
         years.append(previous_year)
         if not AOC_4_first_file_found:
             single_df_list.append(current_year_df)
@@ -362,7 +371,7 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                                                          Company_column_name, company_name, column_name, json_string,
                                                          year_value)
                     except Exception as e:
-                        print(f"Exception {e} occurred while updating data in dataframe for {sql_table_name} "
+                        print(f"Exception {e} occurred while updating data in dataframe for {table_name} "
                               f"with data {json_string}")
         common_sql_tables_list = common_df[common_df.columns[7]].unique()
         print(common_sql_tables_list)
@@ -393,8 +402,8 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                                                          common_json_string,
                                                          year)
                     except Exception as e:
-                        print(f"Exception {e} occurred while updating data in dataframe for {sql_table_name} "
-                              f"with data {json_string}")
+                        print(f"Exception {e} occurred while updating data in dataframe for {common_table_name} "
+                              f"with data {common_json_string}")
         for index, row in group_df.iterrows():
             field_name = str(row.iloc[0]).strip()
             parent_node = str(row.iloc[3]).strip()
@@ -415,9 +424,9 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
             # print(table_df)
             if field_name == 'financials_auditor':
                 column_json_node_list = [x.strip() for x in column_json_node.split(',')]
-                table_df.columns = column_json_node_list
+                column_child_node_list = [x.strip() for x in child_nodes.split(',')]
+                table_df.columns = column_child_node_list
                 first_row_df = table_df.iloc[[0]]
-                remaining_row_df = table_df.iloc[1:]
                 row_dicts = first_row_df.to_dict(orient='records')
 
                 # Convert each dictionary to a JSON string
@@ -433,30 +442,34 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                     }
                     auditor_json = json.dumps(row_dict)
                 group_df.at[index, 'Value'] = auditor_json
-
-                rows_dicts_remaining = remaining_row_df.to_dict(orient='records')
-
-                for row_dict_remaining in rows_dicts_remaining:
-                    row_dict_remaining["ADDRESS"] = {
-                        "ADDRESS_LINE_I": row_dict_remaining.pop("ADDRESS_LINE_I"),
-                        "ADDRESS_LINE_II": row_dict_remaining.pop("ADDRESS_LINE_II"),
-                        "CITY": row_dict_remaining.pop("CITY"),
-                        "STATE": row_dict_remaining.pop("STATE"),
-                        "COUNTRY": row_dict_remaining.pop("COUNTRY"),
-                        "PIN_CODE": row_dict_remaining.pop("PIN_CODE")
-                    }
-                remaining_row_df_new = pd.DataFrame(rows_dicts_remaining)
                 for year in years:
                     update_database_single_value_AOC(db_config,sql_table_name, Cin_Column_Name, cin_column_value,Company_column_name, company_name, column_names,auditor_json, year)
-                    for _, df_row in remaining_row_df_new.iterrows():
-                        # print(df_row)
-                        # print(table_df.columns)
-                        try:
-                            insert_datatable_with_table(db_config, config_dict['Additional_Auditor_Table_Name'], remaining_row_df_new.columns, df_row,Cin_Column_Name,cin_column_value,Company_column_name,company_name,year)
-                        except Exception as e:
-                            print(
-                                f'Exception {e} occurred while inserting below table row in table {sql_table_name}- \n',
-                                df_row)
+                if len(table_df.index) > 1:
+                    remaining_row_df = table_df.iloc[1:]
+                    rows_dicts_remaining = remaining_row_df.to_dict(orient='records')
+                    for row_dict_remaining in rows_dicts_remaining:
+                        row_dict_remaining["ADDRESS"] = {
+                            "ADDRESS_LINE_I": row_dict_remaining.pop("ADDRESS_LINE_I"),
+                            "ADDRESS_LINE_II": row_dict_remaining.pop("ADDRESS_LINE_II"),
+                            "CITY": row_dict_remaining.pop("CITY"),
+                            "STATE": row_dict_remaining.pop("STATE"),
+                            "COUNTRY": row_dict_remaining.pop("COUNTRY"),
+                            "PIN_CODE": row_dict_remaining.pop("PIN_CODE")
+                        }
+                    remaining_row_df_new = pd.DataFrame(rows_dicts_remaining)
+                    remaining_row_df_new.columns = column_json_node_list
+                    remaining_row_df_new["address"] = remaining_row_df_new["address"].apply(lambda x: json.dumps(x))
+                    for year in years:
+                        for _, df_row in remaining_row_df_new.iterrows():
+                            # print(df_row)
+                            # print(table_df.columns)
+                            try:
+                                insert_datatable_with_table(db_config, config_dict['Additional_Auditor_Table_Name'], remaining_row_df_new.columns, df_row,Cin_Column_Name,cin_column_value,Company_column_name,company_name,year)
+                            except Exception as e:
+                                print(
+                                    f'Exception {e} occurred while inserting below table row in table {sql_table_name}- \n',
+                                    df_row)
+
         print(group_df)
         output_dataframes_list.append(group_df)
 
@@ -493,10 +506,17 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
 
     except Exception as e:
         print(f"Excpetion occured while inserting into db for AOC {e}")
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+
+        # Get the formatted traceback as a string
+        traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+        # Print the traceback details
+        for line in traceback_details:
+            print(line.strip())
         return False
     else:
         return True
-
 
 
 
