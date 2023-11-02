@@ -96,7 +96,7 @@ def update_database_single_value_aoc(db_config, table_name, cin_column_name, cin
 
 
 def insert_datatable_with_table(db_config, sql_table_name, column_names_list, df_row,cin_column_name,cin_value,
-                                company_column_name, company_value, year):
+                                company_column_name, company_value,year):
     db_connection = mysql.connector.connect(**db_config)
     db_cursor = db_connection.cursor()
     db_connection.autocommit = True
@@ -160,7 +160,7 @@ def extract_table_values_from_xml(xml_root, table_node_name, child_nodes):
 
 
 def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, output_file_path,
-              cin_column_value, company_name, aoc4_nbfc_first_file_found):
+              cin_column_value, company_name, aoc4_nbfc_cfs_first_file_found):
     config_dict_keys = ['cin_column_name_in_db', 'company_name_column_name_in_db',
                         'single_type_indicator', 'group_type_indicator',
                         'Previous_year_keyword', 'Current_year_keyword',
@@ -224,8 +224,8 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
     # extract single values
     previous_year_df = single_df[single_df[single_df.columns[year_index]] == config_dict['Previous_year_keyword']]
     current_year_df = single_df[single_df[single_df.columns[year_index]] == config_dict['Current_year_keyword']]
-    financial_parameter_df = single_df[single_df[single_df.columns[year_index]] ==
-                                       config_dict['Financial_Parameter_Keyword']]
+    financial_parameter_df = single_df[
+        single_df[single_df.columns[year_index]] == config_dict['Financial_Parameter_Keyword']]
     common_df = single_df[single_df[single_df.columns[year_index]] == config_dict['Common_Keyword']]
     single_df_list = []
     print("Processing common data")
@@ -325,8 +325,8 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 0], 'Value'] = eval(previous_formula)
         except (NameError, SyntaxError):
             # Handle the case where the formula is invalid or contains a missing field name
-            print(f"Exception occurred while processing previous year data - \n"
-                  f" Invalid formula for {previous_formula_field_name}: {previous_formula}")
+            print(f"Exception occurred while processing previous year data - \n "
+                  f"Invalid formula for {previous_formula_field_name}: {previous_formula}")
     print("Completed processing previous year data")
     print("Processing present year data")
     for index, row in current_year_df.iterrows():
@@ -347,7 +347,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                     datetime_object = datetime.fromisoformat(value_current_year)
                 except ValueError:
                     datetime_object = datetime.strptime(value_current_year, "%Y-%m-%d")
-                value_current_year = str(datetime_object.date())
+                value_current_year = str(datetime_object.year)
                 # print(value_current_year)
         # print(child_nodes)
         # print(value_current_year)
@@ -394,9 +394,9 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
     if previous_year is None:
         raise Exception(f"Exception occurred while extracting year value {previous_year} from previous year data")
     years.append(previous_year)
-    # print(years)
+    print(years)
     print("Saving Single Values to database")
-    if not aoc4_nbfc_first_file_found:
+    if not aoc4_nbfc_cfs_first_file_found:
         single_df_list.append(current_year_df)
     single_df_list.append(previous_year_df)
     single_df_list.append(financial_parameter_df)
@@ -442,7 +442,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                           f"with data {json_string}")
     common_sql_tables_list = common_df[common_df.columns[sql_table_name_index]].unique()
     # print(common_sql_tables_list)
-    if aoc4_nbfc_first_file_found:
+    if aoc4_nbfc_cfs_first_file_found:
         years = years[1:]
     for common_table_name in common_sql_tables_list:
         common_table_df = common_df[common_df[common_df.columns[sql_table_name_index]] == common_table_name]
@@ -451,8 +451,8 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         for common_column_name in common_columns_list:
             # print(common_column_name)
             # filter table df with only column value
-            common_column_df = common_table_df[common_table_df[common_table_df.columns[column_name_index]]
-                                               == common_column_name]
+            common_column_df = common_table_df[
+                common_table_df[common_table_df.columns[column_name_index]] == common_column_name]
             # print(common_column_df)
             # create json dict with keys of field name and values for the same column name entries
             common_json_dict = common_column_df.set_index(common_table_df.columns[0])['Value'].to_dict()
@@ -552,14 +552,14 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
     output_dataframes_list.clear()
 
 
-def aoc_nbfc_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, output_file_path,
-                       cin_column_value, company_name):
+def aoc_nbfc_cfs_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, output_file_path,
+                           cin_column_value, company_name, aoc4_nbfc_cfs_first_file_found):
     try:
-        print("Started Executing AOC NBFC Program")
+        print("Started Executing AOC NBFC CFS Program")
         xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, output_file_path,
-                  cin_column_value, company_name)
+                  cin_column_value, company_name, aoc4_nbfc_cfs_first_file_found)
     except Exception as e:
-        print("Below Exception occurred while processing AOC NBFC program \n ")
+        print("Below Exception occurred while processing AOC NBFC CFS program \n ")
         # Get the current exception information
         exc_type, exc_value, exc_traceback = sys.exc_info()
 
@@ -571,5 +571,5 @@ def aoc_nbfc_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_nam
             print(line.strip())
         return False
     else:
-        print("Completed Executing AOC NBFC Program")
+        print("Completed Executing AOC NBFC CFS Program")
         return True
