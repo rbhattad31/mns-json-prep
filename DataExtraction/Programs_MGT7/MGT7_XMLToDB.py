@@ -326,7 +326,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
                           == config_dict['year_field_name']]['Value'].values[0]
             # print(f'{year_end_date=}')
         except Exception as e:
-            print(f"Exception {e} occurred while extracting date from xml, setting year to default '00-00-0000'")
+            print(f"Exception {e} occurred while extracting date from xml, setting year to default '01-01-2000'")
             year_end_date = '2000-01-01'
 
         # update group values in datatable
