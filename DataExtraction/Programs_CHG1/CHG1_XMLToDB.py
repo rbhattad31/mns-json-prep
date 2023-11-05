@@ -1,4 +1,6 @@
 import re
+import sys
+import traceback
 from datetime import datetime
 
 import pandas as pd
@@ -40,13 +42,8 @@ def update_datatable_single_value(db_cursor, table_name, cin_column_name, cin_va
     json_dict = json.loads(column_value)
     num_elements = len(json_dict)
     print(column_name)
-    if column_name == 'total_equity_shares' or column_name == 'total_preference_shares':
-        temp_column_value = 0
-        for key, value in json_dict.items():
-            temp_column_value += float(value)
-        print(f'{column_value=}')
-        column_value = temp_column_value
-    elif num_elements == 1:
+
+    if num_elements == 1:
         first_key = next(iter(json_dict))
         first_value = json_dict[first_key]
         column_value = first_value
@@ -132,12 +129,12 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
     # extract single values
     for index, row in single_df.iterrows():
-        field_name = str(row.iloc[0]).strip()       # Field name
-        parent_node = str(row.iloc[3]).strip()      # Parent Node
-        child_nodes = str(row.iloc[4]).strip()      # Child Node
-        sql_table_name = str(row.iloc[5]).strip()   # Table Name
-        column_name = str(row.iloc[6]).strip()      # column name
-        column_json_node = str(row.iloc[7]).strip() # column json
+        field_name = str(row.iloc[0]).strip()  # Field name
+        parent_node = str(row.iloc[3]).strip()  # Parent Node
+        child_nodes = str(row.iloc[4]).strip()  # Child Node
+        sql_table_name = str(row.iloc[5]).strip()  # Table Name
+        column_name = str(row.iloc[6]).strip()  # column name
+        column_json_node = str(row.iloc[7]).strip()  # column json
         if field_name == 'filing_date':
             value = filing_date
         else:
@@ -157,28 +154,85 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
         # filter only table
         table_df = single_df[single_df[single_df.columns[5]] == sql_table_name]
         print(table_df)
-        if sql_table_name == 'open_charges_latest_event':
+        if sql_table_name == config_dict['open_charges_latest_event_table_name']:
             print(f'{sql_table_name=}')
-            charges_latest_id = table_df.loc[table_df['Column_Name'] == 'charges_latest_id', 'Value'].values[0]
-
-            print(f'{charges_latest_id}')
+            charges_latest_id = \
+            table_df.loc[table_df['Column_Name'] == config_dict['charges_latest_id_column_name'], 'Value'].values[0]
+            date = table_df.loc[table_df['Column_Name'] == config_dict['date_column_name'], 'Value'].values[0]
+            print(f'{charges_latest_id=}')
             # check if there is already entry with cin
-            charge_id_check_query = "SELECT * FROM {} WHERE {} = '{}' AND {} = {}".format(sql_table_name, cin_column_name_in_db,
-                                                                                          cin_column_value, 'charges_latest_id',
-                                                                                          charges_latest_id)
-            print(f'{charge_id_check_query}')
+            charge_id_year_check_query = (("SELECT * FROM {} WHERE {} = '{}' AND {} = '{}' AND {}"
+                                           " = '{}' AND {} = '{}'").
+                                          format(sql_table_name, cin_column_name_in_db, cin_column_value,
+                                                 company_name_column_name_in_db,
+                                                 company_name,
+                                                 config_dict['charges_latest_id_column_name'],
+                                                 charges_latest_id,
+                                                 config_dict['date_column_name'],
+                                                 date
+                                                 ))
+            print(f'{charge_id_year_check_query=}')
             try:
-                db_cursor.execute(charge_id_check_query)
+                db_cursor.execute(charge_id_year_check_query)
             except mysql.connector.Error as err:
                 print(err)
             result = db_cursor.fetchall()
             # print(result)
             # if change id value already exists for cin
-            if len(result) > 0:
-                print("Charge ID details are already updated in 'open_charges_latest_event' for charge id {} with cin"
-                      " {}".format(charges_latest_id, cin_column_value))
+            if len(result) == 0:
+                print("Charge ID details are not exist in 'open_charges_latest_event' table for charge id {} with cin"
+                      " {}, hence skipping updating the charge id details.".format(charges_latest_id, cin_column_value))
                 continue
         columns_list = table_df[table_df.columns[6]].unique()
+
+        if sql_table_name == config_dict['charge_sequence_table_name']:
+            print(table_df)
+            print(f'{sql_table_name=}')
+            status_abbreviation_list = [x.strip() for x in config_dict['status_abbreviation_list'].split(',')]
+            status_list = [x.strip() for x in config_dict['status_list'].split(',')]
+            status_dict = dict(zip(status_abbreviation_list, status_list))
+            print(f'{status_dict=}')
+            try:
+                status_row_index = table_df[table_df['Column_Name'] == config_dict['status_column_name']].index[0]
+            except IndexError as index_error:
+                raise (f"Below Exception occurred while getting status row details of charge sequence table - "
+                       f"\n {index_error}")
+            print(f'{status_row_index=}')
+            if status_row_index is not None:
+                status_value = table_df.loc[status_row_index, 'Value']
+                print(f'{status_value=}')
+                table_df.loc[status_row_index, 'Value'] = status_dict.get(status_value, "Status Not Found")
+            print(table_df)
+            charge_id = table_df.loc[table_df['Column_Name'] == config_dict['charge_id_column_name'], 'Value'].values[0]
+            date = table_df.loc[table_df['Column_Name'] == config_dict['date_column_name'], 'Value'].values[0]
+            print(f'{charge_id=}')
+            # check if there is already entry with cin
+            charge_id_year_check_query = (("SELECT * FROM {} WHERE {} = '{}' AND {} = '{}' AND {}"
+                                           " = '{}' AND {} = '{}'").
+                                          format(sql_table_name, cin_column_name_in_db, cin_column_value,
+                                                 company_name_column_name_in_db,
+                                                 company_name,
+                                                 config_dict['charge_id_column_name'],
+                                                 charge_id,
+                                                 config_dict['date_column_name'],
+                                                 date
+                                                 ))
+            print(f'{charge_id_year_check_query=}')
+            try:
+                db_cursor.execute(charge_id_year_check_query)
+            except mysql.connector.Error as err:
+                print(err)
+            result = db_cursor.fetchall()
+
+            # if charge details are exist then need not update status column values
+            if len(result) > 0:
+                print(f"Entry is found for cin {cin_column_value} and company name {company_name} in {sql_table_name} "
+                      f"table, \n so removing status info from the data not to update in datatable")
+                print(table_df)
+                table_df = table_df[table_df['Column_Name'] != config_dict['status_column_name']]
+                print(table_df)
+                columns_list = table_df[table_df.columns[6]].unique()
+
         # print(columns_list)
         for column_name in columns_list:
             # print(column_name)
@@ -227,6 +281,15 @@ def chg1_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, x
                   output_file_path, cin_column_value, company_name, filing_date)
     except Exception as e:
         print("Below Exception occurred while processing mgt7 file: \n ", e)
+        # Get the current exception information
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+
+        # Get the formatted traceback as a string
+        traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+        # Print the traceback details
+        for line in traceback_details:
+            print(line.strip())
         return False
     else:
         return True
