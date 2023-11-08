@@ -11,6 +11,7 @@ import fitz
 import datetime
 import shutil
 import mysql.connector
+from DIR2PDFToXML import DIR2_pdf_to_xml
 # Get the current date
 current_date = datetime.date.today()
 
@@ -53,10 +54,17 @@ def extract_xfa_data(pdf_path,filename):
     pdfobject = open(pdf_path, 'rb')
     pdf = pypdf.PdfReader(pdfobject)
     xfa = findInDict('/XFA', pdf.resolved_objects)
+    print(xfa)
     if xfa is not None:
         if 'MSME' in filename or 'AOC-4' in filename or 'CHG' in filename or 'LLP' in filename or 'Form8' in filename or 'FiLLiP' in filename:
             xml = xfa[7].get_object().get_data()
             return xml
+        elif 'DIR' in filename:
+            xml_DIR= []
+            for i in [7,13]:
+                xml= xfa[i].get_object().get_data()
+                xml_DIR.append(xml)
+            return xml_DIR
         else:
             xml = xfa[9].get_object().get_data()
             return xml
@@ -126,19 +134,34 @@ def PDFtoXML(pdf_path,file_name):
 
         if xfa_data:
             # If XFA data is found, use the existing code to save it as XML
-            xml_file_path = pdf_path.replace('.pdf', '.xml')
-            """
-            if '.pdf' in file_name:
-                xml_file_path = os.path.join(folder_path, file_name.replace('.pdf', '.xml'))
+            if 'DIR' in file_name:
+                xml_plain = xfa_data[0]
+                xml_hidden = xfa_data[1]
+                xml_plain_file_path = pdf_path.replace('.pdf', '.xml')
+                xml_hidden_file_path = pdf_path.replace('.pdf', '_hidden.xml')
+                write_xml_data(xml_plain, xml_plain_file_path)
+                write_xml_data(xml_hidden,xml_hidden_file_path)
+                return xml_plain_file_path,True
             else:
-                xml_file_path = os.path.join(folder_path, file_name)
-            """
-            if '.xml' not in xml_file_path:
-                xml_file_path = xml_file_path + '.xml'
-            write_xml_data(xfa_data, xml_file_path)
-            print("Extracted XFA data for ", file_name)
-            print("Saved to", xml_file_path)
-            return xml_file_path, True
+                xml_file_path = pdf_path.replace('.pdf', '.xml')
+                """
+                if '.pdf' in file_name:
+                    xml_file_path = os.path.join(folder_path, file_name.replace('.pdf', '.xml'))
+                else:
+                    xml_file_path = os.path.join(folder_path, file_name)
+                """
+                if '.xml' not in xml_file_path:
+                    xml_file_path = xml_file_path + '.xml'
+                write_xml_data(xfa_data, xml_file_path)
+                print("Extracted XFA data for ", file_name)
+                print("Saved to", xml_file_path)
+                return xml_file_path, True
+        elif 'DIR_2'.lower() in file_name.lower():
+            DIR_XML_File_Path,DIR_2_Status = DIR2_pdf_to_xml(pdf_path)
+            if DIR_2_Status:
+                return DIR_XML_File_Path,True
+            else:
+                return None,False
         else:
             # If XFA data is not found, extract table data and save it as XML
             tables = extract_tables_from_pdf(pdf_path)
@@ -167,9 +190,9 @@ def PDFtoXML(pdf_path,file_name):
 
 def CheckHiddenAttachemnts(xml_file_path,folder_path,pdf_path,file_name):
     hidden_xml_list = []
-    if os.path.exists(xml_file_path):
+    if os.path.exists(pdf_path):
         # Check if the file name contains "MGT"
-        if "MGT" in os.path.basename(xml_file_path):
+        if "MGT" in os.path.basename(pdf_path):
             try:
                 # Parse the XML file
                 tree = ET.parse(xml_file_path)
@@ -240,6 +263,24 @@ def CheckHiddenAttachemnts(xml_file_path,folder_path,pdf_path,file_name):
                     return hidden_xml_list
             except ET.ParseError as e:
                 print("Error parsing the XML file:", str(e))
+
+        elif "DIR" in os.path.basename(pdf_path):
+            DIR_hidden_attachment_folder = os.path.join(folder_path,"DIR_2")
+            if not os.path.exists(DIR_hidden_attachment_folder):
+                os.makedirs(DIR_hidden_attachment_folder)
+            get_embedded_pdfs(pdf_path,DIR_hidden_attachment_folder,file_name)
+            DIR_hidden_attachment_files = os.listdir(DIR_hidden_attachment_folder)
+            for DIR_hidden in DIR_hidden_attachment_files:
+                if 'DIR_2'.lower() not in DIR_hidden.lower():
+                    DIR_file_path = os.path.join(DIR_hidden_attachment_folder,DIR_hidden)
+                    os.remove(DIR_file_path)
+            DIR_hidden_attachment_files = os.listdir(DIR_hidden_attachment_folder)
+            for DIR_2_files in DIR_hidden_attachment_files:
+                DIR_2_PDF_Path = os.path.join(DIR_hidden_attachment_folder,DIR_2_files)
+                result_DIR2 = PDFtoXML(DIR_2_PDF_Path,DIR_2_files)
+                hidden_xml_list.append(result_DIR2[0])
+                return hidden_xml_list
+            return hidden_xml_list
         else:
             print("XML file name does not contain 'MGT'")
             return hidden_xml_list

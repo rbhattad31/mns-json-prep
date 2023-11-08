@@ -21,6 +21,10 @@ from MSME_XMLToDB import msme_xml_to_db
 from AOC_XMLtoDB import AOC_xml_to_db
 from ChangeOfName_XMLtoDB import ChangeOfName_xml_to_db
 from CHG1_XMLToDB import chg1_xml_to_db
+from AOC4_NBFC_XMLToDB import aoc_nbfc_xml_to_db
+from AOC_XBRL_JSONToDB import aoc_xbrl_db_update
+from TableToJson import json_generation
+from AOC_XBRL_JSONToDB import AOC_XBRL_JSON_to_db
 def sign_out(driver,config_dict,CinData):
     try:
         sign_out_button = driver.find_element(By.XPATH, '//a[@id="loginAnchor" and text()="Signout"]')
@@ -130,10 +134,15 @@ def XMLGeneration(db_config,CinData,config_dict):
                 try:
                     pdf_path = files[8]
                     file_name = files[4]
+                    file_date = files[5]
+                    if 'XBRL document in respect Consolidated' in file_name or 'XBRL financial statements' in file_name:
+                        continue
                     folder_path = os.path.dirname(pdf_path)
                     xml_file_path, PDF_to_XML = PDFtoXML(pdf_path, file_name)
                     if PDF_to_XML:
                         update_xml_extraction_status(Cin, file_name, config_dict, 'Success')
+                        if 'AOC-4(XBRL)'.lower() in str(pdf_path).lower():
+                            XBRL_db_update = aoc_xbrl_db_update(db_config,config_dict,Cin,CompanyName,xml_file_path,file_date)
                         hidden_attachments = CheckHiddenAttachemnts(xml_file_path, folder_path, pdf_path, file_name)
                     else:
                         update_xml_extraction_status(Cin, file_name, config_dict, 'Failure')
@@ -141,6 +150,21 @@ def XMLGeneration(db_config,CinData,config_dict):
                 except Exception as e:
                     print(f"Exception Occured while converting to xml{e}")
                     continue
+        # query_for_xbrl = "select * from documents where cin=%s and company_name=%s and (%%XBRL document in respect Consolidated%% in document or %%XBRL financial statements%% in document) and form_data_extraction_needed='Y'"
+        # values_xbrl = (Cin,CompanyName)
+        # print(query_for_xbrl % values_xbrl)
+        # cursor.execute(query_for_xbrl,values_xbrl)
+        # xbrl_files = cursor.fetchall()
+        # for xbrl_file in xbrl_files:
+        #     xbrl_pdf_path = xbrl_file[8]
+        #     xbrl_file_name = xbrl_file[4]
+        #     xbrl_file_date = xbrl_file[5]
+        #     xbrl_json_path = str(xbrl_pdf_path).replace('.pdf','.json')
+        #     json_generation_xbrl = json_generation(xbrl_pdf_path,xbrl_json_path)
+        #     if json_generation_xbrl:
+        #         update_xml_extraction_status(Cin,xbrl_file_name,config_dict,'Success')
+        #     else:
+        #         update_xml_extraction_status(Cin,xbrl_file_name,config_dict,'Failure')
     except Exception as e:
         print(f"Exception Occured {e}")
         return False,[]
@@ -154,15 +178,21 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
         connection.autocommit = True
         Cin, CompanyName, User = CinData[2], CinData[3], CinData[15]
         if len(hiddenattachmentslist) != 0:
-            Subsidiary_Config = config_dict['Subsidiary_Config']
-            Business_Activity_Config = config_dict['Business_Activity_Config']
-            Subsidiary_Config_Sheet_Name = config_dict['Subsidiary_Config_Sheet_Name']
-            Business_Activity_Config_Sheet_Name = config_dict['Business_Activity_Config_Sheet_Name']
             for hiddenattachment in hiddenattachmentslist:
                 if "Subsidiaries" in hiddenattachment or "Holding" in hiddenattachment or "Associate" in hiddenattachment or "Joint Venture" in hiddenattachment:
+                    excel_file = r"C:\MCA Portal\Config.xlsx"
+                    Sheet_name = "MGT"
+                    config_dict_Subs, config_status = create_main_config_dictionary(excel_file, Sheet_name)
+                    Subsidiary_Config = config_dict_Subs['Subsidiary_Config']
+                    Subsidiary_Config_Sheet_Name = config_dict_Subs['Subsidiary_Config_Sheet_Name']
                     map_file_path = Subsidiary_Config
                     map_file_sheet_name = Subsidiary_Config_Sheet_Name
                 elif "Business Activity" in hiddenattachment:
+                    excel_file = r"C:\MCA Portal\Config.xlsx"
+                    Sheet_name = "MGT"
+                    config_dict_Business, config_status = create_main_config_dictionary(excel_file, Sheet_name)
+                    Business_Activity_Config = config_dict_Business['Business_Activity_Config']
+                    Business_Activity_Config_Sheet_Name = config_dict_Business['Business_Activity_Config_Sheet_Name']
                     map_file_path = Business_Activity_Config
                     map_file_sheet_name = Business_Activity_Config_Sheet_Name
                 else:
@@ -174,6 +204,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
                              output_excel_path, Cin, CompanyName)
 
         xml_files_to_insert = get_xml_to_insert(Cin, config_dict)
+        AOC_4_first_file_found = False
         for xml in xml_files_to_insert:
             try:
                 path = xml[8]
@@ -196,12 +227,31 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
                     print("Inserting MSME to DB")
                     msme_xml_to_db(db_cursor,config_dict_MSME,map_file_path_MSME,map_sheet_name_MSME,xml_file_path,output_excel_path,Cin,CompanyName)
                 elif 'AOC-4'.lower() in str(path).lower():
-                    excel_file = r"C:\MCA Portal\Config.xlsx"
-                    Sheet_name = "AOC"
-                    config_dict_AOC, config_status = create_main_config_dictionary(excel_file, Sheet_name)
-                    map_file_path_AOC = config_dict_AOC['mapping_file_path']
-                    map_sheet_name_AOC = config_dict_AOC['mapping _file_sheet_name']
-                    AOC_xml_to_db(db_config,config_dict_AOC,map_file_path_AOC,map_sheet_name_AOC,xml_file_path,output_excel_path,Cin,CompanyName)
+                    if 'AOC-4-NBFC'.lower() in str(path).lower():
+                        excel_file = r"C:\MCA Portal\Config.xlsx"
+                        Sheet_name = "AOC NBFC"
+                        config_dict_AOC_NBFC, config_status = create_main_config_dictionary(excel_file, Sheet_name)
+                        map_file_path_AOC_NBFC = config_dict_AOC_NBFC['mapping file path']
+                        map_sheet_name_AOC_NBFC = config_dict_AOC_NBFC['mapping file sheet name']
+                        try:
+                            aoc_nbfc_xml_to_db(db_config, config_dict_AOC_NBFC, map_file_path_AOC_NBFC, map_sheet_name_AOC_NBFC,
+                                           xml_file_path, output_excel_path, Cin, CompanyName,AOC_4_first_file_found)
+                        except Exception as e:
+                            print(f"Excpetion occured while processing AOC-4-NBFC {e}")
+                        else:
+                            AOC_4_first_file_found = True
+                    else:
+                        excel_file = r"C:\MCA Portal\Config.xlsx"
+                        Sheet_name = "AOC"
+                        config_dict_AOC, config_status = create_main_config_dictionary(excel_file, Sheet_name)
+                        map_file_path_AOC = config_dict_AOC['mapping_file_path']
+                        map_sheet_name_AOC = config_dict_AOC['mapping _file_sheet_name']
+                        try:
+                            AOC_xml_to_db(db_config, config_dict_AOC, map_file_path_AOC, map_sheet_name_AOC, xml_file_path,output_excel_path, Cin, CompanyName,AOC_4_first_file_found)
+                        except Exception as e:
+                            print(f"Excpetion occured while processing AOC-4 {e}")
+                        else:
+                            AOC_4_first_file_found = True
                 elif 'CHANGE OF NAME'.lower() in str(path).lower():
                     excel_file = r"C:\MCA Portal\Config.xlsx"
                     Sheet_name = "Change of name"
@@ -216,6 +266,14 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
                     map_file_path_CHG = config_dict_CHG['mapping_file_path']
                     map_sheet_name_CHG = config_dict_CHG['mapping_file_sheet_name']
                     chg1_xml_to_db(db_cursor,config_dict_CHG,map_file_path_CHG,map_sheet_name_CHG,xml_file_path,output_excel_path,Cin,CompanyName,date)
+                # elif 'XBRL document in respect Consolidated'.lower() in str(path).lower() or 'XBRL financial statements'.lower() in str(path).lower():
+                #     excel_file = r"C:\MCA Portal\Config.xlsx"
+                #     Sheet_name = "AOC XBRL"
+                #     config_dict_Xbrl, config_status = create_main_config_dictionary(excel_file, Sheet_name)
+                #     output_json_path = str(path).replace('.pdf', '.json')
+                #     map_file_path_xbrl = config_dict_Xbrl['mapping file path']
+                #     map_sheet_name_xbrl = config_dict_Xbrl['mapping file sheet name']
+                #     AOC_XBRL_JSON_to_db(db_config,config_dict_Xbrl,map_file_path_xbrl,map_sheet_name_xbrl,output_json_path,output_excel_path,Cin,CompanyName)
             except Exception as e:
                 print(f"Exception occured while inserting into DB {e}")
                 continue

@@ -240,7 +240,7 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath,options
                         back_button = driver.find_element(By.XPATH, back_xpath)
                         back_button.click()
                         break
-                download_details_query = 'select * from documents where cin=%s and company=%s and Category=%s and Page_Number=%s and Download_Status=%s'
+                download_details_query = "select * from documents where cin=%s and company=%s and Category=%s and Page_Number=%s and Download_Status=%s and form_data_extraction_needed='Y'"
                 values = (Cin, CompanyName, Category, j, 'Pending')
                 print(download_details_query % values)
                 cursor.execute(download_details_query, values)
@@ -302,7 +302,7 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath,options
                         continue
                 connection = mysql.connector.connect(**dbconfig)
                 cursor = connection.cursor()
-                check_pending_query = 'select * from documents where cin=%s and company=%s and Category=%s and Page_Number=%s and Download_Status=%s'
+                check_pending_query = "select * from documents where cin=%s and company=%s and Category=%s and Page_Number=%s and Download_Status=%s and form_data_extraction_needed='Y'"
                 pending_values = (Cin, CompanyName, Category, j, 'Pending')
                 print(check_pending_query % pending_values)
                 cursor.execute(check_pending_query, pending_values)
@@ -335,6 +335,16 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath,options
                         Downloaded_Files = cursor.fetchall()
                         cursor.close()
                         connection.close()
+                        try:
+                            back_xpath = '//input[@type="submit" and @value="Back"]'
+                            back_button = driver.find_element(By.XPATH, back_xpath)
+                            back_button.click()
+                            print("Clicked on back button")
+                        except NoSuchElementException:
+                            back_xpath = '//input[@type="submit" and @value="Back"]'
+                            back_button = driver.find_element(By.XPATH, back_xpath)
+                            back_button.click()
+                            print("Trying to click but not clicking")
                         if len(Downloaded_Files) > 0:
                             print("Exception occured but we got the required files")
                             return True
@@ -357,6 +367,16 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath,options
                     connection.close()
                     if len(Downloaded_Files) > 0:
                         print("Exception occured but we got the required files")
+                        try:
+                            back_xpath = '//input[@type="submit" and @value="Back"]'
+                            back_button = driver.find_element(By.XPATH, back_xpath)
+                            back_button.click()
+                            print("Clicked on back button")
+                        except NoSuchElementException:
+                            back_xpath = '//input[@type="submit" and @value="Back"]'
+                            back_button = driver.find_element(By.XPATH, back_xpath)
+                            back_button.click()
+                            print("Trying to click but not clicking")
                         return True
                     else:
                         return False
@@ -375,6 +395,16 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath,options
         connection.close()
         if len(Downloaded_Files) > 0:
             print("Exception occured but we got the required files")
+            try:
+                back_xpath = '//input[@type="submit" and @value="Back"]'
+                back_button = driver.find_element(By.XPATH, back_xpath)
+                back_button.click()
+                print("Clicked on back button")
+            except NoSuchElementException:
+                back_xpath = '//input[@type="submit" and @value="Back"]'
+                back_button = driver.find_element(By.XPATH, back_xpath)
+                back_button.click()
+                print("Trying to click but not clicking")
             return True
         else:
             return False
@@ -431,6 +461,9 @@ def update_form_extraction_status(db_config, cin,CompanyName):
             cursor.execute(update_query_Change_of_name,two_values)
             update_query_CHG = "UPDATE documents set form_data_extraction_needed = 'Y' where document LIKE '%%CHG%%' and `cin`=%s and `company`=%s;"
             cursor.execute(update_query_CHG,two_values)
+            connection.commit()
+            update_query_DIR = "UPDATE documents set form_data_extraction_needed = 'Y' where document LIKE '%%DIR%%' and `cin`=%s and `company`=%s;"
+            cursor.execute(update_query_DIR,two_values)
             connection.commit()
         except Exception as e:
             print("Error Updating form extraction status for MGT")

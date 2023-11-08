@@ -9,6 +9,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from easyocr import easyocr
 import mysql.connector
+import sys
+import traceback
 from selenium.webdriver.common.keys import Keys
 
 def update_login_status(username, db_config):
@@ -141,6 +143,14 @@ def login_to_website(url, chrome_driver_path,username,password,db_config):
     except Exception as e:
         print(f"Error Logging in {e}")
         Status = "Fail"
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+
+        # Get the formatted traceback as a string
+        traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+        # Print the traceback details
+        for line in traceback_details:
+            print(line.strip())
         return Status,driver,options
 
 

@@ -8,6 +8,8 @@ import re
 from datetime import datetime
 import sys
 import traceback
+
+
 def get_single_value_from_xml(xml_root, parent_node, child_node):
     try:
         if child_node == 'nan':
