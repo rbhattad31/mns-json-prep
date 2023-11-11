@@ -1,13 +1,9 @@
-import re
 import sys
 import traceback
-from datetime import datetime
-
 import pandas as pd
 import xml.etree.ElementTree as Et
 import json
 import os
-import mysql.connector
 
 pd.set_option('display.max_columns', None)
 
@@ -33,9 +29,13 @@ def get_single_value_from_xml(xml_root, parent_node, child_node):
         return None
 
 
-def update_datatable_single_value(db_cursor, table_name, cin_column_name, cin_value,
-                                  company_name_column_name,
-                                  company_name, column_name, column_value):
+def update_form8_interim_datatable_single_value(db_cursor, table_name,
+                                                cin_column_name, cin_value,
+                                                charge_id_column_name, charge_id,
+                                                status_column_name, status,
+                                                date_column_name, date,
+                                                column_name, column_value
+                                                ):
     # determine value to be updated
     # if only one key value pair - update value
     # otherwise complete json dictionary
@@ -48,51 +48,35 @@ def update_datatable_single_value(db_cursor, table_name, cin_column_name, cin_va
         first_value = json_dict[first_key]
         column_value = first_value
     else:
-        column_value = json.dumps(json_dict)
-    # check if there is already entry with cin
-    query = "SELECT * FROM {} WHERE {} = '{}'".format(table_name, cin_column_name, cin_value)
-    # print(query)
+        column_value = json.dumps(json_dict).replace('"', "'")
+
+    update_query = 'UPDATE {} SET {} = "{}" WHERE {} = "{}" AND {} = "{}" AND {} = "{}" AND {} = "{}"' \
+        .format(table_name,
+                column_name, column_value,
+                cin_column_name, cin_value,
+                charge_id_column_name, charge_id,
+                status_column_name, status,
+                date_column_name, date
+                )
+    print(update_query)
     try:
-        db_cursor.execute(query)
-    except mysql.connector.Error as err:
-        print(err)
-    result = db_cursor.fetchall()
-    # print(result)
-    print(column_value)
-    # if cin value already exists
-    if len(result) > 0:
-        update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}'".format(table_name, column_name,
-                                                                                      column_value, cin_column_name,
-                                                                                      cin_value,
-                                                                                      company_name_column_name,
-                                                                                      company_name
-                                                                                      )
-        print(update_query)
         db_cursor.execute(update_query)
-        print("Updated entry")
-    # if cin value doesn't exist
+    except Exception as e:
+        raise e
     else:
-        insert_query = "INSERT INTO {} ({}, {}, {}) VALUES ('{}', '{}', '{}')".format(table_name, cin_column_name,
-                                                                                      company_name_column_name,
-                                                                                      column_name,
-                                                                                      cin_value,
-                                                                                      company_name,
-                                                                                      column_value)
-        print(insert_query)
-        db_cursor.execute(insert_query)
-        print("inserted entry")
-
-
-def condition_check():
-    return True
+        print("Updated entry")
 
 
 def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
-              output_file_path, cin_column_value, company_name, filing_date):
-    config_dict_keys = ['single_type_indicator', 'cin_column_name_in_db', 'company_name_column_name_in_db',
-                        'field_name_index', 'type_index', 'parent_node_index', 'child_nodes_index',
-                        'sql_table_name_index', 'column_name_index', 'column_json_node_index',
-                        'Type_of_file_field_name', 'interim_keyword_in_xml', 'open_charges_table_name',
+              output_file_path, cin_column_value, filing_date):
+    config_dict_keys = ['single_type_indicator',
+                        'cin_column_name_in_db',
+                        'field_name_index', 'type_index',
+                        'parent_node_index', 'child_nodes_index',
+                        'sql_table_name_index', 'column_name_index',
+                        'column_json_node_index',
+                        'Type_of_file_field_name', 'interim_keyword_in_xml',
+                        'open_charges_table_name',
                         'open_charges_latest_event_table_name', 'charge_sequence_table_name',
                         'status_abbreviation_list', 'status_list',
                         'creation_keyword', 'modification_keyword', 'satisfaction_keyword',
@@ -148,7 +132,6 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
         raise Exception("Below exception occurred while reading xml file " + '\n' + str(e))
 
     cin_column_name_in_db = config_dict['cin_column_name_in_db']
-    company_name_column_name_in_db = config_dict['company_name_column_name_in_db']
 
     # initializing list to save single values data
     results = []
@@ -183,13 +166,14 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
         print(f'{type_of_file_value=}')
         if type_of_file_value != config_dict['interim_keyword_in_xml']:
             raise Exception("Type of file is not related to Form 8 interim. So stopping program execution")
-
+    else:
+        raise Exception("Type of file field is not found in Form 8 interim mapping file. So stopping program execution")
     # get all the tables names for all single values df
     sql_tables_list = single_df[single_df.columns[sql_table_name_index]].unique()
     # for each distinct table value, filter the df with table value and find columns
     for sql_table_name in sql_tables_list:
         table_df = single_df[single_df[single_df.columns[sql_table_name_index]] == sql_table_name]
-        # print(table_df)
+        print(table_df)
 
         if sql_table_name == config_dict['open_charges_table_name']:
             print(f'{sql_table_name=}')
@@ -197,14 +181,15 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 status_row_index = table_df[table_df[table_df.columns[column_name_index]] ==
                                             config_dict['status_column_name']].index[0]
 
-            except IndexError as index_error:
-                raise (f"Below Exception occurred while getting status row details of charge sequence table - "
-                       f"\n {index_error}")
+            except Exception as e:
+                raise Exception(f"Below Exception occurred while getting status row details of table {sql_table_name}"
+                                f" from mapping file-"
+                                f"\n {e}")
             # print(f'{status_row_index=}')
             if status_row_index is not None:
                 status_value = table_df.loc[status_row_index, 'Value']
-                print(f'{status_value=}')
                 table_df.loc[status_row_index, 'Value'] = status_dict.get(status_value, "Status Not Found")
+                status_value = table_df.loc[status_row_index, 'Value']
                 if status_value == config_dict['creation_keyword']:
                     table_df = table_df[table_df[table_df.columns[field_name_index]] !=
                                         config_dict['date_modification_field_name']]
@@ -213,20 +198,23 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
                     table_df = table_df[table_df[table_df.columns[field_name_index]] !=
                                         config_dict['date_creation_field_name']]
                     pass
-            pass
+            else:
+                print(f"Status details is not found for the table {sql_table_name} in mapping file. \n "
+                      f"hence continuing with next table.")
         elif sql_table_name == config_dict['open_charges_latest_event_table_name']:
             print(f'{sql_table_name=}')
             try:
                 status_row_index = table_df[table_df[table_df.columns[column_name_index]] ==
                                             config_dict['status_column_name']].index[0]
-            except IndexError as index_error:
-                raise (f"Below Exception occurred while getting status row details of charge sequence table - "
-                       f"\n {index_error}")
+            except Exception as e:
+                raise Exception(f"Below Exception occurred while getting status row details of table {sql_table_name} "
+                                f"from mapping file"
+                                f"\n {e}")
             # print(f'{status_row_index=}')
             if status_row_index is not None:
                 status_value = table_df.loc[status_row_index, 'Value']
-                print(f'{status_value=}')
                 table_df.loc[status_row_index, 'Value'] = status_dict.get(status_value, "Status Not Found")
+                status_value = table_df.loc[status_row_index, 'Value']
                 if status_value == config_dict['creation_keyword']:
                     table_df = table_df[table_df[table_df.columns[field_name_index]] !=
                                         config_dict['date_modification_field_name']]
@@ -235,20 +223,23 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
                     table_df = table_df[table_df[table_df.columns[field_name_index]] !=
                                         config_dict['date_creation_field_name']]
                     pass
-            pass
+            else:
+                print(f"Status details is not found for the table {sql_table_name} in mapping file. \n "
+                      f"hence continuing with next table.")
         elif sql_table_name == config_dict['charge_sequence_table_name']:
             print(f'{sql_table_name=}')
             try:
                 status_row_index = table_df[table_df[table_df.columns[column_name_index]] ==
                                             config_dict['status_column_name']].index[0]
-            except IndexError as index_error:
-                raise (f"Below Exception occurred while getting status row details of charge sequence table - "
-                       f"\n {index_error}")
+            except Exception as e:
+                raise Exception(f"Below Exception occurred while getting status row details of table {sql_table_name} "
+                                f"from mapping file"
+                                f"\n {e}")
             # print(f'{status_row_index=}')
             if status_row_index is not None:
                 status_value = table_df.loc[status_row_index, 'Value']
-                print(f'{status_value=}')
                 table_df.loc[status_row_index, 'Value'] = status_dict.get(status_value, "Status Not Found")
+                status_value = table_df.loc[status_row_index, 'Value']
                 if status_value == config_dict['creation_keyword']:
                     table_df = table_df[table_df[table_df.columns[field_name_index]] !=
                                         config_dict['date_modification_field_name']]
@@ -266,9 +257,12 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
                                         config_dict['date_creation_field_name']]
                     table_df = table_df[table_df[table_df.columns[field_name_index]] !=
                                         config_dict['date_modification_field_name']]
-            pass
+            else:
+                print(f"Status details is not found for the table {sql_table_name} in mapping file. \n "
+                      f"hence continuing with next table.")
         else:
             continue
+        print(table_df)
         if sql_table_name == config_dict['open_charges_table_name']:
             charge_id_column_name = config_dict['open_charges_charge_id_column_name']
         elif sql_table_name == config_dict['open_charges_latest_event_table_name']:
@@ -277,123 +271,117 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
             charge_id_column_name = config_dict['charge_sequence_charge_id_column_name']
         else:
             continue
-
+        # print(charge_id_column_name)
         status_column_name = config_dict['status_column_name']
+        # print(status_column_name)
         date_column_name = config_dict['date_column_name']
-
-        charge_id_row_index = table_df[table_df[table_df.columns[column_name_index]] ==
-                                            charge_id_column_name].index[0]
-        status_row_index = table_df[table_df[table_df.columns[column_name_index]] ==
-                                            status_column_name].index[0]
-        date_row_index = table_df[table_df[table_df.columns[column_name_index]] ==
-                                            date_column_name].index[0]
-
-        charge_id = table_df.loc[charge_id_row_index, 'Value']
-        status = table_df.loc[status_row_index, 'Value']
-        date = table_df.loc[date_row_index, 'Value']
-
-
-
-        #  Code up to here
-
-
-            charges_latest_id = \
-                table_df.loc[table_df['Column_Name'] == config_dict['charges_latest_id_column_name'], 'Value'].values[0]
-            date = table_df.loc[table_df['Column_Name'] == config_dict['date_column_name'], 'Value'].values[0]
-            print(f'{charges_latest_id=}')
-            # check if there is already entry with cin
-            charge_id_year_check_query = (("SELECT * FROM {} WHERE {} = '{}' AND {} = '{}' AND {}"
-                                           " = '{}' AND {} = '{}'").
-                                          format(sql_table_name, cin_column_name_in_db, cin_column_value,
-                                                 company_name_column_name_in_db,
-                                                 company_name,
-                                                 config_dict['charges_latest_id_column_name'],
-                                                 charges_latest_id,
-                                                 config_dict['date_column_name'],
-                                                 date
-                                                 ))
-            print(f'{charge_id_year_check_query=}')
-            try:
-                db_cursor.execute(charge_id_year_check_query)
-            except mysql.connector.Error as err:
-                print(err)
-            result = db_cursor.fetchall()
-            # print(result)
-            # if change id value already exists for cin
-            if len(result) == 0:
-                print("Charge ID details are not exist in 'open_charges_latest_event' table for charge id {} with cin"
-                      " {}, hence skipping updating the charge id details.".format(charges_latest_id, cin_column_value))
-                continue
-        columns_list = table_df[table_df.columns[6]].unique()
-
-        if sql_table_name == config_dict['charge_sequence_table_name']:
-            print(table_df)
-            print(f'{sql_table_name=}')
-            status_abbreviation_list = [x.strip() for x in config_dict['status_abbreviation_list'].split(',')]
-            status_list = [x.strip() for x in config_dict['status_list'].split(',')]
-            status_dict = dict(zip(status_abbreviation_list, status_list))
-            print(f'{status_dict=}')
-            try:
-                status_row_index = table_df[table_df['Column_Name'] == config_dict['status_column_name']].index[0]
-            except IndexError as index_error:
-                raise (f"Below Exception occurred while getting status row details of charge sequence table - "
-                       f"\n {index_error}")
-            print(f'{status_row_index=}')
-            if status_row_index is not None:
-                status_value = table_df.loc[status_row_index, 'Value']
-                print(f'{status_value=}')
-                table_df.loc[status_row_index, 'Value'] = status_dict.get(status_value, "Status Not Found")
-            print(table_df)
-            charge_id = table_df.loc[table_df['Column_Name'] == config_dict['charge_id_column_name'], 'Value'].values[0]
-            date = table_df.loc[table_df['Column_Name'] == config_dict['date_column_name'], 'Value'].values[0]
+        # print(date_column_name)
+        try:
+            charge_id_row_index = table_df[table_df[table_df.columns[column_name_index]] == charge_id_column_name].index[0]
+            status_row_index = table_df[table_df[table_df.columns[column_name_index]] == status_column_name].index[0]
+            date_row_index = table_df[table_df[table_df.columns[column_name_index]] == date_column_name].index[0]
+            charge_id = table_df.loc[charge_id_row_index, 'Value']
             print(f'{charge_id=}')
-            # check if there is already entry with cin
-            charge_id_year_check_query = (("SELECT * FROM {} WHERE {} = '{}' AND {} = '{}' AND {}"
-                                           " = '{}' AND {} = '{}'").
-                                          format(sql_table_name, cin_column_name_in_db, cin_column_value,
-                                                 company_name_column_name_in_db,
-                                                 company_name,
-                                                 config_dict['charge_id_column_name'],
-                                                 charge_id,
-                                                 config_dict['date_column_name'],
-                                                 date
-                                                 ))
-            print(f'{charge_id_year_check_query=}')
-            try:
-                db_cursor.execute(charge_id_year_check_query)
-            except mysql.connector.Error as err:
-                print(err)
-            result = db_cursor.fetchall()
+            status = table_df.loc[status_row_index, 'Value']
+            print(f'{status=}')
+            date = table_df.loc[date_row_index, 'Value']
+            print(f'{date=}')
+        except Exception as e:
+            print(f'Exception {e} occurred while finding charge id, status and date values. please check mapping file '
+                  f'and datatable structure. \ncontinuing with next table processing...')
+            continue
 
-            # if charge details are exist then need not update status column values
-            if len(result) > 0:
-                print(f"Entry is found for cin {cin_column_value} and company name {company_name} in {sql_table_name} "
-                      f"table, \n so removing status info from the data not to update in datatable")
-                print(table_df)
-                table_df = table_df[table_df['Column_Name'] != config_dict['status_column_name']]
-                print(table_df)
-                columns_list = table_df[table_df.columns[6]].unique()
+        charge_id_year_check_query = (('SELECT * FROM {} WHERE {} = "{}" AND {} = "{}" AND {} = "{}" '
+                                       'AND {} = "{}"').
+                                      format(sql_table_name,
+                                             cin_column_name_in_db, cin_column_value,
+                                             charge_id_column_name, charge_id,
+                                             status_column_name, status,
+                                             date_column_name, date
+                                             ))
+        print(f'{charge_id_year_check_query=}')
+        try:
+            db_cursor.execute(charge_id_year_check_query)
+        except Exception as e:
+            print(f"Exception Occurred while verifying charge id details in table {sql_table_name}: \n {e}. "
+                  f"Continuing with next table processing")
+            continue
+        result = db_cursor.fetchall()
 
+        if len(result) == 0:
+            if sql_table_name == config_dict['open_charges_table_name']:
+                print(f"Charge id details are not exist in table {sql_table_name}, "
+                      f"hence continuing with next table processing")
+                continue
+            elif sql_table_name == config_dict['open_charges_latest_event_table_name']:
+                print(f"Charge id details are not exist in table {sql_table_name}, "
+                      f"hence continuing with next table processing")
+                continue
+            elif sql_table_name == config_dict['charge_sequence_table_name']:
+                # code for insert charge id, status, date
+                print(f"Charge id details are not exist in table {sql_table_name}, "
+                      f"hence updating the table with charge id, status and date")
+                insert_query = "INSERT INTO {} ({}, {}, {}, {}) VALUES ('{}', '{}', '{}', '{}')".format(
+                    sql_table_name,
+                    cin_column_name_in_db,
+                    charge_id_column_name,
+                    status_column_name,
+                    date_column_name,
+                    cin_column_value,
+                    charge_id,
+                    status,
+                    date
+                )
+                print(f'{insert_query=}')
+
+                try:
+                    db_cursor.execute(insert_query)
+                except Exception as e:
+                    print(f"Exception Occurred while inserting charge id details in table {sql_table_name}: "
+                          f"\n{e} \ncontinuing with next table process.")
+
+                else:
+                    print(f"Charge id details are inserted into table {sql_table_name}")
+                # delete charge id, status, date rows
+                table_df = table_df[table_df[table_df.columns[column_name_index]] != charge_id_column_name]
+                table_df = table_df[table_df[table_df.columns[column_name_index]] != status_column_name]
+                table_df = table_df[table_df[table_df.columns[column_name_index]] != date_column_name]
+                # update remaining rows
+                pass
+            else:
+                continue
+        if len(result) > 0:
+            print(
+                f"Entry is found for charge id {charge_id}, status {status} and date {date} in table {sql_table_name}, "
+                f"hence continuing with tables remaining rows data into database")
+            table_df = table_df[table_df[table_df.columns[column_name_index]] != charge_id_column_name]
+            table_df = table_df[table_df[table_df.columns[column_name_index]] != status_column_name]
+            table_df = table_df[table_df[table_df.columns[column_name_index]] != date_column_name]
+
+        # update all remaining rows for all tables
+        columns_list = table_df[table_df.columns[column_name_index]].unique()
         # print(columns_list)
+
         for column_name in columns_list:
             # print(column_name)
             # filter table df with only column value
-            column_df = table_df[table_df[table_df.columns[6]] == column_name]
+            column_df = table_df[table_df[table_df.columns[column_name_index]] == column_name]
             # print(column_df)
 
             # create json dict with keys of field name and values for the same column name entries
-            json_dict = column_df.set_index(table_df.columns[0])['Value'].to_dict()
+            json_dict = column_df.set_index(table_df.columns[field_name_index])['Value'].to_dict()
             # Convert the dictionary to a JSON string
             json_string = json.dumps(json_dict)
             # print(json_string)
 
             try:
-                update_datatable_single_value(db_cursor, sql_table_name,
-                                              cin_column_name_in_db,
-                                              cin_column_value,
-                                              company_name_column_name_in_db,
-                                              company_name, column_name,
-                                              json_string)
+                update_form8_interim_datatable_single_value(db_cursor, sql_table_name,
+                                                            cin_column_name_in_db, cin_column_value,
+                                                            charge_id_column_name, charge_id,
+                                                            status_column_name, status,
+                                                            date_column_name, date,
+                                                            column_name, json_string)
+
             except Exception as e:
                 print(f"Exception {e} occurred while updating data in dataframe for {sql_table_name} "
                       f"with data {json_string}")
@@ -416,10 +404,10 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
 
 def form8_interim_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
-                            output_file_path, cin_column_value, company_name, filing_date):
+                            output_file_path, cin_column_value, filing_date):
     try:
         xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
-                  output_file_path, cin_column_value, company_name, filing_date)
+                  output_file_path, cin_column_value, filing_date)
     except Exception as e:
         print("Below Exception occurred while processing form 8 interim file: \n ", e)
         # Get the current exception information

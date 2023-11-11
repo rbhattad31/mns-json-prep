@@ -69,7 +69,7 @@ cin = 'L27109PN1999PLC016417'
 company_name = 'ISMT LIMITED'
 filing_date = '14-09-2021'
 result = form8_interim_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
-                                 output_file_path, cin, company_name, filing_date)
+                                 output_file_path, cin, filing_date)
 
 
 if result:
