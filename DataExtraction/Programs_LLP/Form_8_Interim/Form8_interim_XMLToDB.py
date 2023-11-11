@@ -321,7 +321,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 # code for insert charge id, status, date
                 print(f"Charge id details are not exist in table {sql_table_name}, "
                       f"hence updating the table with charge id, status and date")
-                insert_query = "INSERT INTO {} ({}, {}, {}, {}) VALUES ('{}', '{}', '{}', '{}')".format(
+                insert_query = 'INSERT INTO {} ({}, {}, {}, {}) VALUES ("{}", "{}", "{}", "{}")'.format(
                     sql_table_name,
                     cin_column_name_in_db,
                     charge_id_column_name,
