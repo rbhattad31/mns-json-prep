@@ -95,7 +95,7 @@ def update_database_single_value_aoc(db_config, table_name, cin_column_name, cin
     db_connection.close()
 
 
-def insert_datatable_with_table(db_config, sql_table_name, column_names_list, df_row,cin_column_name,cin_value,
+def insert_datatable_with_table(db_config, sql_table_name, column_names_list, df_row, cin_column_name, cin_value,
                                 company_column_name, company_value, year):
     db_connection = mysql.connector.connect(**db_config)
     db_cursor = db_connection.cursor()
@@ -490,12 +490,13 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             continue
         table_df = pd.DataFrame(table_in_list)
         table_df.dropna(inplace=True)
-        # print(table_df)
+        print(table_df)
         if field_name == 'nbfc_financials_auditor':
             column_json_node_list = [x.strip() for x in column_json_node.split(',')]
-            table_df.columns = column_json_node_list
+            print(column_json_node_list)
+            column_child_node_list = [x.strip() for x in child_nodes.split(',')]
+            table_df.columns = column_child_node_list
             first_row_df = table_df.iloc[[0]]
-            remaining_row_df = table_df.iloc[1:]
 
             row_dicts = first_row_df.to_dict(orient='records')
 
@@ -511,33 +512,37 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 }
                 auditor_json = json.dumps(row_dict)
             group_df.at[index, 'Value'] = auditor_json
-
-            rows_dicts_remaining = remaining_row_df.to_dict(orient='records')
-
-            for row_dict_remaining in rows_dicts_remaining:
-                row_dict_remaining["ADDRESS"] = {
-                    "ADDRESS_LINE_I": row_dict_remaining.pop("ADDRESS_LINE_I"),
-                    "ADDRESS_LINE_II": row_dict_remaining.pop("ADDRESS_LINE_II"),
-                    "CITY": row_dict_remaining.pop("CITY"),
-                    "STATE": row_dict_remaining.pop("STATE"),
-                    "COUNTRY": row_dict_remaining.pop("COUNTRY"),
-                    "PIN_CODE": row_dict_remaining.pop("PIN_CODE")
-                }
-            remaining_row_df_new = pd.DataFrame(rows_dicts_remaining)
             for year in years:
                 update_database_single_value_aoc(db_config, sql_table_name, cin_column_name, cin_column_value,
                                                  company_column_name, company_name, column_names, auditor_json, year)
-                for _, df_row in remaining_row_df_new.iterrows():
-                    # print(df_row)
-                    # print(table_df.columns)
-                    try:
-                        insert_datatable_with_table(db_config, config_dict['Additional_Auditor_Table_Name'],
-                                                    remaining_row_df_new.columns, df_row, cin_column_name,
-                                                    cin_column_value, company_column_name, company_name, year)
-                    except Exception as e:
-                        print(
-                            f'Exception {e} occurred while inserting below table row in table {sql_table_name}- \n',
-                            df_row)
+            if len(table_df.index) > 1:
+                remaining_row_df = table_df.iloc[1:]
+                rows_dicts_remaining = remaining_row_df.to_dict(orient='records')
+                for row_dict_remaining in rows_dicts_remaining:
+                    row_dict_remaining["ADDRESS"] = {
+                        "ADDRESS_LINE_I": row_dict_remaining.pop("ADDRESS_LINE_I"),
+                        "ADDRESS_LINE_II": row_dict_remaining.pop("ADDRESS_LINE_II"),
+                        "CITY": row_dict_remaining.pop("CITY"),
+                        "STATE": row_dict_remaining.pop("STATE"),
+                        "COUNTRY": row_dict_remaining.pop("COUNTRY"),
+                        "PIN_CODE": row_dict_remaining.pop("PIN_CODE")
+                    }
+                remaining_row_df_new = pd.DataFrame(rows_dicts_remaining)
+                remaining_row_df_new.columns = column_json_node_list
+                remaining_row_df_new["address"] = remaining_row_df_new["address"].apply(lambda x: json.dumps(x))
+                for year in years:
+                    for _, df_row in remaining_row_df_new.iterrows():
+                        # print(df_row)
+                        # print(table_df.columns)
+                        try:
+                            insert_datatable_with_table(db_config, config_dict['Additional_Auditor_Table_Name'],
+                                                        remaining_row_df_new.columns, df_row, cin_column_name,
+                                                        cin_column_value, company_column_name, company_name, year)
+                        except Exception as e:
+                            print(
+                                f'Exception {e} occurred while inserting below table row in table {sql_table_name}- \n',
+                                df_row)
+
     print(group_df)
     output_dataframes_list.append(group_df)
 
@@ -553,13 +558,13 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
 
 def aoc_nbfc_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, output_file_path,
-                       cin_column_value, company_name):
+                       cin_column_value, company_name, aoc4_nbfc_first_file_found):
     try:
         print("Started Executing AOC NBFC Program")
         xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, output_file_path,
-                  cin_column_value, company_name)
+                  cin_column_value, company_name, aoc4_nbfc_first_file_found)
     except Exception as e:
-        print("Below Exception occurred while processing AOC NBFC program \n ")
+        print(f"Exception {e} occurred while processing AOC NBFC program \n ")
         # Get the current exception information
         exc_type, exc_value, exc_traceback = sys.exc_info()
 
