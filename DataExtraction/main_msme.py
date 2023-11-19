@@ -29,18 +29,12 @@ pdf_file_name = os.path.basename(pdf_file_path)
 print(pdf_file_name)
 print(pdf_file_path)
 
-# xml_file_path = str(pdf_file_path).replace('.pdf', '.xml')
-# xfa_data = extract_xfa_data(pdf_file_path)
-# save_xfa_data_to_xml(xfa_data, xml_file_path)
+xml_file_path = str(pdf_file_path).replace('.pdf', '.xml')
+xfa_data = extract_xfa_data(pdf_file_path)
+save_xfa_data_to_xml(xfa_data, xml_file_path)
 
-
-xml_file_path = 'Input/MSME/1_Form MSME FORM I-14092023_signed_1 - Copy.xml'
-# xml_file_path = 'Input/MSME/2_Form MSME FORM I-21072022_signed_2 - Copy.xml'
-# xml to Excel
 
 map_file_path = config_dict['mapping file path']
-# map_file_path = 'Input/Subsidiary_associate_MGT7_config.xlsx'
-# map_file_path = 'Input/business activity mgt7 config.xlsx'
 
 map_file_sheet_name = config_dict['mapping file sheet name']
 output_file_folder = config_dict['output excel file folder path']

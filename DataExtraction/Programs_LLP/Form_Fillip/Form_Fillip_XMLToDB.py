@@ -77,7 +77,8 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                         'field_name_index', 'type_index',
                         'parent_node_index',
                         'child_nodes_index', 'sql_table_name_index',
-                        'column_name_index', 'column_json_node_index'
+                        'column_name_index', 'column_json_node_index',
+                        'name_column_name'
                         ]
 
     missing_keys = [key for key in config_dict_keys if key not in config_dict]

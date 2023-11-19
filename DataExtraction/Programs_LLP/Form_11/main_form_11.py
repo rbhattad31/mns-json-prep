@@ -1,13 +1,12 @@
 from PDFToXML import extract_xfa_data, save_xfa_data_to_xml
-from Programs_MGT7.MGT7_XMLToDB import mgt7_xml_to_db
+from Programs_LLP.Form_11.Form11_XMLToDB import form_11_xml_to_db
 from CreateConfigDictionary import create_main_config_dictionary
 from datetime import date
 import os
-from WriteToDB import db_cursor
 
 # read config file
-config_file_path = 'Input/Config.xlsx'
-config_sheet_name = 'MGT7'
+config_file_path = '../../Input/Config.xlsx'
+config_sheet_name = 'Form_11'
 config_dict = create_main_config_dictionary(config_file_path, config_sheet_name)
 print(config_dict)
 
@@ -34,16 +33,16 @@ pdf_file_name = os.path.basename(pdf_file_path)
 # xfa_data = extract_xfa_data(pdf_file_path)
 # save_xfa_data_to_xml(xfa_data, xml_file_path)
 
-# xml_file_path = 'Input/MGT7/Form MGT-7-22092022_signed - Json data L&T.xml'
-xml_file_path = 'Input/MGT7/List of Subsidiaries and Associates 2022_tables.xml'
-# xml_file_path = 'Input/MGT7/Business Activity Details_tables.xml'
+xml_file_path = '../../Input/LLP/Form_11/LLP Form11-08092020for the financial year ending on31.03.2018_5 (1).xml'
+
+# xml'
+
 # print(xml_file_path)
 # xml to Excel
 
 # map_file_path = config_dict['mapping file path']
 # map_file_path = 'Input/MGT7/MGT7_Newmapping_config.xlsx'
-map_file_path = 'Input/MGT7/Subsidiary_associate_MGT7_config.xlsx'
-# map_file_path = 'Input/MGT7/business activity mgt7 config.xlsx'
+map_file_path = '../../Input/LLP/Form_11/FORM-11_nodes_config.xlsx'
 
 map_file_sheet_name = config_dict['mapping file sheet name']
 output_file_folder = config_dict['output excel file folder path']
@@ -67,12 +66,20 @@ print(output_file_path)
 # company_name = 'ISMT LIMITED'
 
 cin = 'L27100MH1907PLC000268'
-company_name = 'CONTROL RISKS INDIA PRIVATE LIMITED'
-result = mgt7_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path, output_file_path,
-                        cin, company_name)
 
+db_config = {
+    "host": "162.241.123.123",
+    "user": "classle3",
+    "password": "0p=HJ^q~$pT-",
+    "database": "classle3_mns_credit",
+    "connect_timeout": 6000
+}
+
+result = form_11_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, output_file_path,
+                           cin)
 
 if result:
-    print("process complete for mgt7")
+    print("process complete for Form 11")
 else:
-    print("process failed for mgt7")
+    print("process failed for Form 11")
+
