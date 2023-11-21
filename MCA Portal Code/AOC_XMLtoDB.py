@@ -234,7 +234,7 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                 print(value_financial_parameter)
                 Financial_Parameter_df.at[index, 'Value'] = value_financial_parameter
             elif field_name == 'proposed_dividend':
-                if value_financial_parameter != 0 and value_financial_parameter is not None:
+                if value_financial_parameter != 0 or value_financial_parameter is not None:
                     dividend_value = 'Yes'
                 else:
                     dividend_value = 'No'
@@ -388,8 +388,26 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                 # filter table df with only column value
                 common_column_df = common_table_df[common_table_df[common_table_df.columns[8]] == common_column_name]
                 print(common_column_df)
-                # create json dict with keys of field name and values for the same column name entries
-                common_json_dict = common_column_df.set_index(common_table_df.columns[0])['Value'].to_dict()
+                if common_column_name == config_dict['auditor_comments_column_name']:
+                    auditor_comments_row_index = common_column_df[common_column_df[common_column_df.columns[8]] ==
+                                                       config_dict['auditor_comments_column_name']].index[0]
+                    if auditor_comments_row_index is not None:
+                        comment_value = common_column_df.loc[auditor_comments_row_index, 'Value']
+                        print(f'{comment_value=}')
+                        if comment_value == 'NO':
+                            common_json_dict = {'disclosures_auditor_report':'''As per Auditor's Report, the accounts give a true and fair view, as per the accounting principles generally accepted, of the
+                                                state of affairs in the case of Balance sheet and, Profit or Loss in the case of Profit & Loss Accounts. Auditor's Report is
+                                                Unqualified i.e. Clean''','disclosures_director_report':'''As per Auditor's Report, the accounts give a true and fair view, as per the accounting principles generally accepted, of the
+                                                state of affairs in the case of Balance sheet and, Profit or Loss in the case of Profit & Loss Accounts. Auditor's Report is
+                                                Unqualified i.e. Clean'''}
+                        else:
+                            # create json dict with keys of field name and values for the same column name entries
+                            common_json_dict = common_column_df.set_index(common_table_df.columns[0])['Value'].to_dict()
+                    else:
+                        common_json_dict = {}
+                else:
+                    # create json dict with keys of field name and values for the same column name entries
+                    common_json_dict = common_column_df.set_index(common_table_df.columns[0])['Value'].to_dict()
                 # Convert the dictionary to a JSON string
                 common_json_string = json.dumps(common_json_dict)
                 print(common_json_string)
@@ -434,14 +452,15 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                 # Convert each dictionary to a JSON string
                 auditor_json = None
                 for row_dict in row_dicts:
-                    row_dict["ADDRESS"] = {
-                        "ADDRESS_LINE_I": row_dict.pop("ADDRESS_LINE_I"),
-                        "ADDRESS_LINE_II": row_dict.pop("ADDRESS_LINE_II"),
-                        "CITY": row_dict.pop("CITY"),
-                        "STATE": row_dict.pop("STATE"),
-                        "COUNTRY": row_dict.pop("COUNTRY"),
-                        "PIN_CODE": row_dict.pop("PIN_CODE")
-                    }
+                    row_dict["ADDRESS"] = row_dict.pop("ADDRESS_LINE_I") + ", " + row_dict.pop("ADDRESS_LINE_II") + ", " + row_dict.pop("CITY") + ", " + row_dict.pop("STATE") + ", " + row_dict.pop("COUNTRY") + ", " + row_dict.pop("PIN_CODE")
+                    # row_dict["ADDRESS"] = {
+                    #     "ADDRESS_LINE_I": row_dict.pop("ADDRESS_LINE_I"),
+                    #     "ADDRESS_LINE_II": row_dict.pop("ADDRESS_LINE_II"),
+                    #     "CITY": row_dict.pop("CITY"),
+                    #     "STATE": row_dict.pop("STATE"),
+                    #     "COUNTRY": row_dict.pop("COUNTRY"),
+                    #     "PIN_CODE": row_dict.pop("PIN_CODE")
+                    # }
                     auditor_json = json.dumps(row_dict)
                 group_df.at[index, 'Value'] = auditor_json
                 for year in years:
@@ -450,14 +469,17 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                     remaining_row_df = table_df.iloc[1:]
                     rows_dicts_remaining = remaining_row_df.to_dict(orient='records')
                     for row_dict_remaining in rows_dicts_remaining:
-                        row_dict_remaining["ADDRESS"] = {
-                            "ADDRESS_LINE_I": row_dict_remaining.pop("ADDRESS_LINE_I"),
-                            "ADDRESS_LINE_II": row_dict_remaining.pop("ADDRESS_LINE_II"),
-                            "CITY": row_dict_remaining.pop("CITY"),
-                            "STATE": row_dict_remaining.pop("STATE"),
-                            "COUNTRY": row_dict_remaining.pop("COUNTRY"),
-                            "PIN_CODE": row_dict_remaining.pop("PIN_CODE")
-                        }
+                        row_dict_remaining["ADDRESS"] = row_dict_remaining.pop("ADDRESS_LINE_I") + ", " + row_dict_remaining.pop(
+                            "ADDRESS_LINE_II") + ", " + row_dict_remaining.pop("CITY") + ", " + row_dict_remaining.pop(
+                            "STATE") + ", " + row_dict_remaining.pop("COUNTRY") + ", " + row_dict_remaining.pop("PIN_CODE")
+                        # row_dict_remaining["ADDRESS"] = {
+                        #     "ADDRESS_LINE_I": row_dict_remaining.pop("ADDRESS_LINE_I"),
+                        #     "ADDRESS_LINE_II": row_dict_remaining.pop("ADDRESS_LINE_II"),
+                        #     "CITY": row_dict_remaining.pop("CITY"),
+                        #     "STATE": row_dict_remaining.pop("STATE"),
+                        #     "COUNTRY": row_dict_remaining.pop("COUNTRY"),
+                        #     "PIN_CODE": row_dict_remaining.pop("PIN_CODE")
+                        # }
                     remaining_row_df_new = pd.DataFrame(rows_dicts_remaining)
                     remaining_row_df_new.columns = column_json_node_list
                     remaining_row_df_new["address"] = remaining_row_df_new["address"].apply(lambda x: json.dumps(x))

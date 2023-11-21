@@ -16,7 +16,9 @@ import re
 from datetime import datetime
 import datetime
 import shutil
-
+import sys
+import traceback
+from selenium.common.exceptions import NoSuchWindowException
 
 current_date = datetime.date.today()
 today_date = current_date.strftime("%d-%m-%Y")
@@ -62,7 +64,7 @@ def Navigate_to_Company(Cin,CompanyName,driver,dbconfig):
                 else:
                     try:
                         main_page_number_xpath = driver.find_element(By.XPATH,
-                                                                     f'//span[@id="pg{k}" and @class="pg-selected"]')
+                                                                     f'//a[@class="paginate_active"]')
                         main_page_number = main_page_number_xpath.text
                         main_page_number = int(main_page_number)
                         print("Page Number", main_page_number)
@@ -70,11 +72,11 @@ def Navigate_to_Company(Cin,CompanyName,driver,dbconfig):
                         print("No page number found")
                         pass
                     print("Loop Counter", k)
-                    if k != page_number and k != 1:
+                    if k != main_page_number and k != 1:
                         print("Completed Navigation")
                         connection = mysql.connector.connect(**dbconfig)
                         cursor = connection.cursor()
-                        Update_no_company_query = "update orders set workflow_status='Download Failed and bot_comments='Company Not found' where cin = %s"
+                        Update_no_company_query = "update orders set workflow_status='Download Failed' and bot_comments='Company Not found' where cin = %s"
                         Update_no_company_values = (Cin,)
                         print(Update_no_company_query % Update_no_company_values)
                         cursor.execute(Update_no_company_query, Update_no_company_values)
@@ -92,7 +94,7 @@ def Navigate_to_Company(Cin,CompanyName,driver,dbconfig):
                         # If the button is not clickable, you've reached the last page
                         connection = mysql.connector.connect(**dbconfig)
                         cursor = connection.cursor()
-                        Update_no_company_query = "update orders set workflow_status='Download Failed and bot_comments='Company Not found' where cin = %s"
+                        Update_no_company_query = "update orders set workflow_status='Download Failed' and bot_comments='Company Not found' where cin = %s"
                         Update_no_company_values = (Cin,)
                         print(Update_no_company_query % Update_no_company_values)
                         cursor.execute(Update_no_company_query, Update_no_company_values)
@@ -172,8 +174,8 @@ def insert_Download_Details(driver,Cin, Company,db_config,category):
                     result = cursor.fetchall()
                     print("Result from db", result)
                     if len(result) == 0:
-                        query = "Insert into documents(cin,company,Category,document,document_date_year,form_data_extraction_status,created_date,created_by,form_data_extraction_needed,Page_Number,Download_Status) Values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
-                        values = (Cin, Company, category, document_name, formatted_date, 'Pending', current_date,user_name, 'N', j, 'Pending')
+                        query = "Insert into documents(cin,company,Category,document,document_date_year,form_data_extraction_status,created_date,created_by,form_data_extraction_needed,Page_Number,Download_Status,DB_insertion_status) Values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+                        values = (Cin, Company, category, document_name, formatted_date, 'Pending', current_date,user_name, 'N', j, 'Pending','Pending')
                         print(query % values)
                         cursor.execute(query, values)
                         connection.commit()
@@ -199,6 +201,16 @@ def insert_Download_Details(driver,Cin, Company,db_config,category):
         print(f"Exception occured {e}")
         return False
     else:
+        try:
+            back_xpath = '//input[@type="submit" and @value="Back"]'
+            back_button = driver.find_element(By.XPATH, back_xpath)
+            back_button.click()
+            print("Clicked on back button")
+        except NoSuchElementException:
+            back_xpath = '//input[@type="submit" and @value="Back"]'
+            back_button = driver.find_element(By.XPATH, back_xpath)
+            back_button.click()
+            print("Trying to click but not clicking")
         return True
 def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath,options):
     try:
@@ -354,6 +366,14 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath,options
                         continue
             except Exception as e:
                 print(f"Excpetion {e} occured while navigating")
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+
+                # Get the formatted traceback as a string
+                traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+                # Print the traceback details
+                for line in traceback_details:
+                    print(line.strip())
                 download_retry += 1
                 if download_retry > 5:
                     connection = mysql.connector.connect(**dbconfig)
@@ -379,6 +399,16 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath,options
                             print("Trying to click but not clicking")
                         return True
                     else:
+                        try:
+                            back_xpath = '//input[@type="submit" and @value="Back"]'
+                            back_button = driver.find_element(By.XPATH, back_xpath)
+                            back_button.click()
+                            print("Clicked on back button")
+                        except NoSuchElementException:
+                            back_xpath = '//input[@type="submit" and @value="Back"]'
+                            back_button = driver.find_element(By.XPATH, back_xpath)
+                            back_button.click()
+                            print("Trying to click but not clicking")
                         return False
                 else:
                     continue
@@ -418,19 +448,28 @@ def update_form_extraction_status(db_config, cin,CompanyName):
     try:
         values = (cin, CompanyName, cin, CompanyName)
         try:
-            update_query_MGT = """UPDATE documents AS t1
-            JOIN (
-                SELECT id
-                FROM documents
-                WHERE document LIKE '%%MGT%%' and `cin`=%s and `company`=%s
-                ORDER BY STR_TO_DATE(document_date_year, '%%d-%%m-%%Y') DESC
-                LIMIT 1
-            ) AS t2 ON t1.id = t2.id
-            SET t1.form_data_extraction_needed = 'Y'
-            WHERE t1.document LIKE '%%MGT%%' and `cin`=%s and `company`=%s;"""
+            update_query_MGT = """START TRANSACTION;
+
+                                UPDATE documents AS t1
+                                JOIN (
+                                    SELECT id
+                                    FROM documents
+                                    WHERE document LIKE '%%MGT%%' AND `cin` = %s AND `company` = %s
+                                    ORDER BY STR_TO_DATE(document_date_year, '%%d-%%m-%%Y') DESC
+                                    LIMIT 1
+                                    FOR UPDATE
+                                ) AS t2 ON t1.id = t2.id
+                                SET t1.form_data_extraction_needed = 'Y'
+                                WHERE t1.document LIKE '%%MGT%%' AND `cin` = %s AND `company` = %s;
+                                
+                                COMMIT;"""
             cursor.execute(update_query_MGT,values)
             connection.commit()
+            print(update_query_MGT % values)
+        except Exception as e:
+            print(f"Error Updating form extraction status for MGT {e}")
 
+        try:
             update_query_MSME = """UPDATE documents AS t1
             JOIN (
                 SELECT id
@@ -443,30 +482,62 @@ def update_form_extraction_status(db_config, cin,CompanyName):
             WHERE t1.document LIKE '%%MSME%%' and `cin`=%s and `company`=%s;"""
             cursor.execute(update_query_MSME,values)
             connection.commit()
+        except Exception as e:
+            print(f"Exception occured for MSME{e}")
 
+        try:
             update_query_AOC = """UPDATE documents AS t1
-            JOIN (
-                SELECT id
-                FROM documents
-                WHERE document LIKE '%%AOC-4%%' and `cin`=%s and `company`=%s
-                ORDER BY STR_TO_DATE(document_date_year, '%%d-%%m-%%Y') DESC
-                LIMIT 4
-            ) AS t2 ON t1.id = t2.id
             SET t1.form_data_extraction_needed = 'Y'
-            WHERE t1.document LIKE '%%AOC-4%%' and `cin`=%s and `company`=%s;"""
+            WHERE t1.document LIKE '%%AOC%%' 
+              AND t1.cin = %s 
+              AND t1.company = %s
+              AND t1.id IN (
+                  SELECT id
+                  FROM (
+                      SELECT id
+                      FROM documents
+                      WHERE document LIKE '%%AOC%%' 
+                        AND cin = %s
+                        AND company = %s
+                      ORDER BY STR_TO_DATE(document_date_year, '%%d-%%m-%%Y') DESC
+                      LIMIT 4
+                  ) AS top_files_per_year
+              );"""
+            print(update_query_AOC % values)
             cursor.execute(update_query_AOC,values)
             connection.commit()
-            update_query_Change_of_name = "UPDATE documents set form_data_extraction_needed = 'Y' where document LIKE '%%CHANGE OF NAME%%' and `cin`=%s and `company`=%s;"
+        except Exception as e:
+            print(f"Exception occured for AOC{e}")
+        try:
+            update_query_Change_of_name = "UPDATE documents set form_data_extraction_needed = 'Y' where LOWER(document) LIKE '%%change of name%%' and `cin`=%s and `company`=%s;"
             two_values = (cin,CompanyName)
             cursor.execute(update_query_Change_of_name,two_values)
             update_query_CHG = "UPDATE documents set form_data_extraction_needed = 'Y' where document LIKE '%%CHG%%' and `cin`=%s and `company`=%s;"
             cursor.execute(update_query_CHG,two_values)
             connection.commit()
-            update_query_DIR = "UPDATE documents set form_data_extraction_needed = 'Y' where document LIKE '%%DIR%%' and `cin`=%s and `company`=%s;"
+            update_query_DIR = """UPDATE documents 
+                SET form_data_extraction_needed = 'Y' 
+                WHERE LOWER(document) LIKE '%%dir%%' 
+                AND LOWER(document) NOT LIKE '%%directors%%' 
+                AND LOWER(document) NOT LIKE '%%director%%' 
+                AND cin = %s 
+                AND company = %s;"""
             cursor.execute(update_query_DIR,two_values)
             connection.commit()
         except Exception as e:
-            print("Error Updating form extraction status for MGT")
+            print(f"Exception occured for change of name{e}")
+        try:
+            update_query_Xbrl_consolidated = "UPDATE documents set form_data_extraction_needed = 'Y' where document like '%%XBRL document in respect Consolidated%%' and `cin`=%s and `company`=%s;"
+            date_values = (cin, CompanyName)
+            print(update_query_Xbrl_consolidated % date_values)
+            cursor.execute(update_query_Xbrl_consolidated,date_values)
+            connection.commit()
+            update_query_Xbrl = "UPDATE documents set form_data_extraction_needed = 'Y' where document like '%%XBRL financial statements%%' and `cin`=%s and `company`=%s;"
+            print(update_query_Xbrl % date_values)
+            cursor.execute(update_query_Xbrl,date_values)
+            connection.commit()
+        except Exception as e:
+            print(f"Exception occured for XBRL{e}")
     except Exception as e:
         print(f"Error updating login status in the database: {str(e)}")
         return False
@@ -564,8 +635,14 @@ def download_captcha_and_enter_text(CompanyName, driver, file_path, filename, Ci
                 print(e)
                 print(f"Failed attempt {attempt} to download captcha and enter text")
         time.sleep(2)
-        driver.close()
-
+        try:
+            driver.close()
+        except NoSuchWindowException:
+            print("Due to some issue window closed")
+            original_window_handle = window_handles[0]
+            # Switch back to the original window
+            driver.switch_to.window(original_window_handle)
+            return False
         # Assuming the original window is the first one in the list
         original_window_handle = window_handles[0]
 
@@ -578,16 +655,56 @@ def download_captcha_and_enter_text(CompanyName, driver, file_path, filename, Ci
             os.rename(download_file_path,file_path)
             print(f"Renamed from {download_file_path} to {file_path}")
         time.sleep(1)
+        download_filename = os.path.basename(file_path)
+        download_filename = str(download_filename).replace('.pdf', '')
+        print(download_filename)
+        if download_filename != filename:
+            print("Download name not same so renaming")
+            update_download_filename = filename
+            old_file_path = file_path
+            print(f"old file path:{old_file_path}")
+            file_path = str(file_path).replace(download_filename, update_download_filename)
+            if '.pdf' not in file_path:
+                file_path = file_path + '.pdf'
+            print(f"New file path:{file_path}")
+            os.rename(old_file_path, file_path)
+        else:
+            print("Same name so not changing")
         if os.path.exists(file_path):
             Download_Status = "Downloaded"
             print("Downloaded successfully")
             # insert_Download_Details(Cin, CompanyName, category, filename, dbconfig, file_path, date)
             return True
         else:
-            print("Not Downloaded successfully")
-            return False
+            if 'XBRL financial statements' in filename:
+                other_attachments_directory = os.path.dirname(file_path)
+                if os.path.exists(other_attachments_directory):
+                    files = [os.path.join(other_attachments_directory, file) for file in os.listdir(other_attachments_directory)]
+                    for file in files:
+                        if 'XBRL financial statements' in file:
+                            updated_filename = filename
+                            updated_file_path = os.path.join(other_attachments_directory, updated_filename)
+                            if '.pdf' not in updated_file_path:
+                                updated_file_path = updated_file_path + '.pdf'
+                            os.rename(file, updated_file_path)
+                            print(f"Renamed from {file} to {updated_file_path}")
+                            return True
+                else:
+                    print("Not Downloaded successfully")
+                    return False
+            else:
+                print("Not Downloaded successfully")
+                return False
     except Exception as e:
         print(f"Exception Occured {e}")
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+
+        # Get the formatted traceback as a string
+        traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+        # Print the traceback details
+        for line in traceback_details:
+            print(line.strip())
         return False
 
 

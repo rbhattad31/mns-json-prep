@@ -23,7 +23,7 @@ def fetch_order_data_from_table(connection):
             # Construct the SQL query
             query = "SELECT * FROM orders where workflow_status=%s"
             #value1 = ("Download_Pending")
-            cursor.execute(query, ("XML_Pending",))
+            cursor.execute(query, ("json_loader_pending(llp)",))
 
             # Get the column names from the cursor description
             column_names = [desc[0] for desc in cursor.description]
@@ -39,14 +39,14 @@ def fetch_order_data_from_table(connection):
         return None
 
 
-def update_status(user,Status,db_config):
+def update_status(user,Status,db_config,cin):
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
 
     try:
-        query = "UPDATE orders SET workflow_status = %s WHERE payment_by_user = %s"
+        query = "UPDATE orders SET workflow_status = %s WHERE payment_by_user = %s and cin=%s"
         print(query)
-        cursor.execute(query, (Status,user,))
+        cursor.execute(query, (Status,user,cin))
         connection.commit()
     except Exception as e:
         print(f"Error updating login status in the database: {str(e)}")
@@ -144,7 +144,7 @@ def update_xml_extraction_status(Cin,Filename,config_dict,Status):
 def get_xml_to_insert(Cin,config_dict):
     db_config = get_db_credentials(config_dict)
     connection, cursor = connect_to_database(db_config)
-    query = "SELECT * FROM documents where cin=%s and Download_Status='Downloaded' and form_data_extraction_status='Success'"
+    query = "SELECT * FROM documents where cin=%s and Download_Status='Downloaded' and form_data_extraction_status='Success' and DB_insertion_status='Pending'"
     value = (Cin,)
     print(query % value)
     cursor.execute(query,value)
@@ -197,3 +197,29 @@ def update_database_single_value(db_config, table_name, cin_column_name, cin_val
     db_connection.commit()
     db_cursor.close()
     db_connection.close()
+
+
+def update_db_insertion_status(Cin,Filename,config_dict,Status):
+    db_config = get_db_credentials(config_dict)
+    connection = mysql.connector.connect(**db_config)
+    cursor = connection.cursor()
+    update_db_insertion_query = "update documents set DB_insertion_status=%s where document=%s and cin=%s"
+    update_db_insertion_values = (Status,Filename, Cin)
+    print(update_db_insertion_query % update_db_insertion_values)
+    cursor.execute(update_db_insertion_query,update_db_insertion_values)
+    connection.commit()
+    cursor.close()
+    connection.close()
+
+def update_json_loader_db(cindata,config_dict):
+    db_config = get_db_credentials(config_dict)
+    cin = cindata[2]
+    connection = mysql.connector.connect(**db_config)
+    cursor = connection.cursor()
+    update_loader_query = "update orders set workflow_status='Loader_generated' where cin=%s"
+    values = (cin,)
+    cursor.execute(update_loader_query,values)
+    print(update_loader_query % values)
+    connection.commit()
+    cursor.close()
+    connection.close()
