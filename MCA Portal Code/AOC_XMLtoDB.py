@@ -212,6 +212,8 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
             if field_name == 'filing_standard':
                 common_df.at[index, 'Value'] = 'Normal'
                 continue
+            if parent_node == config_dict['constant_keyword']:
+                continue
             value_common = get_single_value_from_xml(xml_root, parent_node, child_nodes)
             # print(value)
             common_df.at[index, 'Value'] = value_common
@@ -379,11 +381,16 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
         print(common_sql_tables_list)
         if AOC_4_first_file_found:
             years = years[1:]
+        report_value = None
         for common_table_name in common_sql_tables_list:
+            if not common_table_name == config_dict['financials_table_name']:
+                continue
             common_table_df = common_df[common_df[common_df.columns[7]] == common_table_name]
             common_columns_list = common_table_df[common_table_df.columns[8]].unique()
             print(common_columns_list)
             for common_column_name in common_columns_list:
+                if not common_column_name == config_dict['auditor_comments_column_name']:
+                    continue
                 print(common_column_name)
                 # filter table df with only column value
                 common_column_df = common_table_df[common_table_df[common_table_df.columns[8]] == common_column_name]
@@ -394,20 +401,33 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                     if auditor_comments_row_index is not None:
                         comment_value = common_column_df.loc[auditor_comments_row_index, 'Value']
                         print(f'{comment_value=}')
-                        if comment_value == 'NO':
-                            common_json_dict = {'disclosures_auditor_report':'''As per Auditor's Report, the accounts give a true and fair view, as per the accounting principles generally accepted, of the
-                                                state of affairs in the case of Balance sheet and, Profit or Loss in the case of Profit & Loss Accounts. Auditor's Report is
-                                                Unqualified i.e. Clean''','disclosures_director_report':'''As per Auditor's Report, the accounts give a true and fair view, as per the accounting principles generally accepted, of the
-                                                state of affairs in the case of Balance sheet and, Profit or Loss in the case of Profit & Loss Accounts. Auditor's Report is
-                                                Unqualified i.e. Clean'''}
+                        if comment_value == 'No':
+                            report_value = '''As per Auditors Report, the accounts give a true and fair view, as per the accounting principles generally accepted, of the
+                                              state of affairs in the case of Balance sheet and, Profit or Loss in the case of Profit & Loss Accounts. Auditors Report is
+                                              Unqualified i.e. Clean'''
+                            break
                         else:
-                            # create json dict with keys of field name and values for the same column name entries
-                            common_json_dict = common_column_df.set_index(common_table_df.columns[0])['Value'].to_dict()
-                    else:
-                        common_json_dict = {}
-                else:
-                    # create json dict with keys of field name and values for the same column name entries
-                    common_json_dict = common_column_df.set_index(common_table_df.columns[0])['Value'].to_dict()
+                            report_value = None
+                            break
+            auditor_report_row_index = common_table_df[common_table_df[common_table_df.columns[8]] ==
+                                                        config_dict['disclosures_auditor_report_column_name']].index[0]
+            director_report_row_index = common_table_df[common_table_df[common_table_df.columns[8]] ==
+                                                           config_dict['disclosures_director_report_column_name']].index[0]
+            if auditor_report_row_index is not None:
+                common_table_df.loc[auditor_report_row_index, 'Value'] = report_value
+            if director_report_row_index is not None:
+                common_table_df.loc[director_report_row_index, 'Value'] = report_value
+
+        for common_table_name in common_sql_tables_list:
+            common_table_df = common_df[common_df[common_df.columns[7]] == common_table_name]
+            common_columns_list = common_table_df[common_table_df.columns[8]].unique()
+            print(common_columns_list)
+            for common_column_name in common_columns_list:
+                print(common_column_name)
+                # filter table df with only column value
+                common_column_df = common_table_df[common_table_df[common_table_df.columns[8]] == common_column_name]
+                print(common_column_df)
+                common_json_dict = common_column_df.set_index(common_table_df.columns[0])['Value'].to_dict()
                 # Convert the dictionary to a JSON string
                 common_json_string = json.dumps(common_json_dict)
                 print(common_json_string)
