@@ -316,7 +316,7 @@ def Auditor_information(sentence, keyword):
     else:
         return None
 
-def update_database_single_value_AOC(db_config, table_name, cin_column_name, cin_value,company_name_column_name,company_name, column_name, column_value,year):
+def update_database_single_value_AOC(db_config, table_name, cin_column_name, cin_value,company_name_column_name,company_name, column_name, column_value,year,nature):
     db_connection = mysql.connector.connect(**db_config)
     db_cursor = db_connection.cursor()
     json_dict = json.loads(column_value)
@@ -334,7 +334,7 @@ def update_database_single_value_AOC(db_config, table_name, cin_column_name, cin
         column_value = json.dumps(json_dict)
 
     # check if there is already entry with cin
-    query = "SELECT * FROM {} WHERE {} = '{}' and {}='{}' and {}='{}'".format(table_name, cin_column_name, cin_value,company_name_column_name,company_name,'year',year)
+    query = "SELECT * FROM {} WHERE {} = '{}' and {}='{}' and {}='{}' and {}='{}'".format(table_name, cin_column_name, cin_value,company_name_column_name,company_name,'year',year,'nature',nature)
     print(query)
     try:
         db_cursor.execute(query)
@@ -344,19 +344,33 @@ def update_database_single_value_AOC(db_config, table_name, cin_column_name, cin
     # print(result)
 
     # if cin value already exists
-    if len(result) > 0:
-        update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}' AND {}='{}'".format(table_name, column_name,
+    if len(result) > 0 and column_name!='nature':
+        update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}' AND {}='{}' AND {}='{}'".format(table_name, column_name,
                                                                                       column_value, cin_column_name,
                                                                                       cin_value,
                                                                                       company_name_column_name,
                                                                                       company_name,
                                                                                       'Year',
-                                                                                      year)
+                                                                                      year,
+                                                                                      'nature',
+                                                                                      nature)
         print(update_query)
         db_cursor.execute(update_query)
         print("Updating")
 
     # if cin value doesn't exist
+    elif column_name == 'nature':
+        update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}' AND {}='{}' AND nature is null".format(
+            table_name, column_name,
+            column_value, cin_column_name,
+            cin_value,
+            company_name_column_name,
+            company_name,
+            'Year',
+            year)
+        print(update_query)
+        db_cursor.execute(update_query)
+        print("Updating nature")
     else:
         insert_query = "INSERT INTO {} ({}, {}, {}) VALUES ('{}', '{}', '{}')".format(table_name, cin_column_name,
                                                                                       company_name_column_name,
@@ -370,7 +384,7 @@ def update_database_single_value_AOC(db_config, table_name, cin_column_name, cin
     db_connection.commit()
     db_cursor.close()
     db_connection.close()
-def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, json_file_path, output_file_path,cin_column_value, company_name):
+def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, json_file_path, output_file_path,cin_column_value, company_name,aoc_xbrl_first_file_found):
     try:
         output_dataframes_list = []
         cin_column_name = config_dict['cin_column_name_in_db']
@@ -516,16 +530,22 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                 print(f"Exception occurred while processing previous year data - \n"
                       f" Invalid formula for {previous_formula_field_name}: {previous_formula}")
         years = []
+        natures = []
         current_year = current_year_df[current_year_df['Field_Name'] == 'year']['Value'].values[0]
         previous_year = previous_year_df[previous_year_df['Field_Name'] == 'year']['Value'].values[0]
+        current_year_nature = current_year_df[current_year_df['Field_Name'] == 'nature']['Value'].values[0]
+        previous_year_nature = previous_year_df[previous_year_df['Field_Name'] == 'nature']['Value'].values[0]
         years.append(current_year)
         years.append(previous_year)
+        natures.append(current_year_nature)
+        natures.append(previous_year_nature)
         if current_year is None:
             raise Exception(f"Exception occurred while extracting year value {current_year} from current year data")
         if previous_year is None:
             raise Exception(f"Exception occurred while extracting year value {previous_year} from previous year data")
         single_df_list = []
-        single_df_list.append(current_year_df)
+        if not aoc_xbrl_first_file_found:
+            single_df_list.append(current_year_df)
         single_df_list.append(previous_year_df)
         single_df_list.append(financial_parameter_df)
         for df in single_df_list:
@@ -533,7 +553,9 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
             sql_tables_list = df[df.columns[8]].unique()
             print(sql_tables_list)
             year_value = df[df['Field_Name'] == 'year']['Value'].values[0]
+            nature_value = df[df['Field_Name'] == 'nature']['Value'].values[0]
             print(year_value)
+            print(nature_value)
             for table_name in sql_tables_list:
                 table_df = df[df[df.columns[8]] == table_name]
                 columns_list = table_df[table_df.columns[9]].unique()
@@ -551,11 +573,15 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                     try:
                         update_database_single_value_AOC(db_config, table_name, cin_column_name, cin_column_value,
                                                          company_column_name, company_name, column_name, json_string,
-                                                         year_value)
+                                                         year_value,nature_value)
                     except Exception as e:
                         print(f"Exception {e} occurred while updating data in dataframe for {table_name} "
                               f"with data {json_string}")
         common_sql_tables_list = common_df[common_df.columns[8]].unique()
+        if aoc_xbrl_first_file_found:
+            years = years[1:]
+        if aoc_xbrl_first_file_found:
+            natures = natures[1:]
         for common_table_name in common_sql_tables_list:
             common_table_df = common_df[common_df[common_df.columns[8]] == common_table_name]
             common_columns_list = common_table_df[common_table_df.columns[9]].unique()
@@ -565,13 +591,34 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                 # filter table df with only column value
                 common_column_df = common_table_df[common_table_df[common_table_df.columns[9]] == common_column_name]
                 print(common_column_df)
+                if common_column_name == config_dict['auditor_comments_column_name']:
+                    auditor_comments_row_index = common_column_df[common_column_df[common_column_df.columns[9]] ==
+                                                       config_dict['auditor_comments_column_name']].index[0]
+                    if auditor_comments_row_index is not None:
+                        comment_value = common_column_df.loc[auditor_comments_row_index, 'Value']
+                        print(f'{comment_value=}')
+                        if comment_value == 'No':
+                            common_json_dict = {'disclosures_auditor_report':'''As per Auditors Report, the accounts give a true and fair view, as per the accounting principles generally accepted, of the
+                                                state of affairs in the case of Balance sheet and, Profit or Loss in the case of Profit & Loss Accounts. Auditors Report is
+                                                Unqualified i.e. Clean''','disclosures_director_report':'''As per Auditors Report, the accounts give a true and fair view, as per the accounting principles generally accepted, of the
+                                                state of affairs in the case of Balance sheet and, Profit or Loss in the case of Profit & Loss Accounts. Auditors Report is
+                                                Unqualified i.e. Clean'''}
+                        else:
+                            # create json dict with keys of field name and values for the same column name entries
+                            common_json_dict = common_column_df.set_index(common_table_df.columns[0])['Value'].to_dict()
+                    else:
+                        common_json_dict = {}
+                else:
+                    # create json dict with keys of field name and values for the same column name entries
+                    common_json_dict = common_column_df.set_index(common_table_df.columns[0])['Value'].to_dict()
                 # create json dict with keys of field name and values for the same column name entries
-                common_json_dict = common_column_df.set_index(common_table_df.columns[0])['Value'].to_dict()
-                # Convert the dictionary to a JSON string
+                # common_json_dict = common_column_df.set_index(common_table_df.columns[0])['Value'].to_dict()
+                # # Convert the dictionary to a JSON string
                 common_json_string = json.dumps(common_json_dict)
+                common_json_string = common_json_string.replace('\\', '')
                 print(common_json_string)
                 print(years)
-                for year in years:
+                for year,nature in zip(years,natures):
                     if year is None or year == '':
                         continue
                     try:
@@ -579,7 +626,7 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                                                          cin_column_value,
                                                          company_column_name, company_name, common_column_name,
                                                          common_json_string,
-                                                         year)
+                                                         year,nature)
                     except Exception as e:
                         print(f"Exception {e} occurred while updating data in dataframe for {common_table_name} "
                               f"with data {common_json_string}")

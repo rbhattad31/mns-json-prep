@@ -93,12 +93,14 @@ def update_datatable_single_value(db_cursor, table_name, cin_column_name, cin_va
         print("inserted entry")
 
 
-def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
+def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
               output_file_path, cin_column_value, company_name, filing_date):
     config_dict_keys = ['single_type_indicator']
 
     missing_keys = [key for key in config_dict_keys if key not in config_dict]
-
+    connection = mysql.connector.connect(**db_config)
+    db_cursor = connection.cursor()
+    connection.autocommit = True
     if missing_keys:
         raise KeyError(f"The following keys are missing in config file: {', '.join(missing_keys)}")
 
@@ -327,10 +329,10 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
     output_dataframes_list.clear()
 
 
-def chg1_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
+def chg1_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
                    output_file_path, cin_column_value, company_name, filing_date):
     try:
-        xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
+        xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
                   output_file_path, cin_column_value, company_name, filing_date)
     except Exception as e:
         print("Below Exception occurred while processing mgt7 file: \n ", e)

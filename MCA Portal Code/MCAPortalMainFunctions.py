@@ -34,7 +34,7 @@ from Form8_annual_XMLToDB import form8_annual_xml_to_db
 from Form8_interim_XMLToDB import form8_interim_xml_to_db
 from Form11_XMLToDB import form_11_xml_to_db
 from Form_Fillip_XMLToDB import form_fillip_xml_to_db
-
+from GSTAPI import insert_gst_number
 def sign_out(driver,config_dict,CinData):
     try:
         sign_out_button = driver.find_element(By.XPATH, '//a[@id="loginAnchor" and text()="Signout"]')
@@ -150,6 +150,8 @@ def XMLGeneration(db_config,CinData,config_dict):
         print(CompanyName)
         root_path = config_dict['Root path']
         files_to_be_extracted, Fetch_File_Data_Status = fetch_form_extraction_file_data_from_table(connection, Cin,CompanyName)
+        cursor.close()
+        connection.close()
         if Fetch_File_Data_Status == "Pass":
             hidden_attachments = []
             for files in files_to_be_extracted:
@@ -172,7 +174,8 @@ def XMLGeneration(db_config,CinData,config_dict):
                 except Exception as e:
                     print(f"Exception Occured while converting to xml{e}")
                     continue
-        query_for_xbrl = "select * from documents where cin=%s and company=%s and (document like '%%XBRL document in respect Consolidated%%'  or document like '%%XBRL financial statements%%') and form_data_extraction_needed='Y'"
+        connection, cursor = connect_to_database(db_config)
+        query_for_xbrl = "select * from documents where cin=%s and company=%s and (document like '%%XBRL document in respect Consolidated%%'  or document like '%%XBRL financial statements%%') and form_data_extraction_needed='Y' and Download_Status='Downloaded' and form_data_extraction_status='Pending'"
         values_xbrl = (Cin,CompanyName)
         print(query_for_xbrl % values_xbrl)
         try:
@@ -183,6 +186,7 @@ def XMLGeneration(db_config,CinData,config_dict):
                     xbrl_pdf_path = xbrl_file[8]
                     xbrl_file_name = xbrl_file[4]
                     xbrl_file_date = xbrl_file[5]
+                    print(f"Generating JSON for {xbrl_pdf_path}")
                     xbrl_json_path = str(xbrl_pdf_path).replace('.pdf', '.json')
                     json_generation_xbrl = json_generation(xbrl_pdf_path, xbrl_json_path)
                     if json_generation_xbrl:
@@ -191,6 +195,8 @@ def XMLGeneration(db_config,CinData,config_dict):
                         update_xml_extraction_status(Cin, xbrl_file_name, config_dict, 'Failure')
                 except Exception as e:
                     print(f"Exception Occured for XBRL JSON Generation{e}")
+            cursor.close()
+            connection.close()
         except Exception as e:
             print(f"Exception occured in query for XBRL JSON Generation{e}")
 
@@ -205,6 +211,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
         db_config = get_db_credentials(config_dict)
         connection, db_cursor = connect_to_database(db_config)
         connection.autocommit = True
+
         Cin, CompanyName, User = CinData[2], CinData[3], CinData[15]
         if len(hiddenattachmentslist) != 0:
             for hiddenattachment in hiddenattachmentslist:
@@ -234,6 +241,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
 
         xml_files_to_insert = get_xml_to_insert(Cin, config_dict)
         AOC_4_first_file_found = False
+        AOC_XBRL_first_file_found = False
         for xml in xml_files_to_insert:
             try:
                 path = xml[8]
@@ -310,7 +318,10 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
                     excel_file = r"C:\MCA Portal\Config.xlsx"
                     Sheet_name = "Change of name"
                     config_dict_Change_of_name,config_status = create_main_config_dictionary(excel_file,Sheet_name)
-                    map_file_path_Change_of_name = config_dict_Change_of_name['mapping_file_path']
+                    if len(Cin) == 21:
+                        map_file_path_Change_of_name = config_dict_Change_of_name['mapping_file_path']
+                    else:
+                        map_file_path_Change_of_name = config_dict_Change_of_name['mapping_file_path_llp']
                     map_sheet_name_Change_of_name = config_dict_Change_of_name['mapping _file_sheet_name']
                     change_of_name_db_insertion = ChangeOfName_xml_to_db(db_config,config_dict_Change_of_name,map_file_path_Change_of_name,map_sheet_name_Change_of_name,xml_file_path,output_excel_path,Cin,CompanyName)
                     if change_of_name_db_insertion:
@@ -321,7 +332,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
                     config_dict_CHG,config_status = create_main_config_dictionary(excel_file,Sheet_name)
                     map_file_path_CHG = config_dict_CHG['mapping_file_path']
                     map_sheet_name_CHG = config_dict_CHG['mapping_file_sheet_name']
-                    chg_db_insertion = chg1_xml_to_db(db_cursor,config_dict_CHG,map_file_path_CHG,map_sheet_name_CHG,xml_file_path,output_excel_path,Cin,CompanyName,date)
+                    chg_db_insertion = chg1_xml_to_db(db_config,config_dict_CHG,map_file_path_CHG,map_sheet_name_CHG,xml_file_path,output_excel_path,Cin,CompanyName,date)
                     if chg_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                 elif 'XBRL document in respect Consolidated'.lower() in str(path).lower() or 'XBRL financial statements'.lower() in str(path).lower():
@@ -331,9 +342,16 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
                     output_json_path = str(path).replace('.pdf', '.json')
                     map_file_path_xbrl = config_dict_Xbrl['mapping file path']
                     map_sheet_name_xbrl = config_dict_Xbrl['mapping file sheet name']
-                    aoc_xbrl_db_insertion = AOC_XBRL_JSON_to_db(db_config,config_dict_Xbrl,map_file_path_xbrl,map_sheet_name_xbrl,output_json_path,output_excel_path,Cin,CompanyName)
-                    if aoc_xbrl_db_insertion:
-                        update_db_insertion_status(Cin, file_name, config_dict, 'Success')
+                    try:
+                        aoc_xbrl_db_insertion = AOC_XBRL_JSON_to_db(db_config, config_dict_Xbrl, map_file_path_xbrl,
+                                                                    map_sheet_name_xbrl, output_json_path,
+                                                                    output_excel_path, Cin, CompanyName,AOC_XBRL_first_file_found)
+                        if aoc_xbrl_db_insertion:
+                            update_db_insertion_status(Cin, file_name, config_dict, 'Success')
+                    except Exception as e:
+                        print(f"Exception occured while inserting into db for XBRL")
+                    else:
+                        AOC_XBRL_first_file_found = True
                 elif 'DIR'.lower() in str(path).lower():
                     excel_file = r"C:\MCA Portal\Config.xlsx"
                     Sheet_name = "DIR"
@@ -341,10 +359,10 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
                     map_file_path_DIR = config_dict_DIR['mapping file path']
                     map_sheet_name_dir = config_dict_DIR['mapping file sheet name']
                     xml_hidden_file_path = xml_file_path.replace('.xml', '_hidden.xml')
-                    dir_db_insertion = dir_xml_to_db(db_cursor,config_dict_DIR,map_file_path_DIR,map_sheet_name_dir,xml_file_path,xml_hidden_file_path,output_excel_path,Cin,CompanyName,date)
+                    dir_db_insertion = dir_xml_to_db(db_config,config_dict_DIR,map_file_path_DIR,map_sheet_name_dir,xml_file_path,xml_hidden_file_path,output_excel_path,Cin,CompanyName,date)
                     if dir_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
-                    dir_hidden_xml = dir_attachment_xml_to_db(db_cursor,config_dict,map_file_path_DIR,map_sheet_name_dir,xml_file_path,output_excel_path)
+                    dir_hidden_xml = dir_attachment_xml_to_db(db_config,config_dict,map_file_path_DIR,map_sheet_name_dir,xml_file_path,output_excel_path)
                 elif 'Form8'.lower() in str(path).lower():
                     excel_file = r"C:\MCA Portal\Config.xlsx"
                     Sheet_name = 'Form_8_annual'
@@ -382,18 +400,63 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
             except Exception as e:
                 print(f"Exception occured while inserting into DB {e}")
                 continue
+
+
+        gst_connection = mysql.connector.connect(**db_config)
+        gst_cursor = gst_connection.cursor()
+        gst_query = """SELECT * FROM orders
+                       WHERE MONTH(created_date) = MONTH(CURRENT_DATE())
+                        AND YEAR(created_date) = YEAR(CURRENT_DATE()) AND cin=%s AND gst_status='Y'"""
+        cin_value = (Cin,)
+        print(gst_query % cin_value)
+        gst_cursor.execute(gst_query,cin_value)
+        gst_result = gst_cursor.fetchall()
+        gst_cursor.close()
+        gst_connection.close()
+        if len(gst_result) == 0:
+            excel_file_path = r"C:\MCA Portal\Config.xlsx"
+            sheet_name_gst = 'GST'
+            config_dict_GST,status = create_main_config_dictionary(excel_file_path,sheet_name_gst)
+            gst = insert_gst_number(db_config,config_dict_GST,Cin,CompanyName)
+            if gst:
+                print("Successfully inserted for GST")
+        connection = mysql.connector.connect(**db_config)
+        cursor = connection.cursor()
+        db_insert_check_query = "select * from documents where cin=%s and form_data_extraction_needed='Y' and DB_insertion_status='Pending' and Download_Status='Downloaded'"
+        values_check = (Cin,)
+        print(db_insert_check_query % values_check)
+        cursor.execute(db_insert_check_query,values_check)
+        result_db_insertion = cursor.fetchall()
+        print(len(result_db_insertion))
+        if len(result_db_insertion) == 0:
+            return True,None
+        else:
+            db_insertion_exception_message = f"Db insertion failed for {Cin}"
+            return False,db_insertion_exception_message
     except Exception as e:
         print(f"Exception Occured while inserting for hidden attachments {e}")
-        return False
+        return False,e
     else:
-        return True
+        return True,None
 
 def json_loader_generation(cindata,dbconfig,config_dict):
     try:
-        json_config_path = config_dict['config_json_path']
         root_path = config_dict['Root path']
         Cin, CompanyName, User = cindata[2], cindata[3], cindata[15]
-        json_loader,json_file_path,exception_message = JSON_loader(dbconfig,json_config_path,Cin,root_path)
+        excel_file_path = r"C:\MCA Portal\Config.xlsx"
+        if len(Cin) == 21:
+            json_config_path = config_dict['config_json_path_nonllp']
+            excel_sheet_name = 'JSON Loader Queries'
+            json_loader, json_file_path, exception_message = JSON_loader(dbconfig, json_config_path, Cin, root_path,
+                                                                         excel_file_path, excel_sheet_name)
+        elif len(Cin) == 8:
+            json_config_path = config_dict['config_json_path_llp']
+            excel_sheet_name = 'LLP JSON Loader Queries'
+            json_loader,json_file_path,exception_message = JSON_loader(dbconfig,json_config_path,Cin,root_path,excel_file_path,excel_sheet_name)
+        else:
+            json_loader = False
+            json_file_path = None
+            exception_message = 'Invalid Cin to generate loader'
         if json_loader:
             print("JSON Loader generated successfully")
         else:

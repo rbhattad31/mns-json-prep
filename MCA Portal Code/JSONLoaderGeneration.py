@@ -20,7 +20,7 @@ def get_json_node_names(data, parent_name=''):
     return node_names
 # Read JSON data from a file
 
-def JSON_loader(db_config,config_json_file_path,cin,root_path):
+def JSON_loader(db_config,config_json_file_path,cin,root_path,excel_path,sheet_name):
     try:
         if not os.path.exists(config_json_file_path):
             raise Exception("Config file not exists")
@@ -30,14 +30,13 @@ def JSON_loader(db_config,config_json_file_path,cin,root_path):
             os.makedirs(json_folder_path)
         json_file_path = os.path.join(json_folder_path,cin)
         json_file_path = json_file_path + '.json'
-        shutil.copy(config_json_file_path,json_file_path)
+        if not os.path.exists(json_file_path):
+            shutil.copy(config_json_file_path,json_file_path)
         with open(json_file_path) as f:
             json_data = json.load(f)
 
         # Call the function with your JSON data, starting directly with the 'data' child nodes
         json_nodes = get_json_node_names(json_data.get('data', {}), parent_name='')
-        excel_path = r"C:\MCA Portal\Config.xlsx"
-        sheet_name = 'JSON Loader Queries'
         config_dict_loader, status = create_main_config_dictionary(excel_path, sheet_name)
         print(json_nodes)
         for json_node in json_nodes:
@@ -48,9 +47,9 @@ def JSON_loader(db_config,config_json_file_path,cin,root_path):
                     company_query = config_dict_loader[json_node]
                 except Exception as e:
                     continue
-                if json_node == 'contact_details':
+                if json_node == 'contact_details' or json_node == 'authorized_signatories':
                     values = (cin,cin)
-                elif json_node == 'subsidiary_entities' or json_node == 'associate_entities' or json_node == 'joint_ventures':
+                elif json_node == 'subsidiary_entities' or json_node == 'associate_entities' or json_node == 'joint_ventures' or json_node == 'holding_entities':
                     values = (cin,cin,cin)
                 else:
                     values = (cin,)

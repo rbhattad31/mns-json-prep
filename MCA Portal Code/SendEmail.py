@@ -46,17 +46,3 @@ def send_email(config_dict,subject, body, to_emails, attachment_path=None):
     except Exception as e:
         print(f"Error: {e}")
 
-
-if __name__ == "__main__":
-    # Example usage
-    from Config import create_main_config_dictionary
-    path = r"C:\MCA Portal\Config.xlsx"
-    sheet = 'Sheet1'
-    json_file_path = r"C:\MCA Portal\U25200DL2014PTC263572\U25200DL2014PTC263572.json"
-    cin = 'U25200DL2014PTC263572'
-    config_dict, config_status = create_main_config_dictionary(path, sheet)
-    cin_complete_subject = str(config_dict['cin_Completed_subject']).format(cin)
-    cin_completed_body = str(config_dict['cin_Completed_body']).format(cin)
-    emails = config_dict['to_email']
-    emails = str(emails).split(',')
-    send_email(config_dict,cin_complete_subject,cin_completed_body,emails,json_file_path)

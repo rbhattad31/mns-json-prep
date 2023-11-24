@@ -236,11 +236,19 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                 print(value_financial_parameter)
                 Financial_Parameter_df.at[index, 'Value'] = value_financial_parameter
             elif field_name == 'proposed_dividend':
-                if value_financial_parameter != 0 or value_financial_parameter is not None:
+                if value_financial_parameter != 0 and value_financial_parameter is not None:
                     dividend_value = 'Yes'
                 else:
                     dividend_value = 'No'
                 Financial_Parameter_df.at[index, 'Value'] = dividend_value
+            elif field_name == 'nature':
+                if value_financial_parameter.lower() == 'no':
+                    value_financial_parameter = 'Standalone'
+                elif value_financial_parameter.lower() == 'yes':
+                    value_financial_parameter = 'Consolidated'
+                else:
+                    pass
+                Financial_Parameter_df.at[index, 'Value'] = value_financial_parameter
             else:
                 Financial_Parameter_df.at[index, 'Value'] = value_financial_parameter
             results_financial_parameter.append([field_name, value_financial_parameter, sql_table_name, column_name, column_json_node])
@@ -258,10 +266,27 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
             if field_name == 'year':
                 try:
                     datetime_object = datetime.fromisoformat(value_previous_year)
+                    value_previous_year = str(datetime_object.date())
                 except ValueError:
-                    datetime_object = datetime.strptime(value_previous_year, "%Y-%m-%d")
-                value_previous_year = str(datetime_object.date())
+                    try:
+                        datetime_object = datetime.strptime(value_previous_year, "%Y-%m-%d")
+                        value_previous_year = str(datetime_object.date())
+                    except Exception as e:
+                        pass
+                except Exception as e:
+                    try:
+                        datetime_object = datetime.strptime(value_previous_year, "%Y-%m-%d")
+                        value_previous_year = str(datetime_object.date())
+                    except Exception as e:
+                        pass
                 print(value_previous_year)
+            elif field_name == 'nature':
+                if value_previous_year.lower() == 'no':
+                    value_previous_year = 'Standalone'
+                elif value_previous_year.lower() == 'yes':
+                    value_previous_year = 'Consolidated'
+                else:
+                    pass
             previous_year_df.at[index, 'Value'] = value_previous_year
             results_previous_year.append(
                 [field_name, value_previous_year, sql_table_name, column_name, column_json_node])
@@ -302,6 +327,13 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                     datetime_object = datetime.strptime(value_current_year, "%Y-%m-%d")
                 value_current_year = str(datetime_object.date())
                 print(value_current_year)
+            elif field_name == 'nature':
+                if value_current_year.lower() == 'no':
+                    value_current_year = 'Standalone'
+                elif value_current_year.lower() == 'yes':
+                    value_current_year = 'Consolidated'
+                else:
+                    pass
             current_year_df.at[index, 'Value'] = value_current_year
             results_current_year.append([field_name, value_current_year, sql_table_name, column_name, column_json_node])
 
@@ -328,8 +360,8 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
             raise Exception(f"Exception occurred while extracting year value {current_year} from current year data")
         years.append(current_year)
         previous_year = previous_year_df[previous_year_df['Field_Name'] == 'year']['Value'].values[0]
-        if previous_year is None:
-            raise Exception(f"Exception occurred while extracting year value {previous_year} from previous year data")
+        # if previous_year is None:
+        #     raise Exception(f"Exception occurred while extracting year value {previous_year} from previous year data")
         years.append(previous_year)
         if not AOC_4_first_file_found:
             single_df_list.append(current_year_df)
@@ -383,13 +415,18 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
             years = years[1:]
         report_value = None
         for common_table_name in common_sql_tables_list:
-            if not common_table_name == config_dict['financials_table_name']:
+            print(common_table_name)
+            if common_table_name != config_dict['financials_table_name']:
+                print("Continuing table")
                 continue
             common_table_df = common_df[common_df[common_df.columns[7]] == common_table_name]
+            print(common_table_df)
             common_columns_list = common_table_df[common_table_df.columns[8]].unique()
             print(common_columns_list)
             for common_column_name in common_columns_list:
-                if not common_column_name == config_dict['auditor_comments_column_name']:
+                print(common_column_name)
+                if common_column_name != config_dict['auditor_comments_column_name']:
+                    print("continuing column")
                     continue
                 print(common_column_name)
                 # filter table df with only column value
@@ -401,22 +438,35 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                     if auditor_comments_row_index is not None:
                         comment_value = common_column_df.loc[auditor_comments_row_index, 'Value']
                         print(f'{comment_value=}')
-                        if comment_value == 'No':
+                        if comment_value == 'NO':
                             report_value = '''As per Auditors Report, the accounts give a true and fair view, as per the accounting principles generally accepted, of the
                                               state of affairs in the case of Balance sheet and, Profit or Loss in the case of Profit & Loss Accounts. Auditors Report is
                                               Unqualified i.e. Clean'''
+                            print(report_value)
+                            auditor_report_row_index = common_table_df[common_table_df[common_table_df.columns[8]] ==
+                                                                       config_dict[
+                                                                           'disclosures_auditor_report_column_name']].index[0]
+                            director_report_row_index = common_table_df[common_table_df[common_table_df.columns[8]] ==
+                                                                        config_dict[
+                                                                            'disclosures_director_report_column_name']].index[0]
+                            if auditor_report_row_index is not None:
+                                common_df.loc[auditor_report_row_index, 'Value'] = report_value
+                            if director_report_row_index is not None:
+                                common_df.loc[director_report_row_index, 'Value'] = report_value
                             break
                         else:
                             report_value = None
+                            print(report_value)
                             break
-            auditor_report_row_index = common_table_df[common_table_df[common_table_df.columns[8]] ==
-                                                        config_dict['disclosures_auditor_report_column_name']].index[0]
-            director_report_row_index = common_table_df[common_table_df[common_table_df.columns[8]] ==
-                                                           config_dict['disclosures_director_report_column_name']].index[0]
-            if auditor_report_row_index is not None:
-                common_table_df.loc[auditor_report_row_index, 'Value'] = report_value
-            if director_report_row_index is not None:
-                common_table_df.loc[director_report_row_index, 'Value'] = report_value
+                print(common_table_df)
+            # auditor_report_row_index = common_table_df[common_table_df[common_table_df.columns[8]] ==
+            #                                             config_dict['disclosures_auditor_report_column_name']].index[0]
+            # director_report_row_index = common_table_df[common_table_df[common_table_df.columns[8]] ==
+            #                                                config_dict['disclosures_director_report_column_name']].index[0]
+            # if auditor_report_row_index is not None:
+            #     common_table_df.loc[auditor_report_row_index, 'Value'] = report_value
+            # if director_report_row_index is not None:
+            #     common_table_df.loc[director_report_row_index, 'Value'] = report_value
 
         for common_table_name in common_sql_tables_list:
             common_table_df = common_df[common_df[common_df.columns[7]] == common_table_name]

@@ -375,7 +375,7 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath,options
                 for line in traceback_details:
                     print(line.strip())
                 download_retry += 1
-                if download_retry > 5:
+                if download_retry > 2:
                     connection = mysql.connector.connect(**dbconfig)
                     cursor = connection.cursor()
                     Check_download_files_query = "select * from documents where cin=%s and company=%s and Download_Status='Downloaded' and form_data_extraction_needed='Y'"
@@ -470,41 +470,36 @@ def update_form_extraction_status(db_config, cin,CompanyName):
             print(f"Error Updating form extraction status for MGT {e}")
 
         try:
-            update_query_MSME = """UPDATE documents AS t1
-            JOIN (
-                SELECT id
-                FROM documents
-                WHERE document LIKE '%%MSME%%' and `cin`=%s and `company`=%s
-                ORDER BY STR_TO_DATE(document_date_year, '%%d-%%m-%%Y') DESC
-                LIMIT 2
-            ) AS t2 ON t1.id = t2.id
-            SET t1.form_data_extraction_needed = 'Y'
-            WHERE t1.document LIKE '%%MSME%%' and `cin`=%s and `company`=%s;"""
-            cursor.execute(update_query_MSME,values)
+            update_query_MSME = """UPDATE documents AS d1
+JOIN (
+    SELECT MAX(STR_TO_DATE(document_date_year, '%d-%m-%Y')) AS latest_date
+    FROM documents
+    WHERE cin = '{}' AND document LIKE '%MSME%'
+    GROUP BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y'))
+    ORDER BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y')) DESC
+    LIMIT 2
+) AS d2 ON STR_TO_DATE(d1.document_date_year, '%d-%m-%Y') = d2.latest_date
+SET d1.form_data_extraction_needed = 'Y'
+WHERE d1.cin = '{}' AND d1.document LIKE '%MSME%';""".format(cin,cin)
+            cursor.execute(update_query_MSME)
             connection.commit()
         except Exception as e:
             print(f"Exception occured for MSME{e}")
 
         try:
-            update_query_AOC = """UPDATE documents AS t1
-            SET t1.form_data_extraction_needed = 'Y'
-            WHERE t1.document LIKE '%%AOC%%' 
-              AND t1.cin = %s 
-              AND t1.company = %s
-              AND t1.id IN (
-                  SELECT id
-                  FROM (
-                      SELECT id
-                      FROM documents
-                      WHERE document LIKE '%%AOC%%' 
-                        AND cin = %s
-                        AND company = %s
-                      ORDER BY STR_TO_DATE(document_date_year, '%%d-%%m-%%Y') DESC
-                      LIMIT 4
-                  ) AS top_files_per_year
-              );"""
-            print(update_query_AOC % values)
-            cursor.execute(update_query_AOC,values)
+            update_query_AOC = """UPDATE documents AS d1
+JOIN (
+    SELECT MAX(STR_TO_DATE(document_date_year, '%d-%m-%Y')) AS latest_date
+    FROM documents
+    WHERE cin = '{}' AND document LIKE '%AOC%'
+    GROUP BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y'))
+    ORDER BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y')) DESC
+    LIMIT 4
+) AS d2 ON STR_TO_DATE(d1.document_date_year, '%d-%m-%Y') = d2.latest_date
+SET d1.form_data_extraction_needed = 'Y'
+WHERE d1.cin = '{}' AND d1.document LIKE '%AOC%';""".format(cin,cin)
+            print(update_query_AOC)
+            cursor.execute(update_query_AOC)
             connection.commit()
         except Exception as e:
             print(f"Exception occured for AOC{e}")

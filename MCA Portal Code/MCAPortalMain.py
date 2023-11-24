@@ -13,6 +13,7 @@ from MCAPortalMainFunctions import json_loader_generation
 from DBFunctions import update_json_loader_db
 from SendEmail import send_email
 
+
 def main():
     excel_file = r"C:\MCA Portal\Config.xlsx"
     Sheet_name = "Sheet1"
@@ -32,9 +33,11 @@ def main():
                 except Exception as e:
                     print(f"Error sending email {e}")
                 cin = None
+                receipt_number = None
                 for CinData in CinDBData:
                     try:
                         cin = CinData[2]
+                        receipt_number = CinData[1]
                         """
                         Download_Status, driver,exception_message = Login_and_Download(config_dict, CinData)
                         if Download_Status:
@@ -55,7 +58,7 @@ def main():
                                 sign_out(driver, config_dict, CinData)
                             continue
                             """
-                        Insert_fields_into_DB = insert_fields_into_db(hidden_attachments, config_dict, CinData)
+                        Insert_fields_into_DB,exception_message_db = insert_fields_into_db(hidden_attachments, config_dict, CinData)
                         if Insert_fields_into_DB:
                             print("Successfully Inserted into DB")
                         else:
@@ -63,19 +66,21 @@ def main():
                             """
                             if 'driver' in locals():
                                 sign_out(driver, config_dict, CinData)
-                            continue
+                            """
+                            raise Exception(exception_message_db)
                         json_loader,json_file_path,exception_message = json_loader_generation(CinData, db_config, config_dict)
                         if json_loader:
                             print("JSON Loader generated succesfully")
                             update_json_loader_db(CinData, config_dict)
-                            cin_complete_subject = str(config_dict['cin_Completed_subject']).format(cin)
-                            cin_completed_body = str(config_dict['cin_Completed_body']).format(cin)
+                            cin_complete_subject = str(config_dict['cin_Completed_subject']).format(cin,receipt_number)
+                            cin_completed_body = str(config_dict['cin_Completed_body']).format(cin,receipt_number)
                             try:
                                 send_email(config_dict,cin_complete_subject,cin_completed_body,emails,json_file_path)
                             except Exception as e:
                                 print(f"Exception occured while sending end email {e}")
                         else:
                             print("JSON Loader not generated")
+                            """
                             if 'driver' in locals():
                                 sign_out(driver, config_dict, CinData)
                             raise Exception(f"Exception occured for json loader generation {cin} {exception_message}")
@@ -83,8 +88,8 @@ def main():
                         """
                     except Exception as e:
                         print(f"Exception occured for cin {cin} {e}")
-                        exception_subject = str(config_dict['Exception_subject']).format(cin)
-                        exception_body = str(config_dict['Exception_message']).format(cin,e)
+                        exception_subject = str(config_dict['Exception_subject']).format(cin,receipt_number)
+                        exception_body = str(config_dict['Exception_message']).format(cin,receipt_number,e)
                         try:
                             send_email(config_dict,exception_subject,exception_body,emails,None)
                         except Exception as e:

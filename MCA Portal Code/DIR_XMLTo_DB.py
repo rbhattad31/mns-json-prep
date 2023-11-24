@@ -166,7 +166,7 @@ def update_attachment_table(db_cursor, sql_table_name, column_names_list, df_row
             print(f"Entry with name {result_dict['name']} not exists in table {sql_table_name}")
 
 
-def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path, hidden_xml_file_path,
+def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, hidden_xml_file_path,
               output_file_path, cin_column_value, company_name, filing_date):
     # field_name_index = 0
     xml_type_index = 1
@@ -179,7 +179,8 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
     config_dict_keys = [
     ]
-
+    connection = mysql.connector.connect(**db_config)
+    db_cursor = connection.cursor()
     missing_keys = [key for key in config_dict_keys if key not in config_dict]
     if missing_keys:
         raise KeyError(f"The following keys are missing in config file: {', '.join(missing_keys)}")
@@ -329,7 +330,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
     output_dataframes_list.clear()
 
 
-def attachment_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
+def attachment_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
                          output_file_path):
     # field_name_index = 0
     single_group_type_index = 2
@@ -341,7 +342,8 @@ def attachment_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_n
 
     config_dict_keys = [
     ]
-
+    connection = mysql.connector.connect(**db_config)
+    db_cursor = connection.cursor()
     missing_keys = [key for key in config_dict_keys if key not in config_dict]
     if missing_keys:
         raise KeyError(f"The following keys are missing in config file: {', '.join(missing_keys)}")
@@ -425,10 +427,10 @@ def attachment_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_n
     output_dataframes_list.clear()
 
 
-def dir_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path, hidden_xml_file_path,
+def dir_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, hidden_xml_file_path,
                   output_file_path, cin_column_value, company_name, filing_date):
     try:
-        xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path, hidden_xml_file_path,
+        xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, hidden_xml_file_path,
                   output_file_path, cin_column_value, company_name, filing_date)
     except Exception as e:
         print("Below Exception occurred while processing DIR file: \n ", e)
@@ -445,10 +447,10 @@ def dir_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xm
         return True
 
 
-def dir_attachment_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
+def dir_attachment_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
                              output_file_path):
     try:
-        attachment_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
+        attachment_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
                              output_file_path)
     except Exception as e:
         print("Below Exception occurred while processing DIR file: \n ", e)

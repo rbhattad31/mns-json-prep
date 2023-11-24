@@ -6,7 +6,8 @@ import xml.etree.ElementTree as Et
 import json
 import os
 import mysql.connector
-
+import sys
+import traceback
 pd.set_option('display.max_columns', None)
 
 
@@ -222,6 +223,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
         column_json_node = str(row.iloc[7]).strip()
 
         value = get_single_value_from_xml(xml_root, parent_node, child_nodes)
+        print(value)
         if field_name == 'year':
             date_obj = datetime.strptime(value, "%Y-%m-%d")
             year = date_obj.year
@@ -600,6 +602,14 @@ def mgt7_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, x
                   output_file_path, cin_column_value, company_name)
     except Exception as e:
         print("Below Exception occurred while processing mgt7 file: \n ", e)
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        # Get the formatted traceback as a string
+        traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+        # Print the traceback details
+        for line in traceback_details:
+            print(line.strip())
+
         return False
     else:
         return True
