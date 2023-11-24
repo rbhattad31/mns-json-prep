@@ -253,7 +253,10 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
                     excel_file = r"C:\MCA Portal\Config.xlsx"
                     Sheet_name = "MGT"
                     config_dict_MGT, config_status = create_main_config_dictionary(excel_file, Sheet_name)
-                    map_file_path = config_dict_MGT['map_file_path']
+                    if 'MGT-7A' in path:
+                        map_file_path = config_dict_MGT['map_file_path_mgt7A']
+                    else:
+                        map_file_path = config_dict_MGT['map_file_path']
                     map_file_sheet_name = config_dict_MGT['map_file_sheet_name']
                     mgt_7_db_insertion = mgt7_xml_to_db(db_cursor, config_dict_MGT, map_file_path, map_file_sheet_name, xml_file_path,output_excel_path, Cin, CompanyName)
                     if mgt_7_db_insertion:
