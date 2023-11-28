@@ -235,6 +235,13 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
             elif '.' in value and all(char == '0' for char in value.split('.')[1]):
                 # If yes, convert to the actual value before the decimal point
                 value = value.split('.')[0]
+            if 'no_of_shares' in column_json_node:
+                print("The string contains 'no_of_shares'.")
+                try:
+                    value = int(value)
+                    print(value)
+                except:
+                    pass
             single_df.at[index, 'Value'] = value
         results.append([field_name, value, sql_table_name, column_name, column_json_node])
     # print(single_df)
