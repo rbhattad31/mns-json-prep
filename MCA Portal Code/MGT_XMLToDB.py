@@ -229,6 +229,9 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
             year = date_obj.year
             single_df.at[index, 'Value'] = year
         else:
+            if all(char == '0' for char in value):
+                # If yes, convert the entire value to '0'
+                value = '0'
             single_df.at[index, 'Value'] = value
         results.append([field_name, value, sql_table_name, column_name, column_json_node])
     # print(single_df)
