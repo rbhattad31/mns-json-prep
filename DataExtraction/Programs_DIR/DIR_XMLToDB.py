@@ -66,20 +66,30 @@ def extract_table_values_from_hidden_xml(xml_root, table_node_name, child_nodes)
     return data_list
 
 
-def insert_datatable_with_table(db_cursor, sql_table_name, column_names_list, df_row):
+def insert_datatable_with_table(config_dict, db_cursor, sql_table_name, column_names_list, df_row):
     combined = list(zip(column_names_list, df_row))
     # Create a dictionary from the list of tuples
     result_dict = dict(combined)
     # print(result_dict)
+    cin_column_name = config_dict['cin_column_name_in_db']
+    cin = result_dict[cin_column_name]
+    print(f'{cin=}')
+    din_column_name = config_dict['din_column_name_in_db']
+    din = result_dict[din_column_name]
+    print(f'{din=}')
 
-    where_clause = f'SELECT * FROM {sql_table_name} WHERE '
-    for key, value in result_dict.items():
-        if value is not None:
-            where_clause += f"`{key}` = '{value}' AND "
-        else:
-            where_clause += f"(`{key}` is NULL OR `{key}` = '') AND "
+    designation_after_event_column_name = config_dict['designation_after_event_column_name_in_db']
+    designation_after_event = result_dict[designation_after_event_column_name]
+    print(f'{designation_after_event=}')
 
-    select_query = where_clause[:-4]
+    if cin is None or din is None or designation_after_event is None:
+        raise Exception(f" One of the Value of CIN, DIN and 'Designation after event' values are empty for director"
+                        f" in table {sql_table_name} "
+                        f"with below data \n {list(df_row)} ")
+    else:
+        select_query = (f"SELECT * FROM {sql_table_name} WHERE {cin_column_name} = '{cin}' AND {din_column_name}"
+                        f" = '{din}' AND {designation_after_event_column_name} = '{designation_after_event}'")
+
     print(select_query)
     db_cursor.execute(select_query)
     result = db_cursor.fetchall()
@@ -93,10 +103,25 @@ def insert_datatable_with_table(db_cursor, sql_table_name, column_names_list, df
         print(insert_query)
         print(tuple(df_row.values))
         db_cursor.execute(insert_query, tuple(df_row.values))
-
         # print(f"Data row values are saved in table {sql_table_name} with \n {df_row}")
     else:
-        print(f"Entry with values already exists in table {sql_table_name}")
+        result_dict.pop(cin_column_name)
+        result_dict.pop(din_column_name)
+        result_dict.pop(designation_after_event_column_name)
+
+        column_names_list = list(column_names_list)
+        column_names_list.remove(cin_column_name)
+        column_names_list.remove(din_column_name)
+        column_names_list.remove(designation_after_event_column_name)
+
+        update_query = f'''UPDATE {sql_table_name}
+                        SET {', '.join([f"{col} = '{str(result_dict[col])}'" for col in column_names_list])} 
+                        WHERE {cin_column_name} = '{cin}' AND {din_column_name} = '{din}' AND
+                        {designation_after_event_column_name} = '{designation_after_event}' '''
+
+        print(update_query)
+        db_cursor.execute(update_query)
+        print(f"Data row values are saved in table '{sql_table_name}' with \n {df_row}")
 
 
 def update_attachment_table(db_cursor, sql_table_name, column_names_list, df_row):
@@ -312,7 +337,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
         for _, df_row in table_df.iterrows():
             try:
-                insert_datatable_with_table(db_cursor, sql_table_name, table_df.columns, df_row)
+                insert_datatable_with_table(config_dict, db_cursor, sql_table_name, table_df.columns, df_row)
             except Exception as e:
                 print(f'Exception {e} occurred while inserting below table row in table {sql_table_name}- \n',
                       df_row)
