@@ -84,9 +84,9 @@ def JSON_loader(db_config,config_json_file_path,cin,root_path,excel_path,sheet_n
         # Print the traceback details
         for line in traceback_details:
             print(line.strip())
-        return False,None,e
+        return False,None,e,[]
     else:
-        return True,json_file_path,None
+        return True,json_file_path,None,json_nodes
 
 
 
