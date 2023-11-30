@@ -263,13 +263,14 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
         value = get_single_value_from_xml(xml_root, parent_node, child_nodes)
         if field_name == 'year' and value is not None:
             print(value)
-            date_obj = datetime.strptime(value, "%Y-%m-%d")
-            year = date_obj.year
-            single_df.at[index, 'Value'] = year
+            # date_obj = datetime.strptime(value, "%Y-%m-%d")
+            # year = date_obj.year
+            # single_df.at[index, 'Value'] = year
+            single_df.at[index, 'Value'] = value
         else:
             single_df.at[index, 'Value'] = value
         results.append([field_name, value, sql_table_name, column_name, column_json_node])
-    # print(single_df)
+    print(single_df)
 
     # update single values in datatable
     # get all the tables names for all single values df
@@ -364,14 +365,16 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
             year_end_date = \
                 single_df[single_df[single_df.columns[0]]
                           == config_dict['year_field_name']]['Value'].values[0]
-            # print(f'{year_end_date=}')
+            print(f'{year_end_date=}')
         except Exception as e:
             print(f"Exception {e} occurred while extracting date from xml, setting year to default '01-01-2000'")
             year_end_date = '2000-01-01'
 
         # update group values in datatable
         if field_name == config_dict['principal_business_activities_field_name']:
-            table_df['Year'] = year_end_date
+            date_obj = datetime.strptime(year_end_date, "%Y-%m-%d")
+            year = date_obj.year
+            table_df['year'] = year
 
             # filter out table with nan values
             table_df = table_df[table_df[column_names_list[0]].notna()]
@@ -609,7 +612,9 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
             print("DB execution is complete for Holding/Subsidiary/Associate/Joint Venture tables")
             pass
         elif field_name == config_dict['director_remuneration_field_name']:
-            table_df['Year'] = year_end_date
+            date_obj = datetime.strptime(year_end_date, "%Y-%m-%d")
+            year = date_obj.year
+            table_df['year'] = year
             table_df = table_df[table_df[column_names_list[0]].notna()]
             # print(table_df)
             for _, df_row in table_df.iterrows():
