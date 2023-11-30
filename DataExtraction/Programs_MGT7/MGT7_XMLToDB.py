@@ -52,9 +52,14 @@ def extract_table_values_from_xml(xml_root, table_node_name, child_nodes):
     return data_list
 
 
-def update_datatable_single_value(config_dict, db_cursor, table_name, cin_column_name, cin_value,
+def update_datatable_single_value(config_dict, db_config, table_name, cin_column_name, cin_value,
                                   company_name_column_name,
                                   company_name, column_name, column_value):
+
+    db_connection = mysql.connector.connect(**db_config)
+    db_cursor = db_connection.cursor()
+    db_connection.autocommit = True
+
     # determine value to be updated
     # if only one key value pair - update value
     # otherwise complete json dictionary
@@ -142,9 +147,14 @@ def update_datatable_single_value(config_dict, db_cursor, table_name, cin_column
                                                                                       column_value)
         # print(insert_query)
         db_cursor.execute(insert_query)
+    db_cursor.close()
+    db_connection.close()
 
 
-def insert_datatable_with_table(db_cursor, sql_table_name, column_names_list, df_row):
+def insert_datatable_with_table(db_config, sql_table_name, column_names_list, df_row):
+    db_connection = mysql.connector.connect(**db_config)
+    db_cursor = db_connection.cursor()
+    db_connection.autocommit = True
     combined = list(zip(column_names_list, df_row))
     # Create a dictionary from the list of tuples
     result_dict = dict(combined)
@@ -176,9 +186,11 @@ def insert_datatable_with_table(db_cursor, sql_table_name, column_names_list, df
         # print(f"Data row values are saved in table {sql_table_name} with \n {df_row}")
     else:
         print(f"Entry with values already exists in table {sql_table_name}")
+    db_cursor.close()
+    db_connection.close()
 
 
-def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
+def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
               output_file_path, cin_column_value, company_name):
     config_dict_keys = ['single_type_indicator',
                         'group_type_indicator',
@@ -304,7 +316,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
             else:
                 company_name_column_name = company_name_column_name_in_db
             try:
-                update_datatable_single_value(config_dict, db_cursor, sql_table_name,
+                update_datatable_single_value(config_dict, db_config, sql_table_name,
                                               cin_column_name_in_db,
                                               cin_column_value,
                                               company_name_column_name,
@@ -384,7 +396,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 # print(df_row)
                 # print(table_df.columns)
                 try:
-                    insert_datatable_with_table(db_cursor, sql_table_name, table_df.columns, df_row)
+                    insert_datatable_with_table(db_config, sql_table_name, table_df.columns, df_row)
                 except Exception as e:
                     print(f'Exception {e} occurred while inserting below table row in table {sql_table_name}- \n',
                           df_row)
@@ -413,7 +425,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
             # print(table_df)
             for _, df_row in table_df.iterrows():
                 try:
-                    insert_datatable_with_table(db_cursor, sql_table_name, table_df.columns, df_row)
+                    insert_datatable_with_table(db_config, sql_table_name, table_df.columns, df_row)
                 except Exception as e:
                     print(f'Exception {e} occurred while inserting below table row in table {sql_table_name}- \n',
                           df_row)
@@ -466,7 +478,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
                         sql_table_companies = \
                             [item for item in associate_tables_list if 'companies' in item.lower()][0]
                         try:
-                            insert_datatable_with_table(db_cursor, sql_table_companies, hold_sub_assoc_db_table_columns,
+                            insert_datatable_with_table(db_config, sql_table_companies, hold_sub_assoc_db_table_columns,
                                                         df_row)
                         except Exception as e:
                             print(f'Exception {e} occurred while inserting below table row in table '
@@ -476,7 +488,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
                         # llp
                         sql_table_llp = [item for item in associate_tables_list if 'llp' in item.lower()][0]
                         try:
-                            insert_datatable_with_table(db_cursor, sql_table_llp, hold_sub_assoc_db_table_columns,
+                            insert_datatable_with_table(db_config, sql_table_llp, hold_sub_assoc_db_table_columns,
                                                         df_row)
                         except Exception as e:
                             print(f'Exception {e} occurred while inserting below table row in table '
@@ -486,7 +498,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
                         # others
                         sql_table_others = [item for item in associate_tables_list if 'others' in item.lower()][0]
                         try:
-                            insert_datatable_with_table(db_cursor, sql_table_others, hold_sub_assoc_db_table_columns,
+                            insert_datatable_with_table(db_config, sql_table_others, hold_sub_assoc_db_table_columns,
                                                         df_row)
                         except Exception as e:
                             print(f'Exception {e} occurred while inserting below table row in table '
@@ -505,7 +517,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
                         sql_table_companies = [item for item in holding_tables_list if 'companies' in item.lower()][
                             0]
                         try:
-                            insert_datatable_with_table(db_cursor, sql_table_companies, hold_sub_assoc_db_table_columns,
+                            insert_datatable_with_table(db_config, sql_table_companies, hold_sub_assoc_db_table_columns,
                                                         df_row)
                         except Exception as e:
                             print(f'Exception {e} occurred while inserting below table row in table '
@@ -515,7 +527,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
                         # llp
                         sql_table_llp = [item for item in holding_tables_list if 'llp' in item.lower()][0]
                         try:
-                            insert_datatable_with_table(db_cursor, sql_table_llp, hold_sub_assoc_db_table_columns,
+                            insert_datatable_with_table(db_config, sql_table_llp, hold_sub_assoc_db_table_columns,
                                                         df_row)
                         except Exception as e:
                             print(f'Exception {e} occurred while inserting below table row in table '
@@ -525,7 +537,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
                         # others
                         sql_table_others = [item for item in holding_tables_list if 'others' in item.lower()][0]
                         try:
-                            insert_datatable_with_table(db_cursor, sql_table_others, hold_sub_assoc_db_table_columns,
+                            insert_datatable_with_table(db_config, sql_table_others, hold_sub_assoc_db_table_columns,
                                                         df_row)
                         except Exception as e:
                             print(f'Exception {e} occurred while inserting below table row in table '
@@ -542,7 +554,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
                         # companies
                         sql_table_companies = [item for item in joint_tables_list if 'companies' in item.lower()][0]
                         try:
-                            insert_datatable_with_table(db_cursor, sql_table_companies, hold_sub_assoc_db_table_columns,
+                            insert_datatable_with_table(db_config, sql_table_companies, hold_sub_assoc_db_table_columns,
                                                         df_row)
                         except Exception as e:
                             print(f'Exception {e} occurred while inserting below table row in table '
@@ -552,7 +564,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
                         # llp
                         sql_table_llp = [item for item in joint_tables_list if 'llp' in item.lower()][0]
                         try:
-                            insert_datatable_with_table(db_cursor, sql_table_llp, hold_sub_assoc_db_table_columns,
+                            insert_datatable_with_table(db_config, sql_table_llp, hold_sub_assoc_db_table_columns,
                                                         df_row)
                         except Exception as e:
                             print(f'Exception {e} occurred while inserting below table row in table '
@@ -562,7 +574,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
                         # others
                         sql_table_others = [item for item in joint_tables_list if 'others' in item.lower()][0]
                         try:
-                            insert_datatable_with_table(db_cursor, sql_table_others, hold_sub_assoc_db_table_columns,
+                            insert_datatable_with_table(db_config, sql_table_others, hold_sub_assoc_db_table_columns,
                                                         df_row)
                         except Exception as e:
                             print(f'Exception {e} occurred while inserting below table row in table '
@@ -581,7 +593,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
                         sql_table_companies = \
                             [item for item in subsidiary_tables_list if 'companies' in item.lower()][0]
                         try:
-                            insert_datatable_with_table(db_cursor, sql_table_companies, hold_sub_assoc_db_table_columns,
+                            insert_datatable_with_table(db_config, sql_table_companies, hold_sub_assoc_db_table_columns,
                                                         df_row)
                         except Exception as e:
                             print(f'Exception {e} occurred while inserting below table row in table '
@@ -591,7 +603,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
                         # llp
                         sql_table_llp = [item for item in subsidiary_tables_list if 'llp' in item.lower()][0]
                         try:
-                            insert_datatable_with_table(db_cursor, sql_table_llp, hold_sub_assoc_db_table_columns,
+                            insert_datatable_with_table(db_config, sql_table_llp, hold_sub_assoc_db_table_columns,
                                                         df_row)
                         except Exception as e:
                             print(f'Exception {e} occurred while inserting below table row in table '
@@ -601,7 +613,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
                         # others
                         sql_table_others = [item for item in subsidiary_tables_list if 'others' in item.lower()][0]
                         try:
-                            insert_datatable_with_table(db_cursor, sql_table_others, hold_sub_assoc_db_table_columns,
+                            insert_datatable_with_table(db_config, sql_table_others, hold_sub_assoc_db_table_columns,
                                                         df_row)
                         except Exception as e:
                             print(f'Exception {e} occurred while inserting below table row in table '
@@ -619,7 +631,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
             # print(table_df)
             for _, df_row in table_df.iterrows():
                 try:
-                    insert_datatable_with_table(db_cursor, sql_table_name, table_df.columns, df_row)
+                    insert_datatable_with_table(db_config, sql_table_name, table_df.columns, df_row)
                 except Exception as e:
                     print(f'Exception {e} occurred while inserting below table row in table '
                           f'{sql_table_name}- \n', df_row)
@@ -638,10 +650,10 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
     output_dataframes_list.clear()
 
 
-def mgt7_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
+def mgt7_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
                    output_file_path, cin_column_value, company_name):
     try:
-        xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
+        xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
                   output_file_path, cin_column_value, company_name)
     except Exception as e:
         print("Below Exception occurred while processing mgt7 file: \n ", e)
