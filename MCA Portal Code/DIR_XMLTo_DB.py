@@ -66,20 +66,30 @@ def extract_table_values_from_hidden_xml(xml_root, table_node_name, child_nodes)
     return data_list
 
 
-def insert_datatable_with_table(db_cursor, sql_table_name, column_names_list, df_row):
+def insert_datatable_with_table(config_dict, db_cursor, sql_table_name, column_names_list, df_row):
     combined = list(zip(column_names_list, df_row))
     # Create a dictionary from the list of tuples
     result_dict = dict(combined)
     # print(result_dict)
+    cin_column_name = config_dict['cin_column_name_in_db']
+    cin = result_dict[cin_column_name]
+    print(f'{cin=}')
+    din_column_name = config_dict['din_column_name_in_db']
+    din = result_dict[din_column_name]
+    print(f'{din=}')
 
-    where_clause = f'SELECT * FROM {sql_table_name} WHERE '
-    for key, value in result_dict.items():
-        if value is not None:
-            where_clause += f"`{key}` = '{value}' AND "
-        else:
-            where_clause += f"(`{key}` is NULL OR `{key}` = '') AND "
+    designation_after_event_column_name = config_dict['designation_after_event_column_name_in_db']
+    designation_after_event = result_dict[designation_after_event_column_name]
+    print(f'{designation_after_event=}')
 
-    select_query = where_clause[:-4]
+    if cin is None or din is None or designation_after_event is None:
+        raise Exception(f" One of the Value of CIN, DIN and 'Designation after event' values are empty for director"
+                        f" in table {sql_table_name} "
+                        f"with below data \n {list(df_row)} ")
+    else:
+        select_query = (f"SELECT * FROM {sql_table_name} WHERE {cin_column_name} = '{cin}' AND {din_column_name}"
+                        f" = '{din}' AND {designation_after_event_column_name} = '{designation_after_event}'")
+
     print(select_query)
     db_cursor.execute(select_query)
     result = db_cursor.fetchall()
@@ -93,22 +103,48 @@ def insert_datatable_with_table(db_cursor, sql_table_name, column_names_list, df
         print(insert_query)
         print(tuple(df_row.values))
         db_cursor.execute(insert_query, tuple(df_row.values))
-
         # print(f"Data row values are saved in table {sql_table_name} with \n {df_row}")
     else:
-        print(f"Entry with values already exists in table {sql_table_name}")
+        result_dict.pop(cin_column_name)
+        result_dict.pop(din_column_name)
+        result_dict.pop(designation_after_event_column_name)
+
+        column_names_list = list(column_names_list)
+        column_names_list.remove(cin_column_name)
+        column_names_list.remove(din_column_name)
+        column_names_list.remove(designation_after_event_column_name)
+
+        update_query = f'''UPDATE {sql_table_name}
+                        SET {', '.join([f"{col} = '{str(result_dict[col])}'" for col in column_names_list])} 
+                        WHERE {cin_column_name} = '{cin}' AND {din_column_name} = '{din}' AND
+                        {designation_after_event_column_name} = '{designation_after_event}' '''
+
+        print(update_query)
+        db_cursor.execute(update_query)
+        print(f"Data row values are saved in table '{sql_table_name}' with \n {df_row}")
 
 
-def update_attachment_table(db_cursor, sql_table_name, column_names_list, df_row):
+def update_attachment_table(db_cursor, config_dict, sql_table_name, column_names_list, df_row):
     combined = list(zip(column_names_list, df_row))
     # Create a dictionary from the list of tuples
     result_dict = dict(combined)
     # print(result_dict)
-    if result_dict['name'] is not None:
-        query = "SELECT * FROM {} WHERE {} = '{}'".format(sql_table_name, 'name', result_dict['name'])
+
+    din_column_name = config_dict['din_column_name_in_db']
+    din = result_dict[din_column_name]
+
+    pan_column_name = config_dict['pan_column_name_in_db']
+    pan = result_dict[pan_column_name]
+
+    cin_column_name = config_dict['cin_column_name_in_db']
+    cin = result_dict[cin_column_name]
+
+    if din is None or cin is None:
+        raise f"din '{din}' or cin '{cin}' value extracted from xml file is None"
     else:
-        raise "Name value extracted from xml file is None"
-    # print(query)
+        query = "SELECT * FROM {} WHERE {} = '{}' AND {} = '{}' ".format(sql_table_name, din_column_name, din,
+                                                                         cin_column_name, cin)
+    print(query)
     try:
         db_cursor.execute(query)
     except mysql.connector.Error as err:
@@ -116,46 +152,64 @@ def update_attachment_table(db_cursor, sql_table_name, column_names_list, df_row
     result = db_cursor.fetchall()
     print(len(result))
     if sql_table_name == 'authorized_signatories':
+        phone_number_column_name = config_dict['phone_number_column_name_in_db']
+        phone_number = result_dict[phone_number_column_name]
+
+        email_column_name = config_dict['email_column_name_in_db']
+        email = result_dict[email_column_name]
         if len(result) > 0:
-            if result_dict['pan'] is not None:
+            if pan is not None:
                 try:
-                    update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}'".format(sql_table_name, 'pan',
-                                                                                    result_dict['pan'], 'name',
-                                                                                    result_dict['name'])
+                    update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}' ".format(sql_table_name,
+                                                                                                   pan_column_name,
+                                                                                                   pan, din_column_name,
+                                                                                                   din, cin_column_name,
+                                                                                                   cin
+                                                                                                   )
 
                     print(update_query)
                     db_cursor.execute(update_query)
                 except Exception as e:
                     print(e)
-            if result_dict['phone_number'] is not None:
+            if phone_number is not None:
                 try:
-                    update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}'".format(sql_table_name, 'phone_number',
-                                                                                    result_dict['phone_number'], 'name',
-                                                                                    result_dict['name'])
+                    update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}'".format(
+                        sql_table_name,
+                        phone_number_column_name,
+                        phone_number,
+                        din_column_name,
+                        din, cin_column_name,
+                        cin)
                     print(update_query)
                     db_cursor.execute(update_query)
                 except Exception as e:
                     print(e)
-            if result_dict['email'] is not None:
+            if email is not None:
                 try:
-                    update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}'".format(sql_table_name, 'email',
-                                                                                    result_dict['email'], 'name',
-                                                                                    result_dict['name'])
+                    update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}'".format(sql_table_name,
+                                                                                                  email_column_name,
+                                                                                                  email,
+                                                                                                  din_column_name,
+                                                                                                  din, cin_column_name,
+                                                                                                  cin)
                     print(update_query)
                     db_cursor.execute(update_query)
                 except Exception as e:
                     print(e)
             print(f"Updated entry in table {sql_table_name}")
         else:
-            print(f"Entry with name {result_dict['name']} not exists in table {sql_table_name}")
+            print(f"Entry for din '{din}' with cin '{cin}' not exists in table {sql_table_name}")
     if sql_table_name == 'director_network':
         if len(result) > 0:
-            if result_dict['pan'] is not None:
+            if pan is not None:
                 try:
-                    update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}'".format(sql_table_name,
-                                                                                    'pan',
-                                                                                    result_dict['pan'],
-                                                                                    'name', result_dict['name'])
+                    update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}'".format(sql_table_name,
+                                                                                                  pan_column_name,
+                                                                                                  pan,
+                                                                                                  din_column_name, din,
+                                                                                                  cin_column_name,
+                                                                                                  cin
+                                                                                                  )
 
                     print(update_query)
                     db_cursor.execute(update_query)
@@ -163,10 +217,10 @@ def update_attachment_table(db_cursor, sql_table_name, column_names_list, df_row
                 except Exception as e:
                     print(e)
         else:
-            print(f"Entry with name {result_dict['name']} not exists in table {sql_table_name}")
+            print(f"Entry for din '{din}' with cin '{cin}' not exists in table {sql_table_name}")
 
 
-def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, hidden_xml_file_path,
+def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path, hidden_xml_file_path,
               output_file_path, cin_column_value, company_name, filing_date):
     # field_name_index = 0
     xml_type_index = 1
@@ -179,8 +233,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
     config_dict_keys = [
     ]
-    connection = mysql.connector.connect(**db_config)
-    db_cursor = connection.cursor()
+
     missing_keys = [key for key in config_dict_keys if key not in config_dict]
     if missing_keys:
         raise KeyError(f"The following keys are missing in config file: {', '.join(missing_keys)}")
@@ -274,7 +327,8 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             #     continue
         else:
             pass
-        table_df = pd.concat([table_df_direct, table_df_hidden])
+        # table_df = pd.concat([table_df_direct, table_df_hidden])
+        table_df = table_df_direct
         table_df[config_dict['filing_date_column_name']] = filing_date
         print(table_df)
 
@@ -313,7 +367,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
         for _, df_row in table_df.iterrows():
             try:
-                insert_datatable_with_table(db_cursor, sql_table_name, table_df.columns, df_row)
+                insert_datatable_with_table(config_dict, db_cursor, sql_table_name, table_df.columns, df_row)
             except Exception as e:
                 print(f'Exception {e} occurred while inserting below table row in table {sql_table_name}- \n',
                       df_row)
@@ -330,8 +384,8 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
     output_dataframes_list.clear()
 
 
-def attachment_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
-                         output_file_path):
+def attachment_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
+                         output_file_path, cin):
     # field_name_index = 0
     single_group_type_index = 2
     parent_node_index = 3
@@ -340,10 +394,11 @@ def attachment_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_n
     column_name_index = 6
     # column_json_node_index = 7
 
+    cin_column_name_in_db = config_dict['cin_column_name_in_db']
+
     config_dict_keys = [
     ]
-    connection = mysql.connector.connect(**db_config)
-    db_cursor = connection.cursor()
+
     missing_keys = [key for key in config_dict_keys if key not in config_dict]
     if missing_keys:
         raise KeyError(f"The following keys are missing in config file: {', '.join(missing_keys)}")
@@ -392,7 +447,9 @@ def attachment_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_n
             print(child_nodes)
             table_in_list = extract_table_values_from_xml(xml_root, table_node_name, child_nodes)
             table_df = pd.DataFrame(table_in_list)
+            table_df[cin_column_name_in_db] = cin
             print(table_df)
+            column_names_list.append(cin_column_name_in_db)
         except Exception as e:
             print(f'Exception {e} occurred while extracting data from xml for table {table_node_name}')
             continue
@@ -410,7 +467,7 @@ def attachment_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_n
         for _, df_row in table_df.iterrows():
             print(df_row)
             try:
-                update_attachment_table(db_cursor, sql_table_name, table_df.columns, df_row)
+                update_attachment_table(db_cursor, config_dict, sql_table_name, table_df.columns, df_row)
             except Exception as e:
                 print(f'Exception {e} occurred while inserting below table row in table {sql_table_name}- \n',
                       df_row)
@@ -423,14 +480,13 @@ def attachment_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_n
             # print(dataframe)
             dataframe.to_excel(writer, sheet_name=config_dict['output_sheet_name'], index=False, startrow=row_index)
             row_index += len(dataframe.index) + 2
-
     output_dataframes_list.clear()
 
 
-def dir_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, hidden_xml_file_path,
+def dir_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path, hidden_xml_file_path,
                   output_file_path, cin_column_value, company_name, filing_date):
     try:
-        xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, hidden_xml_file_path,
+        xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path, hidden_xml_file_path,
                   output_file_path, cin_column_value, company_name, filing_date)
     except Exception as e:
         print("Below Exception occurred while processing DIR file: \n ", e)
@@ -447,11 +503,11 @@ def dir_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
         return True
 
 
-def dir_attachment_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
-                             output_file_path):
+def dir_attachment_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
+                             output_file_path, cin):
     try:
-        attachment_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
-                             output_file_path)
+        attachment_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
+                             output_file_path, cin)
     except Exception as e:
         print("Below Exception occurred while processing DIR file: \n ", e)
         exc_type, exc_value, exc_traceback = sys.exc_info()

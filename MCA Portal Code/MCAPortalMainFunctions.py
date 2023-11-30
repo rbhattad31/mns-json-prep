@@ -35,6 +35,9 @@ from Form8_interim_XMLToDB import form8_interim_xml_to_db
 from Form11_XMLToDB import form_11_xml_to_db
 from Form_Fillip_XMLToDB import form_fillip_xml_to_db
 from GSTAPI import insert_gst_number
+from logging_config import setup_logging
+import logging
+from OrderJson import order_json
 def sign_out(driver,config_dict,CinData):
     try:
         sign_out_button = driver.find_element(By.XPATH, '//a[@id="loginAnchor" and text()="Signout"]')
@@ -56,6 +59,7 @@ def sign_out(driver,config_dict,CinData):
         update_logout_status(username, db_config)
 def Login_and_Download(config_dict,CinData):
     try:
+        setup_logging()
         root_path = config_dict['Root path']
         if not os.path.exists(root_path):
             os.makedirs(root_path)
@@ -72,22 +76,22 @@ def Login_and_Download(config_dict,CinData):
             if Status == "Pass":
                 Login, driver,options,exception_message = login_to_website(Url, chrome_driver_path, username, password, db_config)
             else:
-                print("Already Logged in")
+                logging.warning("Already Logged in")
                 # update_status(User,"Exception",db_config)
                 exception_message = "Already Logged in"
                 return False,None,exception_message
             print(Login)
             if Login == "Pass":
-                print("Successfully Logged in")
+                logging.info("Successfully Logged in")
                 last_logged_in_user = User
             else:
                 update_status(User, "Login Failed", db_config,Cin)
                 return False,None,exception_message
         else:
-            print("Already Logged in so carrying on with the same credentials")
+            logging.info("Already Logged in so carrying on with the same credentials")
         Navigation = Navigate_to_Company(Cin, CompanyName, driver, db_config)
         if Navigation:
-            print(f"Navigated succesfully to {CompanyName}")
+            logging.info(f"Navigated succesfully to {CompanyName}")
         else:
             raise Exception(f"Failed to Navigate to {CompanyName}")
         category_list = ['Annual Returns and Balance Sheet eForms','Certificates','Charge Documents','Change in Directors','Incorporation Documents','LLP Forms(Conversion of company to LLP)','Other eForm Documents','Other Attachments']
@@ -144,6 +148,7 @@ def Login_and_Download(config_dict,CinData):
 
 def XMLGeneration(db_config,CinData,config_dict):
     try:
+        setup_logging()
         connection,cursor = connect_to_database(db_config)
         Cin, CompanyName, User = CinData[2], CinData[3], CinData[15]
         print(Cin)
@@ -206,8 +211,10 @@ def XMLGeneration(db_config,CinData,config_dict):
     else:
         return True, hidden_attachments
 
-def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
+
+def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
     try:
+        setup_logging()
         db_config = get_db_credentials(config_dict)
         connection, db_cursor = connect_to_database(db_config)
         connection.autocommit = True
@@ -216,7 +223,10 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
         if len(hiddenattachmentslist) != 0:
             for hiddenattachment in hiddenattachmentslist:
                 if "Subsidiaries" in hiddenattachment or "Holding" in hiddenattachment or "Associate" in hiddenattachment or "Joint Venture" in hiddenattachment:
-                    excel_file = r"C:\MCA Portal\Config.xlsx"
+<<<<<<< HEAD
+=======
+                    excel_file = r"C:\Users\mns-admin\Documents\Python\Config\Config_Python.xlsx"
+>>>>>>> 6cef494a80bc2c1b6ee4ce396a0fa91722ed6968
                     Sheet_name = "MGT"
                     config_dict_Subs, config_status = create_main_config_dictionary(excel_file, Sheet_name)
                     Subsidiary_Config = config_dict_Subs['Subsidiary_Config']
@@ -224,7 +234,10 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
                     map_file_path = Subsidiary_Config
                     map_file_sheet_name = Subsidiary_Config_Sheet_Name
                 elif "Business Activity" in hiddenattachment:
-                    excel_file = r"C:\MCA Portal\Config.xlsx"
+<<<<<<< HEAD
+=======
+                    excel_file = r"C:\Users\mns-admin\Documents\Python\Config\Config_Python.xlsx"
+>>>>>>> 6cef494a80bc2c1b6ee4ce396a0fa91722ed6968
                     Sheet_name = "MGT"
                     config_dict_Business, config_status = create_main_config_dictionary(excel_file, Sheet_name)
                     Business_Activity_Config = config_dict_Business['Business_Activity_Config']
@@ -250,7 +263,10 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
                 xml_file_path = str(path).replace('.pdf', '.xml')
                 output_excel_path = str(path).replace('.pdf', '.xlsx')
                 if 'MGT'.lower() in str(path).lower():
-                    excel_file = r"C:\MCA Portal\Config.xlsx"
+<<<<<<< HEAD
+=======
+                    excel_file =  r"C:\Users\mns-admin\Documents\Python\Config\Config_Python.xlsx"
+>>>>>>> 6cef494a80bc2c1b6ee4ce396a0fa91722ed6968
                     Sheet_name = "MGT"
                     config_dict_MGT, config_status = create_main_config_dictionary(excel_file, Sheet_name)
                     if 'MGT-7A' in path:
@@ -262,7 +278,10 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
                     if mgt_7_db_insertion:
                         update_db_insertion_status(Cin,file_name,config_dict,'Success')
                 elif 'MSME'.lower() in str(path).lower():
-                    excel_file = r"C:\MCA Portal\Config.xlsx"
+<<<<<<< HEAD
+=======
+                    excel_file = r"C:\Users\mns-admin\Documents\Python\Config\Config_Python.xlsx"
+>>>>>>> 6cef494a80bc2c1b6ee4ce396a0fa91722ed6968
                     Sheet_name = "MSME"
                     config_dict_MSME, config_status = create_main_config_dictionary(excel_file, Sheet_name)
                     map_file_path_MSME = config_dict_MSME['mapping_file_path']
@@ -273,7 +292,10 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                 elif 'AOC-4'.lower() in str(path).lower() and 'AOC-4(XBRL)'.lower() not in str(path).lower():
                     if 'AOC-4-NBFC'.lower() in str(path).lower():
-                        excel_file = r"C:\MCA Portal\Config.xlsx"
+<<<<<<< HEAD
+=======
+                        excel_file = r"C:\Users\mns-admin\Documents\Python\Config\Config_Python.xlsx"
+>>>>>>> 6cef494a80bc2c1b6ee4ce396a0fa91722ed6968
                         Sheet_name = "AOC NBFC"
                         config_dict_AOC_NBFC, config_status = create_main_config_dictionary(excel_file, Sheet_name)
                         map_file_path_AOC_NBFC = config_dict_AOC_NBFC['mapping file path']
@@ -288,7 +310,10 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
                         else:
                             AOC_4_first_file_found = True
                     elif 'AOC-4 CFS NBFC'.lower() in str(path).lower():
-                        excel_file = r"C:\MCA Portal\Config.xlsx"
+<<<<<<< HEAD
+=======
+                        excel_file = r"C:\Users\mns-admin\Documents\Python\Config\Config_Python.xlsx"
+>>>>>>> 6cef494a80bc2c1b6ee4ce396a0fa91722ed6968
                         Sheet_name = "AOC CFS"
                         config_dict_AOC_CFS, config_status = create_main_config_dictionary(excel_file, Sheet_name)
                         map_file_path_AOC_CFS = config_dict_AOC_CFS['mapping file path']
@@ -304,7 +329,10 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
                     elif 'AOC-4 CSR'.lower() in str(path).lower():
                         continue
                     else:
-                        excel_file = r"C:\MCA Portal\Config.xlsx"
+<<<<<<< HEAD
+=======
+                        excel_file = r"C:\Users\mns-admin\Documents\Python\Config\Config_Python.xlsx"
+>>>>>>> 6cef494a80bc2c1b6ee4ce396a0fa91722ed6968
                         Sheet_name = "AOC"
                         config_dict_AOC, config_status = create_main_config_dictionary(excel_file, Sheet_name)
                         map_file_path_AOC = config_dict_AOC['mapping_file_path']
@@ -318,7 +346,10 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
                         else:
                             AOC_4_first_file_found = True
                 elif 'CHANGE OF NAME'.lower() in str(path).lower():
-                    excel_file = r"C:\MCA Portal\Config.xlsx"
+<<<<<<< HEAD
+=======
+                    excel_file = r"C:\Users\mns-admin\Documents\Python\Config\Config_Python.xlsx"
+>>>>>>> 6cef494a80bc2c1b6ee4ce396a0fa91722ed6968
                     Sheet_name = "Change of name"
                     config_dict_Change_of_name,config_status = create_main_config_dictionary(excel_file,Sheet_name)
                     if len(Cin) == 21:
@@ -330,7 +361,10 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
                     if change_of_name_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                 elif 'CHG'.lower() in str(path).lower():
-                    excel_file = r"C:\MCA Portal\Config.xlsx"
+<<<<<<< HEAD
+=======
+                    excel_file = r"C:\Users\mns-admin\Documents\Python\Config\Config_Python.xlsx"
+>>>>>>> 6cef494a80bc2c1b6ee4ce396a0fa91722ed6968
                     Sheet_name = "CHG1"
                     config_dict_CHG,config_status = create_main_config_dictionary(excel_file,Sheet_name)
                     map_file_path_CHG = config_dict_CHG['mapping_file_path']
@@ -339,7 +373,10 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
                     if chg_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                 elif 'XBRL document in respect Consolidated'.lower() in str(path).lower() or 'XBRL financial statements'.lower() in str(path).lower():
-                    excel_file = r"C:\MCA Portal\Config.xlsx"
+<<<<<<< HEAD
+=======
+                    excel_file = r"C:\Users\mns-admin\Documents\Python\Config\Config_Python.xlsx"
+>>>>>>> 6cef494a80bc2c1b6ee4ce396a0fa91722ed6968
                     Sheet_name = "AOC XBRL"
                     config_dict_Xbrl, config_status = create_main_config_dictionary(excel_file, Sheet_name)
                     output_json_path = str(path).replace('.pdf', '.json')
@@ -356,7 +393,10 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
                     else:
                         AOC_XBRL_first_file_found = True
                 elif 'DIR'.lower() in str(path).lower():
-                    excel_file = r"C:\MCA Portal\Config.xlsx"
+<<<<<<< HEAD
+=======
+                    excel_file = r"C:\Users\mns-admin\Documents\Python\Config\Config_Python.xlsx"
+>>>>>>> 6cef494a80bc2c1b6ee4ce396a0fa91722ed6968
                     Sheet_name = "DIR"
                     config_dict_DIR,config_status = create_main_config_dictionary(excel_file,Sheet_name)
                     map_file_path_DIR = config_dict_DIR['mapping file path']
@@ -367,7 +407,10 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                     dir_hidden_xml = dir_attachment_xml_to_db(db_config,config_dict,map_file_path_DIR,map_sheet_name_dir,xml_file_path,output_excel_path)
                 elif 'Form8'.lower() in str(path).lower():
-                    excel_file = r"C:\MCA Portal\Config.xlsx"
+<<<<<<< HEAD
+=======
+                    excel_file = r"C:\Users\mns-admin\Documents\Python\Config\Config_Python.xlsx"
+>>>>>>> 6cef494a80bc2c1b6ee4ce396a0fa91722ed6968
                     Sheet_name = 'Form_8_annual'
                     config_dict_form8,config_status = create_main_config_dictionary(excel_file,Sheet_name)
                     map_file_path_form8 = config_dict_form8['mapping file path']
@@ -383,7 +426,10 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
                     if form8_interim_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                 elif 'Form11'.lower() in str(path).lower():
-                    excel_file = r"C:\MCA Portal\Config.xlsx"
+<<<<<<< HEAD
+=======
+                    excel_file = r"C:\Users\mns-admin\Documents\Python\Config\Config_Python.xlsx"
+>>>>>>> 6cef494a80bc2c1b6ee4ce396a0fa91722ed6968
                     sheet_name_form11 = 'Form_11'
                     config_dict_form11,config_status = create_main_config_dictionary(excel_file,sheet_name_form11)
                     map_file_path_form11 = config_dict_form11['mapping file path']
@@ -392,7 +438,10 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
                     if form11_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                 elif 'FiLLiP'.lower() in str(path).lower():
-                    excel_file = r"C:\MCA Portal\Config.xlsx"
+<<<<<<< HEAD
+=======
+                    excel_file = r"C:\Users\mns-admin\Documents\Python\Config\Config_Python.xlsx"
+>>>>>>> 6cef494a80bc2c1b6ee4ce396a0fa91722ed6968
                     sheet_name_fillip = 'Form_Fillip'
                     config_dict_fillip,config_status = create_main_config_dictionary(excel_file,sheet_name_fillip)
                     map_file_path_fillip = config_dict_fillip['mapping file path']
@@ -417,10 +466,16 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
         gst_cursor.close()
         gst_connection.close()
         if len(gst_result) == 0:
-            excel_file_path = r"C:\MCA Portal\Config.xlsx"
+<<<<<<< HEAD
+            sheet_name_gst = 'GST'
+            config_dict_GST,status = create_main_config_dictionary(excel_file,sheet_name_gst)
+=======
+            excel_file_path = r"C:\Users\mns-admin\Documents\Python\Config\Config_Python.xlsx"
             sheet_name_gst = 'GST'
             config_dict_GST,status = create_main_config_dictionary(excel_file_path,sheet_name_gst)
-            gst = insert_gst_number(db_config,config_dict_GST,Cin,CompanyName)
+>>>>>>> 6cef494a80bc2c1b6ee4ce396a0fa91722ed6968
+            root_path = config_dict['Root path']
+            gst = insert_gst_number(db_config,config_dict_GST,Cin,CompanyName,root_path)
             if gst:
                 print("Successfully inserted for GST")
         connection = mysql.connector.connect(**db_config)
@@ -442,26 +497,40 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData):
     else:
         return True,None
 
-def json_loader_generation(cindata,dbconfig,config_dict):
+def json_loader_generation(cindata,dbconfig,config_dict,excel_file_path):
     try:
         root_path = config_dict['Root path']
         Cin, CompanyName, User = cindata[2], cindata[3], cindata[15]
-        excel_file_path = r"C:\MCA Portal\Config.xlsx"
+<<<<<<< HEAD
+=======
+        excel_file_path = r"C:\Users\mns-admin\Documents\Python\Config\Config_Python.xlsx"
+>>>>>>> 6cef494a80bc2c1b6ee4ce396a0fa91722ed6968
         if len(Cin) == 21:
             json_config_path = config_dict['config_json_path_nonllp']
             excel_sheet_name = 'JSON Loader Queries'
-            json_loader, json_file_path, exception_message = JSON_loader(dbconfig, json_config_path, Cin, root_path,
+            json_loader, json_file_path, exception_message,json_nodes = JSON_loader(dbconfig, json_config_path, Cin, root_path,
                                                                          excel_file_path, excel_sheet_name)
         elif len(Cin) == 8:
             json_config_path = config_dict['config_json_path_llp']
             excel_sheet_name = 'LLP JSON Loader Queries'
-            json_loader,json_file_path,exception_message = JSON_loader(dbconfig,json_config_path,Cin,root_path,excel_file_path,excel_sheet_name)
+            json_loader,json_file_path,exception_message,json_nodes = JSON_loader(dbconfig,json_config_path,Cin,root_path,excel_file_path,excel_sheet_name)
         else:
             json_loader = False
             json_file_path = None
+            json_nodes = []
             exception_message = 'Invalid Cin to generate loader'
         if json_loader:
             print("JSON Loader generated successfully")
+            for json_node in json_nodes:
+                try:
+                    order_sheet_name = "JSON Non-LLP Order"
+                    print(json_node)
+                    config_dict_order,config_status = create_main_config_dictionary(excel_file_path,order_sheet_name)
+                    json_order = order_json(config_dict_order,json_node,json_file_path)
+                    if json_order:
+                        print("Json ordered successfully")
+                except Exception as e:
+                    print(f"Exception occured for {json_node} {e}")
         else:
             print("JSON Loader not generated successfully")
             return False,None,exception_message

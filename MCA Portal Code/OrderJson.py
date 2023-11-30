@@ -1,18 +1,28 @@
 import json
 from collections import OrderedDict
-
-
+import sys
+import traceback
+import logging
+from logging_config import setup_logging
 def order_json(config_dict,json_node,input_file_path):
     try:
+        setup_logging()
         with open(input_file_path, "r") as file:
             json_data = json.load(file)
 
         # Define a single list for both top-level and "lei" object keys
         order_dict = config_dict[json_node]
-
+        """
+        if json_node == 'financials' or json_node == 'gst_details' or json_node == 'nbfc_financials' or json_node == 'authorized_signatories':
+            order_dict = f'"{order_dict}"'
+            print(order_dict)
+            order_dict = json.loads(order_dict)
+        """
+        
+        order_dict = json.loads(order_dict)
+        print(order_dict)
         # Process the dictionary or a list of dictionaries
         company_data = json_data.get("data", {}).get(json_node)
-        print(company_data)
         if isinstance(company_data, list):
             # If it's a list of dictionaries
             print("List")
@@ -99,7 +109,15 @@ def order_json(config_dict,json_node,input_file_path):
 
         print(f"Updated JSON saved to {input_file_path}")
     except Exception as e:
-        print(f"Error occured while ordering json {e}")
-        return False
+        print(f"Error occured while ordering json {json_node}{e}")
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+
+        # Get the formatted traceback as a string
+        traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+        # logging.info the traceback details
+        for line in traceback_details:
+            logging.info(line.strip())
+        return False    
     else:
         return True

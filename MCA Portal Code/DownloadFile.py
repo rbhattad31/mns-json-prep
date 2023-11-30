@@ -19,6 +19,8 @@ import shutil
 import sys
 import traceback
 from selenium.common.exceptions import NoSuchWindowException
+from logging_config import setup_logging
+import logging
 
 current_date = datetime.date.today()
 today_date = current_date.strftime("%d-%m-%Y")
@@ -34,22 +36,24 @@ def initialize_driver(chrome_driver_path):
 
 def select_category(category,driver):
     try:
+        setup_logging()
         certificates_button_xpath = f'//a[@class="dashboardlinks" and contains(text(),"{category}")]'
         current_date = datetime.date.today()
         if click_element_with_retry(driver, certificates_button_xpath):
-            print(f"Clicked on {category}")
+            logging.info(f"Clicked on {category}")
             time.sleep(4)
             return True
         else:
             return False
     except Exception as e:
-        print(f"Exception while selecting category {e}")
+        logging.warning(f"Exception while selecting category {e}")
         return False
 def Navigate_to_Company(Cin,CompanyName,driver,dbconfig):
     try:
+        setup_logging()
         my_workspace_button_xpath = '//a[@href="/mcafoportal/" and text()="My Workspace"]'
         if click_element_with_retry(driver, my_workspace_button_xpath):
-            print("Clicked on My Workspace")
+            logging.info("Clicked on My Workspace")
             time.sleep(5)
             k = 1
             page_number = 1
@@ -58,7 +62,7 @@ def Navigate_to_Company(Cin,CompanyName,driver,dbconfig):
                 CompanyName = CompanyName.lower()
                 download_button_xpath = f'//table[@id="publicDocuments" and @name="publicDocuments"]/tbody/tr[contains(translate(., "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz"), "{CompanyName}")]/td/a'
                 if click_element_with_retry(driver, download_button_xpath):
-                    print("Clicked on Download")
+                    logging.info("Clicked on Download")
                     time.sleep(5)
                     break
                 else:
@@ -67,18 +71,18 @@ def Navigate_to_Company(Cin,CompanyName,driver,dbconfig):
                                                                      f'//a[@class="paginate_active"]')
                         main_page_number = main_page_number_xpath.text
                         main_page_number = int(main_page_number)
-                        print("Page Number", main_page_number)
+                        logging.info("Page Number", main_page_number)
                     except NoSuchElementException:
-                        print("No page number found")
+                        logging.info("No page number found")
                         pass
-                    print("Loop Counter", k)
+                    logging.info("Loop Counter", k)
                     if k != main_page_number and k != 1:
-                        print("Completed Navigation")
+                        logging.info("Completed Navigation")
                         connection = mysql.connector.connect(**dbconfig)
                         cursor = connection.cursor()
                         Update_no_company_query = "update orders set workflow_status='Download Failed' and bot_comments='Company Not found' where cin = %s"
                         Update_no_company_values = (Cin,)
-                        print(Update_no_company_query % Update_no_company_values)
+                        logging.info(Update_no_company_query % Update_no_company_values)
                         cursor.execute(Update_no_company_query, Update_no_company_values)
                         connection.commit()
                         cursor.close()
@@ -96,15 +100,15 @@ def Navigate_to_Company(Cin,CompanyName,driver,dbconfig):
                         cursor = connection.cursor()
                         Update_no_company_query = "update orders set workflow_status='Download Failed' and bot_comments='Company Not found' where cin = %s"
                         Update_no_company_values = (Cin,)
-                        print(Update_no_company_query % Update_no_company_values)
+                        logging.info(Update_no_company_query % Update_no_company_values)
                         cursor.execute(Update_no_company_query, Update_no_company_values)
                         connection.commit()
                         cursor.close()
                         connection.close()
-                        print("No Company Found")
+                        logging.warning("No Company Found")
                         return False
     except Exception as e:
-        print(f"Exception occured while navigating{e}")
+        logging.warning(f"Exception occured while navigating{e}")
         return False
     else:
         return True
@@ -112,6 +116,7 @@ def Navigate_to_Company(Cin,CompanyName,driver,dbconfig):
 
 def insert_Download_Details(driver,Cin, Company,db_config,category):
     try:
+        setup_logging()
         current_date = datetime.date.today()
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor()
@@ -124,47 +129,47 @@ def insert_Download_Details(driver,Cin, Company,db_config,category):
                 page_number_xpath = driver.find_element(By.XPATH, f'//span[@id="pg{j}" and @class="pg-selected"]')
                 page_number = page_number_xpath.text
                 page_number = int(page_number)
-                print("Page Number", page_number)
+                logging.info("Page Number", page_number)
             except NoSuchElementException:
-                print("No page number found")
+                logging.info("No page number found")
                 pass
-            print("Loop Counter", j)
+            logging.info("Loop Counter", j)
             if j != page_number and j != 1:
-                print("Completed Navigation")
+                logging.info("Completed Navigation")
                 break
             # document_name_elements = driver.find_elements(By.XPATH,'//table[@id="reportsTab1"]/tbody/tr/td[1]/a')
             for _ in range(0, 10):
                 try:
                     document_xpath = f'//table[@id="reportsTab1"]/tbody/tr/td[1]/a[@id="open{i}\'"]'
-                    print(document_xpath)
+                    logging.info(document_xpath)
                     document_name_elements = driver.find_element(By.XPATH, document_xpath)
-                    print(document_name_elements)
+                    logging.info(document_name_elements)
                     document_name = document_name_elements.text
                     parts = document_name.rsplit('.', 1)
                     if len(parts) == 2:
                         # If a dot is found, remove everything after it
                         document_name = parts[0]
-                    print("Document Name", document_name)
+                    logging.info("Document Name", document_name)
                     date_pattern1 = r'\d{6}'  # Matches 6 digits (e.g., 041215)
                     date_pattern2 = r'\d{8}'  # Matches 8 digits (e.g., 01042021)
                     match_date_pattern1 = re.search(date_pattern1, document_name)
-                    # print(match_date_pattern1)
+                    # logging.info(match_date_pattern1)
                     match_date_pattern2 = re.search(date_pattern2, document_name)
-                    # print(match_date_pattern2)
+                    # logging.info(match_date_pattern2)
 
                     if match_date_pattern2:
                         date_format = match_date_pattern2.group()
-                        print(date_format)
+                        logging.info(date_format)
                         formatted_date = datetime.datetime.strptime(date_format, '%d%m%Y').strftime('%d-%m-%Y')
-                        print("date", formatted_date)
+                        logging.info("date", formatted_date)
                     elif match_date_pattern1:
                         date_format = match_date_pattern1.group()
-                        print(date_format)
+                        logging.info(date_format)
                         formatted_date = datetime.datetime.strptime(date_format, '%d%m%y').strftime('%d-%m-%Y')
-                        print("date", formatted_date)
+                        logging.info("date", formatted_date)
                     else:
                         formatted_date = ''
-                        print(f"Not able to fetch date {formatted_date}")
+                        logging.info(f"Not able to fetch date {formatted_date}")
                     duplicate_query = "select * from documents where cin=%s and document=%s and company=%s and Category=%s"
                     Value1 = Cin
                     Value2 = document_name
@@ -172,18 +177,18 @@ def insert_Download_Details(driver,Cin, Company,db_config,category):
                     Value4 = category
                     cursor.execute(duplicate_query, (Value1, Value2, Value3, Value4))
                     result = cursor.fetchall()
-                    print("Result from db", result)
+                    logging.info("Result from db", result)
                     if len(result) == 0:
                         query = "Insert into documents(cin,company,Category,document,document_date_year,form_data_extraction_status,created_date,created_by,form_data_extraction_needed,Page_Number,Download_Status,DB_insertion_status) Values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
                         values = (Cin, Company, category, document_name, formatted_date, 'Pending', current_date,user_name, 'N', j, 'Pending','Pending')
-                        print(query % values)
+                        logging.info(query % values)
                         cursor.execute(query, values)
                         connection.commit()
                     else:
-                        print("Value already there so not inserting")
+                        logging.info("Value already there so not inserting")
                     i = i + 1
                 except Exception as e:
-                    print(f"Exception Occured {e}")
+                    logging.info(f"Exception Occured {e}")
                     i = i + 1
                     continue
             j = j + 1
@@ -191,36 +196,37 @@ def insert_Download_Details(driver,Cin, Company,db_config,category):
                 next_button_download = driver.find_element(By.XPATH, '//span[@id="next"]')
                 time.sleep(2)
                 next_button_download.click()
-                print("Next Button clicked")
+                logging.info("Next Button clicked")
             except NoSuchElementException:
-                print("Next Button not clicking")
+                logging.info("Next Button not clicking")
                 pass
         cursor.close()
         connection.close()
     except Exception as e:
-        print(f"Exception occured {e}")
+        logging.info(f"Exception occured {e}")
         return False
     else:
         try:
             back_xpath = '//input[@type="submit" and @value="Back"]'
             back_button = driver.find_element(By.XPATH, back_xpath)
             back_button.click()
-            print("Clicked on back button")
+            logging.info("Clicked on back button")
         except NoSuchElementException:
             back_xpath = '//input[@type="submit" and @value="Back"]'
             back_button = driver.find_element(By.XPATH, back_xpath)
             back_button.click()
-            print("Trying to click but not clicking")
+            logging.info("Trying to click but not clicking")
         return True
 def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath,options):
     try:
         j = 1
+        setup_logging()
         first_xpath = '//span[@id="first"]'
         try:
             first_button = driver.find_element(By.XPATH, first_xpath)
             first_button.click()
         except Exception as e:
-            print("No first button")
+            logging.info("No first button")
             pass
         folder_path = os.path.join(rootpath, Cin, CompanyName, Category)
         if not os.path.exists(folder_path):
@@ -233,15 +239,15 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath,options
                     page_number_xpath = driver.find_element(By.XPATH, f'//span[@id="pg{j}" and @class="pg-selected"]')
                     page_number = page_number_xpath.text
                     page_number = int(page_number)
-                    print("Page Number", page_number)
+                    logging.info("Page Number", page_number)
                 except NoSuchElementException:
-                    print("No page number found")
+                    logging.info("No page number found")
                     pass
-                print("Loop Counter", j)
+                logging.info("Loop Counter", j)
                 connection = mysql.connector.connect(**dbconfig)
                 cursor = connection.cursor()
                 if j != page_number and j != 1:
-                    print("Completed Navigation")
+                    logging.info("Completed Navigation")
                     try:
                         back_xpath = '//input[@type="submit" and @value="Back"]'
                         back_button = driver.find_element(By.XPATH, back_xpath)
@@ -254,7 +260,7 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath,options
                         break
                 download_details_query = "select * from documents where cin=%s and company=%s and Category=%s and Page_Number=%s and Download_Status=%s and form_data_extraction_needed='Y'"
                 values = (Cin, CompanyName, Category, j, 'Pending')
-                print(download_details_query % values)
+                logging.info(download_details_query % values)
                 cursor.execute(download_details_query, values)
                 result = cursor.fetchall()
                 cursor.close()
@@ -266,7 +272,7 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath,options
                         if len(parts) == 2:
                             # If a dot is found, remove everything after it
                             filename = parts[0]
-                        print(filename)
+                        logging.info(filename)
                         download_filepath = os.path.join(folder_path, filename)
                         filepath = download_filepath + '.pdf'
                         file_xpath = f'//a[contains(text(),"{filename}")]'
@@ -277,7 +283,7 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath,options
                             continue
                         file_directory = os.path.dirname(filepath)
                         file_directory = file_directory
-                        print(file_directory)
+                        logging.info(file_directory)
                         params = {
                             "behavior": "allow",
                             "downloadPath": file_directory
@@ -285,14 +291,14 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath,options
                         driver.execute_cdp_cmd("Page.setDownloadBehavior", params)
                         download = download_captcha_and_enter_text(CompanyName, driver, filepath, filename, Cin,dbconfig,Category, download_filepath, retry_count=10)
                         if download:
-                            print("Downloaded Successfully")
+                            logging.info("Downloaded Successfully")
                             connection = mysql.connector.connect(**dbconfig)
                             cursor = connection.cursor()
                             update_query = 'update documents set Download_Status=%s where cin=%s and document=%s and company=%s'
                             path_update_query = 'update documents set document_download_path=%s where cin=%s and document=%s and company=%s'
                             values_update = ('Downloaded', Cin, filename, CompanyName)
                             values_path_update = (filepath, Cin, filename, CompanyName)
-                            print(values_update)
+                            logging.info(values_update)
                             cursor.execute(update_query, values_update)
                             cursor.execute(path_update_query, values_path_update)
                             connection.commit()
@@ -305,21 +311,21 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath,options
                                 try:
                                     shutil.copy(filepath, MGT_folder)
                                 except Exception as e:
-                                    print(f"Error {e}")
+                                    logging.info(f"Error {e}")
                         else:
-                            print("Not Downloaded")
+                            logging.info("Not Downloaded")
                             continue
                     except Exception as e:
-                        print(f"Exception occured {e}")
+                        logging.info(f"Exception occured {e}")
                         continue
                 connection = mysql.connector.connect(**dbconfig)
                 cursor = connection.cursor()
                 check_pending_query = "select * from documents where cin=%s and company=%s and Category=%s and Page_Number=%s and Download_Status=%s and form_data_extraction_needed='Y'"
                 pending_values = (Cin, CompanyName, Category, j, 'Pending')
-                print(check_pending_query % pending_values)
+                logging.info(check_pending_query % pending_values)
                 cursor.execute(check_pending_query, pending_values)
                 pending_result = cursor.fetchall()
-                print(pending_result)
+                logging.info(pending_result)
                 cursor.close()
                 connection.close()
                 if len(pending_result) == 0:
@@ -328,12 +334,12 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath,options
                         next_button_download = driver.find_element(By.XPATH, '//span[@id="next"]')
                         time.sleep(2)
                         next_button_download.click()
-                        print("Next Button clicked")
+                        logging.info("Next Button clicked")
                     except NoSuchElementException:
                         next_button_download = driver.find_element(By.XPATH, '//span[@id="next"]')
                         time.sleep(2)
                         next_button_download.click()
-                        print("Next Button not clicking")
+                        logging.info("Next Button not clicking")
                         pass
                 else:
                     download_retry += 1
@@ -342,7 +348,7 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath,options
                         cursor = connection.cursor()
                         Check_download_files_query = "select * from documents where cin=%s and company=%s and Download_Status='Downloaded' and form_data_extraction_needed='Y'"
                         Download_Check_Values = (Cin, CompanyName)
-                        print(Check_download_files_query % Download_Check_Values)
+                        logging.info(Check_download_files_query % Download_Check_Values)
                         cursor.execute(Check_download_files_query, Download_Check_Values)
                         Downloaded_Files = cursor.fetchall()
                         cursor.close()
@@ -351,90 +357,94 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath,options
                             back_xpath = '//input[@type="submit" and @value="Back"]'
                             back_button = driver.find_element(By.XPATH, back_xpath)
                             back_button.click()
-                            print("Clicked on back button")
+                            logging.info("Clicked on back button")
                         except NoSuchElementException:
                             back_xpath = '//input[@type="submit" and @value="Back"]'
                             back_button = driver.find_element(By.XPATH, back_xpath)
                             back_button.click()
-                            print("Trying to click but not clicking")
+                            logging.info("Trying to click but not clicking")
                         if len(Downloaded_Files) > 0:
-                            print("Exception occured but we got the required files")
+                            logging.info("Exception occured but we got the required files")
                             return True
                         else:
                             return False
                     else:
                         continue
             except Exception as e:
-                print(f"Excpetion {e} occured while navigating")
+                logging.info(f"Excpetion {e} occured while navigating")
                 exc_type, exc_value, exc_traceback = sys.exc_info()
 
                 # Get the formatted traceback as a string
                 traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
 
-                # Print the traceback details
+                # logging.info the traceback details
                 for line in traceback_details:
-                    print(line.strip())
+                    logging.info(line.strip())
                 download_retry += 1
                 if download_retry > 2:
                     connection = mysql.connector.connect(**dbconfig)
                     cursor = connection.cursor()
                     Check_download_files_query = "select * from documents where cin=%s and company=%s and Download_Status='Downloaded' and form_data_extraction_needed='Y'"
                     Download_Check_Values = (Cin, CompanyName)
-                    print(Check_download_files_query % Download_Check_Values)
+                    logging.info(Check_download_files_query % Download_Check_Values)
                     cursor.execute(Check_download_files_query, Download_Check_Values)
                     Downloaded_Files = cursor.fetchall()
                     cursor.close()
                     connection.close()
                     if len(Downloaded_Files) > 0:
-                        print("Exception occured but we got the required files")
+                        logging.info("Exception occured but we got the required files")
                         try:
                             back_xpath = '//input[@type="submit" and @value="Back"]'
                             back_button = driver.find_element(By.XPATH, back_xpath)
                             back_button.click()
-                            print("Clicked on back button")
+                            logging.info("Clicked on back button")
                         except NoSuchElementException:
                             back_xpath = '//input[@type="submit" and @value="Back"]'
                             back_button = driver.find_element(By.XPATH, back_xpath)
                             back_button.click()
-                            print("Trying to click but not clicking")
+                            logging.info("Trying to click but not clicking")
                         return True
                     else:
                         try:
                             back_xpath = '//input[@type="submit" and @value="Back"]'
                             back_button = driver.find_element(By.XPATH, back_xpath)
                             back_button.click()
-                            print("Clicked on back button")
+                            logging.info("Clicked on back button")
                         except NoSuchElementException:
                             back_xpath = '//input[@type="submit" and @value="Back"]'
                             back_button = driver.find_element(By.XPATH, back_xpath)
                             back_button.click()
-                            print("Trying to click but not clicking")
+                            logging.info("Trying to click but not clicking")
                         return False
                 else:
                     continue
     except Exception as e:
-        print(f"Exception {e} occured")
+        logging.info(f"Exception {e} occured")
         connection = mysql.connector.connect(**dbconfig)
         cursor = connection.cursor()
         Check_download_files_query = "select * from documents where cin=%s and company=%s and Download_Status='Downloaded' and form_data_extraction_needed='Y'"
         Download_Check_Values = (Cin,CompanyName)
-        print(Check_download_files_query % Download_Check_Values)
+        logging.info(Check_download_files_query % Download_Check_Values)
         cursor.execute(Check_download_files_query,Download_Check_Values)
         Downloaded_Files = cursor.fetchall()
+        check_total_files = "select * from documents where cin=%s and company=%s and form_data_extraction_needed='Y'"
+        logging.info(check_total_files % Download_Check_Values)
+        cursor.execute(check_total_files,Download_Check_Values)
+        total_files = cursor.fetchall()
         cursor.close()
         connection.close()
-        if len(Downloaded_Files) > 0:
-            print("Exception occured but we got the required files")
+        if len(Downloaded_Files) == len(total_files):
+            logging.info("Exception occured but we got the required files")
             try:
                 back_xpath = '//input[@type="submit" and @value="Back"]'
                 back_button = driver.find_element(By.XPATH, back_xpath)
                 back_button.click()
-                print("Clicked on back button")
+                logging.info("Clicked on back button")
             except NoSuchElementException:
                 back_xpath = '//input[@type="submit" and @value="Back"]'
                 back_button = driver.find_element(By.XPATH, back_xpath)
                 back_button.click()
-                print("Trying to click but not clicking")
+                logging.info("Trying to click but not clicking")
             return True
         else:
             return False
@@ -445,6 +455,7 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath,options
 def update_form_extraction_status(db_config, cin,CompanyName):
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
+    setup_logging()
     try:
         values = (cin, CompanyName, cin, CompanyName)
         try:
@@ -465,9 +476,9 @@ def update_form_extraction_status(db_config, cin,CompanyName):
                                 COMMIT;"""
             cursor.execute(update_query_MGT,values)
             connection.commit()
-            print(update_query_MGT % values)
+            logging.info(update_query_MGT % values)
         except Exception as e:
-            print(f"Error Updating form extraction status for MGT {e}")
+            logging.info(f"Error Updating form extraction status for MGT {e}")
 
         try:
             update_query_MSME = """UPDATE documents AS d1
@@ -484,7 +495,7 @@ WHERE d1.cin = '{}' AND d1.document LIKE '%MSME%';""".format(cin,cin)
             cursor.execute(update_query_MSME)
             connection.commit()
         except Exception as e:
-            print(f"Exception occured for MSME{e}")
+            logging.info(f"Exception occured for MSME{e}")
 
         try:
             update_query_AOC = """UPDATE documents AS d1
@@ -498,11 +509,11 @@ JOIN (
 ) AS d2 ON STR_TO_DATE(d1.document_date_year, '%d-%m-%Y') = d2.latest_date
 SET d1.form_data_extraction_needed = 'Y'
 WHERE d1.cin = '{}' AND d1.document LIKE '%AOC%';""".format(cin,cin)
-            print(update_query_AOC)
+            logging.info(update_query_AOC)
             cursor.execute(update_query_AOC)
             connection.commit()
         except Exception as e:
-            print(f"Exception occured for AOC{e}")
+            logging.info(f"Exception occured for AOC{e}")
         try:
             update_query_Change_of_name = "UPDATE documents set form_data_extraction_needed = 'Y' where LOWER(document) LIKE '%%change of name%%' and `cin`=%s and `company`=%s;"
             two_values = (cin,CompanyName)
@@ -520,21 +531,21 @@ WHERE d1.cin = '{}' AND d1.document LIKE '%AOC%';""".format(cin,cin)
             cursor.execute(update_query_DIR,two_values)
             connection.commit()
         except Exception as e:
-            print(f"Exception occured for change of name{e}")
+            logging.info(f"Exception occured for change of name{e}")
         try:
             update_query_Xbrl_consolidated = "UPDATE documents set form_data_extraction_needed = 'Y' where document like '%%XBRL document in respect Consolidated%%' and `cin`=%s and `company`=%s;"
             date_values = (cin, CompanyName)
-            print(update_query_Xbrl_consolidated % date_values)
+            logging.info(update_query_Xbrl_consolidated % date_values)
             cursor.execute(update_query_Xbrl_consolidated,date_values)
             connection.commit()
             update_query_Xbrl = "UPDATE documents set form_data_extraction_needed = 'Y' where document like '%%XBRL financial statements%%' and `cin`=%s and `company`=%s;"
-            print(update_query_Xbrl % date_values)
+            logging.info(update_query_Xbrl % date_values)
             cursor.execute(update_query_Xbrl,date_values)
             connection.commit()
         except Exception as e:
-            print(f"Exception occured for XBRL{e}")
+            logging.info(f"Exception occured for XBRL{e}")
     except Exception as e:
-        print(f"Error updating login status in the database: {str(e)}")
+        logging.info(f"Error updating login status in the database: {str(e)}")
         return False
     else:
         return True
@@ -558,13 +569,14 @@ def check_already_Downloaded_db(dbconfig, Cin, filename, CompanyName):
 
 
 def click_element_with_retry(driver, xpath, retry_count=3):
+    setup_logging()
     for attempt in range(1, retry_count + 1):
         try:
             element = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, xpath)))
             element.click()
             return True
         except:
-            print(f"Failed attempt {attempt} to click element with xpath: {xpath}")
+            logging.info(f"Failed attempt {attempt} to click element with xpath: {xpath}")
             time.sleep(3)
     return False
 
@@ -573,6 +585,7 @@ def download_captcha_and_enter_text(CompanyName, driver, file_path, filename, Ci
                                     retry_count=5):
     try:
         #options = webdriver.ChromeOptions()
+        setup_logging()
         window_handles = driver.window_handles
         new_window_handle = window_handles[-1]
         driver.switch_to.window(new_window_handle)
@@ -586,7 +599,7 @@ def download_captcha_and_enter_text(CompanyName, driver, file_path, filename, Ci
                 image = 'download_captcha.png'
                 result = reader.readtext(image)
                 captcha_text = " ".join([text[1] for text in result])
-                print(f"Captcha Text: {captcha_text}")
+                logging.info(f"Captcha Text: {captcha_text}")
                 time.sleep(3)
 
                 captcha_enter_download = WebDriverWait(driver, 10).until(
@@ -597,12 +610,12 @@ def download_captcha_and_enter_text(CompanyName, driver, file_path, filename, Ci
                 time.sleep(2)
                 Captcha_submit_xpath = '//input[@type="submit" and @value="Submit"]'
                 click_element_with_retry(driver, Captcha_submit_xpath, retry_count)
-                print("Clicked on Submit")
+                logging.info("Clicked on Submit")
                 time.sleep(5)
                 try:
                     no_captcha = driver.find_element(By.XPATH, '//li[text()="Please enter letters shown."]')
                     if no_captcha.is_displayed():
-                        print("No Captcha Entered")
+                        logging.info("No Captcha Entered")
                         time.sleep(2)
                         no_captcha_close_button = driver.find_element(By.XPATH, '//a[@class="boxclose" and @id="alertboxclose"]')
                         time.sleep(2)
@@ -614,7 +627,7 @@ def download_captcha_and_enter_text(CompanyName, driver, file_path, filename, Ci
                 try:
                     incorrect_captcha = driver.find_element(By.XPATH, '//li[text()="Enter valid Letters shown."]')
                     if incorrect_captcha.is_displayed():
-                        print("Incorrect Captcha entered")
+                        logging.info("Incorrect Captcha entered")
                         time.sleep(3)
                         close_box_button = driver.find_element(By.XPATH, '//a[@class="boxclose" and @id="msgboxclose"]')
                         time.sleep(2)
@@ -627,13 +640,13 @@ def download_captcha_and_enter_text(CompanyName, driver, file_path, filename, Ci
                 except:
                     break
             except Exception as e:
-                print(e)
-                print(f"Failed attempt {attempt} to download captcha and enter text")
+                logging.info(e)
+                logging.info(f"Failed attempt {attempt} to download captcha and enter text")
         time.sleep(2)
         try:
             driver.close()
         except NoSuchWindowException:
-            print("Due to some issue window closed")
+            logging.info("Due to some issue window closed")
             original_window_handle = window_handles[0]
             # Switch back to the original window
             driver.switch_to.window(original_window_handle)
@@ -648,26 +661,26 @@ def download_captcha_and_enter_text(CompanyName, driver, file_path, filename, Ci
 
         if os.path.exists(download_file_path):
             os.rename(download_file_path,file_path)
-            print(f"Renamed from {download_file_path} to {file_path}")
+            logging.info(f"Renamed from {download_file_path} to {file_path}")
         time.sleep(1)
         download_filename = os.path.basename(file_path)
         download_filename = str(download_filename).replace('.pdf', '')
-        print(download_filename)
+        logging.info(download_filename)
         if download_filename != filename:
-            print("Download name not same so renaming")
+            logging.info("Download name not same so renaming")
             update_download_filename = filename
             old_file_path = file_path
-            print(f"old file path:{old_file_path}")
+            logging.info(f"old file path:{old_file_path}")
             file_path = str(file_path).replace(download_filename, update_download_filename)
             if '.pdf' not in file_path:
                 file_path = file_path + '.pdf'
-            print(f"New file path:{file_path}")
+            logging.info(f"New file path:{file_path}")
             os.rename(old_file_path, file_path)
         else:
-            print("Same name so not changing")
+            logging.info("Same name so not changing")
         if os.path.exists(file_path):
             Download_Status = "Downloaded"
-            print("Downloaded successfully")
+            logging.info("Downloaded successfully")
             # insert_Download_Details(Cin, CompanyName, category, filename, dbconfig, file_path, date)
             return True
         else:
@@ -682,33 +695,34 @@ def download_captcha_and_enter_text(CompanyName, driver, file_path, filename, Ci
                             if '.pdf' not in updated_file_path:
                                 updated_file_path = updated_file_path + '.pdf'
                             os.rename(file, updated_file_path)
-                            print(f"Renamed from {file} to {updated_file_path}")
+                            logging.info(f"Renamed from {file} to {updated_file_path}")
                             return True
                 else:
-                    print("Not Downloaded successfully")
+                    logging.info("Not Downloaded successfully")
                     return False
             else:
-                print("Not Downloaded successfully")
+                logging.info("Not Downloaded successfully")
                 return False
     except Exception as e:
-        print(f"Exception Occured {e}")
+        logging.info(f"Exception Occured {e}")
         exc_type, exc_value, exc_traceback = sys.exc_info()
 
         # Get the formatted traceback as a string
         traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
 
-        # Print the traceback details
+        # logging.info the traceback details
         for line in traceback_details:
-            print(line.strip())
+            logging.info(line.strip())
         return False
 
 
 def sign_out(driver):
+    setup_logging()
     sign_out_button = driver.find_element(By.XPATH, '//a[@id="loginAnchor" and text()="Signout"]')
 
     if sign_out_button.is_displayed():
         sign_out_button.click()
-        print("Signed Out")
+        logging.info("Signed Out")
     time.sleep(4)
     if 'driver' in locals():
         driver.delete_all_cookies()

@@ -62,7 +62,7 @@ def update_database_single_value_GST(db_config, table_name, cin_column_name, cin
     db_cursor.close()
     db_connection.close()
 
-def insert_gst_number(db_config,config_dict,cin,company):
+def insert_gst_number(db_config,config_dict,cin,company,root_path):
     try:
         url = config_dict['pan_to_gst_url']
         connection = mysql.connector.connect(**db_config)
@@ -93,7 +93,11 @@ def insert_gst_number(db_config,config_dict,cin,company):
                     print(gst_number, gst_status)
                     df_map = fetch_gst_details(config_dict,gst_number,gst_status)
                     output_df.append(df_map)
-            output_file_path = r'C:\MCA Portal\gst.xlsx'
+            output_folder_path = os.path.join(root_path,cin)
+            if not os.path.exists(output_folder_path):
+               os.makedirs(output_folder_path)
+            output_file_path = os.path.join(output_folder_path,'gst.xlsx')
+            #output_file_path = r"C:\Users\mns-admin\Documents\Power Automate\MNS Credit Automation\Output\U27100WB2021PTC246718\gst.xlsx"
             cin_column_name = config_dict['cin_column_name']
             company_column_name = config_dict['company_column_name']
             for df in output_df:
@@ -173,6 +177,10 @@ def fetch_gst_details(config_dict,gst_number,status):
                 column = str(row.iloc[3]).strip()
                 if field_name == config_dict['filings_keyword']:
                     value = gst_json_response[config_dict['gst_result_keyword']][config_dict['gst_result_keyword']][json_node]
+                    for entry in value:
+                        # Convert the dateOfFiling to yyyy-mm-dd format
+                        entry["dateOfFiling"] = datetime.strptime(entry["dateOfFiling"], "%d/%m/%Y").strftime(
+                            "%Y-%m-%d")
                     value = json.dumps(value)
                     value = value.replace("'", '"')
                 elif field_name == config_dict['gstin_keyword']:
