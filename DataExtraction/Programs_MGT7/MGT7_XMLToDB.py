@@ -52,7 +52,7 @@ def extract_table_values_from_xml(xml_root, table_node_name, child_nodes):
     return data_list
 
 
-def update_datatable_single_value(db_cursor, table_name, cin_column_name, cin_value,
+def update_datatable_single_value(config_dict, db_cursor, table_name, cin_column_name, cin_value,
                                   company_name_column_name,
                                   company_name, column_name, column_value):
     # determine value to be updated
@@ -61,9 +61,13 @@ def update_datatable_single_value(db_cursor, table_name, cin_column_name, cin_va
     json_dict = json.loads(column_value)
     num_elements = len(json_dict)
     print(column_name)
-    if column_name == 'total_equity_shares' or column_name == 'total_preference_shares':
+
+    if column_name == config_dict['total_equity_shares_column_name'] or column_name == \
+            config_dict['total_preference_shares_column_name']:
         temp_column_value = 0
         for key, value in json_dict.items():
+            if value is None:
+                continue
             temp_column_value += float(value)
         print(f'{column_value=}')
         column_value = temp_column_value
@@ -73,6 +77,41 @@ def update_datatable_single_value(db_cursor, table_name, cin_column_name, cin_va
         column_value = first_value
     else:
         column_value = json.dumps(json_dict)
+
+    if column_name == config_dict['registered_full_address_column_name']:
+        print(column_value)
+        # query to check if address exist in db with cin
+        query = "SELECT {} FROM {} WHERE {} = '{}'".format(column_name, table_name, cin_column_name, cin_value)
+
+        try:
+            db_cursor.execute(query)
+        except mysql.connector.Error as err:
+            print(err)
+        rows = db_cursor.fetchall()
+        print(rows)
+        print(len(rows))
+        for row in rows:
+            print(row)
+            column_index_to_check = 0
+            value_in_column = row[column_index_to_check]
+            if value_in_column is None or value_in_column == '' or value_in_column == 'null':
+                # if not found update address for cin in Company table
+                update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}'".format(table_name,
+                                                                                column_name,
+                                                                                column_value,
+                                                                                cin_column_name,
+                                                                                cin_value
+                                                                                )
+                print(update_query)
+                db_cursor.execute(update_query)
+                print(f"Updated address for CIN '{cin_value}' in table '{table_name}'")
+                return
+            else:
+                # if cin and address value already exist skip updating
+                print(f"Entry for Address field for CIN '{cin_value}' already exist in '{table_name}' Table, hence "
+                      f"skipping updating Address")
+                return
+
     # check if there is already entry with cin
     query = "SELECT * FROM {} WHERE {} = '{}'".format(table_name, cin_column_name, cin_value)
     # print(query)
@@ -222,7 +261,8 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
         column_json_node = str(row.iloc[7]).strip()
 
         value = get_single_value_from_xml(xml_root, parent_node, child_nodes)
-        if field_name == 'year':
+        if field_name == 'year' and value is not None:
+            print(value)
             date_obj = datetime.strptime(value, "%Y-%m-%d")
             year = date_obj.year
             single_df.at[index, 'Value'] = year
@@ -263,7 +303,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
             else:
                 company_name_column_name = company_name_column_name_in_db
             try:
-                update_datatable_single_value(db_cursor, sql_table_name,
+                update_datatable_single_value(config_dict, db_cursor, sql_table_name,
                                               cin_column_name_in_db,
                                               cin_column_value,
                                               company_name_column_name,
@@ -356,10 +396,10 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
             # print(table_df)
             total_shares = pd.to_numeric(table_df['no_of_shares']).sum()
             # print(total_shares)
-            table_df['percentage_holding'] = (pd.to_numeric(table_df['no_of_shares'])/total_shares) * 100
+            table_df['percentage_holding'] = (pd.to_numeric(table_df['no_of_shares']) / total_shares) * 100
             # print(table_df)
 
-             # Define the mapping of values to be replaced
+            # Define the mapping of values to be replaced
             designation_mapping = {'DIRT': 'Director',
                                    'MDIR': 'Managing Director',
                                    'WTDR': 'Whole-time director',
