@@ -21,9 +21,9 @@ def fetch_order_data_from_table(connection):
         if connection:
             cursor = connection.cursor()
             # Construct the SQL query
-            query = "SELECT * FROM orders where workflow_status=%s"
+            query = "SELECT * FROM orders where (workflow_status=%s or workflow_status=%s)"
             #value1 = ("Download_Pending")
-            cursor.execute(query, ("json_loader_pending(llp)",))
+            cursor.execute(query, ("json_loader_pending(llp)","download_insertion_success"))
 
             # Get the column names from the cursor description
             column_names = [desc[0] for desc in cursor.description]
