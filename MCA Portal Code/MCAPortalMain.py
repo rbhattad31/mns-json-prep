@@ -15,8 +15,9 @@ from SendEmail import send_email
 import logging
 from logging_config import setup_logging
 
+
 def main():
-    excel_file = r"C:\Users\mns-admin\Documents\Python\Config\Config_Python.xlsx"
+    excel_file = os.environ.get("MCA_Config")
     Sheet_name = "Sheet1"
     try:
         setup_logging()
@@ -61,7 +62,7 @@ def main():
                                 sign_out(driver, config_dict, CinData)
                             """
                             continue
-                        Insert_fields_into_DB,exception_message_db = insert_fields_into_db(hidden_attachments, config_dict, CinData)
+                        Insert_fields_into_DB,exception_message_db = insert_fields_into_db(hidden_attachments, config_dict, CinData,excel_file)
                         if Insert_fields_into_DB:
                             logging.info("Successfully Inserted into DB")
                         else:
@@ -71,7 +72,7 @@ def main():
                                 sign_out(driver, config_dict, CinData)
                             """
                             raise Exception(exception_message_db)
-                        json_loader,json_file_path,exception_message = json_loader_generation(CinData, db_config, config_dict)
+                        json_loader,json_file_path,exception_message = json_loader_generation(CinData, db_config, config_dict,excel_file)
                         if json_loader:
                             logging.info("JSON Loader generated succesfully")
                             update_json_loader_db(CinData, config_dict)
