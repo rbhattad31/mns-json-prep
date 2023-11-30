@@ -15,12 +15,9 @@ from SendEmail import send_email
 import logging
 from logging_config import setup_logging
 
+
 def main():
-<<<<<<< HEAD
     excel_file = os.environ.get("MCA_Config")
-=======
-    excel_file = r"C:\Users\mns-admin\Documents\Python\Config\Config_Python.xlsx"
->>>>>>> 6cef494a80bc2c1b6ee4ce396a0fa91722ed6968
     Sheet_name = "Sheet1"
     try:
         setup_logging()
@@ -65,11 +62,7 @@ def main():
                                 sign_out(driver, config_dict, CinData)
                             """
                             continue
-<<<<<<< HEAD
                         Insert_fields_into_DB,exception_message_db = insert_fields_into_db(hidden_attachments, config_dict, CinData,excel_file)
-=======
-                        Insert_fields_into_DB,exception_message_db = insert_fields_into_db(hidden_attachments, config_dict, CinData)
->>>>>>> 6cef494a80bc2c1b6ee4ce396a0fa91722ed6968
                         if Insert_fields_into_DB:
                             logging.info("Successfully Inserted into DB")
                         else:
