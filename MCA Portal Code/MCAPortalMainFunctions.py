@@ -95,6 +95,7 @@ def Login_and_Download(config_dict,CinData):
         else:
             raise Exception(f"Failed to Navigate to {CompanyName}")
         category_list = ['Annual Returns and Balance Sheet eForms','Certificates','Charge Documents','Change in Directors','Incorporation Documents','LLP Forms(Conversion of company to LLP)','Other eForm Documents','Other Attachments']
+        insertion_counter = 0
         if workflow_status != 'download_insertion_success':
             for item in category_list:
                 try:
@@ -108,12 +109,14 @@ def Login_and_Download(config_dict,CinData):
                     else:
                         continue
                     if update_extraction_status:
-                        update_status(User,'download_insertion_success',db_config,Cin)
-                    else:
-                        continue
+                        insertion_counter +=1
                 except Exception as e:
                     print(f"Exception Occured for category {item}{e}")
                     continue
+            if len(category_list) == insertion_counter:
+                update_status(User, 'download_insertion_success', db_config, Cin)
+            else:
+                raise Exception(f"Download Insertion failed for {Cin}")
         for category in category_list:
             try:
                 category_selection = select_category(category, driver)
@@ -127,22 +130,38 @@ def Login_and_Download(config_dict,CinData):
                     continue
             except Exception as e:
                 print(f"Excpetion occured while downloading{e}")
-
-    except Exception as e:
-        print(f"Exception Occured in downloading Main {e}")
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor()
-        Check_download_files_query = "select * from documents where cin=%s and company=%s and Download_Status='Downloaded' and form_data_extraction_needed='Y'"
-        Download_Check_Values = (Cin, CompanyName)
-        print(Check_download_files_query % Download_Check_Values)
-        cursor.execute(Check_download_files_query, Download_Check_Values)
-        Downloaded_Files = cursor.fetchall()
+        download_check_query = "select * from documents where cin = %s and form_data_extraction_needed='Y'"
+        download_file_details = "select * from documents where cin = %s and form_data_extraction_needed='Y' and Download_Status='Downloaded'"
+        values = (Cin,)
+        cursor.execute(download_check_query,values)
+        total_files = cursor.fetchall()
+        cursor.execute(download_file_details,values)
+        download_files = cursor.fetchall()
         cursor.close()
         connection.close()
-        if len(Downloaded_Files) > 0:
-            return True, driver,None
+        if len(total_files) == len(download_files):
+            return True,driver,None
         else:
-            return False, None,e
+            exception_message = f"Download failed for {Cin}"
+            return False,None,exception_message
+    except Exception as e:
+        print(f"Exception Occured in downloading Main {e}")
+        return False, None, e
+        # connection = mysql.connector.connect(**db_config)
+        # cursor = connection.cursor()
+        # Check_download_files_query = "select * from documents where cin=%s and company=%s and Download_Status='Downloaded' and form_data_extraction_needed='Y'"
+        # Download_Check_Values = (Cin, CompanyName)
+        # print(Check_download_files_query % Download_Check_Values)
+        # cursor.execute(Check_download_files_query, Download_Check_Values)
+        # Downloaded_Files = cursor.fetchall()
+        # cursor.close()
+        # connection.close()
+        # if len(Downloaded_Files) > 0:
+        #     return True, driver,None
+        # else:
+        #     return False, None,e
     else:
         return True,driver,None
 
