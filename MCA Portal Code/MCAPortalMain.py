@@ -12,12 +12,14 @@ from MCAPortalMainFunctions import sign_out
 from MCAPortalMainFunctions import json_loader_generation
 from DBFunctions import update_json_loader_db
 from SendEmail import send_email
-
+import logging
+from logging_config import setup_logging
 
 def main():
-    excel_file = r"C:\MCA Portal\Config.xlsx"
+    excel_file = r"C:\Users\mns-admin\Documents\Python\Config\Config_Python.xlsx"
     Sheet_name = "Sheet1"
     try:
+        setup_logging()
         config_dict, config_status = create_main_config_dictionary(excel_file, Sheet_name)
         if config_status == "Pass":
             db_config = get_db_credentials(config_dict)
@@ -31,38 +33,39 @@ def main():
                 try:
                     send_email(config_dict,subject_start,body_start,emails,None)
                 except Exception as e:
-                    print(f"Error sending email {e}")
+                    logging.info(f"Error sending email {e}")
                 cin = None
                 receipt_number = None
                 for CinData in CinDBData:
                     try:
                         cin = CinData[2]
                         receipt_number = CinData[1]
+                        logging.info(f"Starting to download for {cin}")
                         """
                         Download_Status, driver,exception_message = Login_and_Download(config_dict, CinData)
                         if Download_Status:
-                            print("Downloaded Successfully")
+                            logging.info("Downloaded Successfully")
                         else:
-                            print("Not Downloaded")
+                            logging.info("Not Downloaded")
                             if 'driver' in locals():
                                 sign_out(driver, config_dict, CinData)
                             raise Exception(f"Download failed for {cin} {exception_message}")
                         """
                         XML_Generation, hidden_attachments = XMLGeneration(db_config, CinData, config_dict)
                         if XML_Generation:
-                            print("XML Generated successfully")
+                            logging.info("XML Generated successfully")
                         else:
-                            print("XML Not Generated successfully")
+                            logging.info("XML Not Generated successfully")
                             """
                             if 'driver' in locals():
                                 sign_out(driver, config_dict, CinData)
-                            continue
                             """
+                            continue
                         Insert_fields_into_DB,exception_message_db = insert_fields_into_db(hidden_attachments, config_dict, CinData)
                         if Insert_fields_into_DB:
-                            print("Successfully Inserted into DB")
+                            logging.info("Successfully Inserted into DB")
                         else:
-                            print("Not Successfully Inserted into DB")
+                            logging.info("Not Successfully Inserted into DB")
                             """
                             if 'driver' in locals():
                                 sign_out(driver, config_dict, CinData)
@@ -70,24 +73,24 @@ def main():
                             raise Exception(exception_message_db)
                         json_loader,json_file_path,exception_message = json_loader_generation(CinData, db_config, config_dict)
                         if json_loader:
-                            print("JSON Loader generated succesfully")
+                            logging.info("JSON Loader generated succesfully")
                             update_json_loader_db(CinData, config_dict)
                             cin_complete_subject = str(config_dict['cin_Completed_subject']).format(cin,receipt_number)
                             cin_completed_body = str(config_dict['cin_Completed_body']).format(cin,receipt_number)
                             try:
                                 send_email(config_dict,cin_complete_subject,cin_completed_body,emails,json_file_path)
                             except Exception as e:
-                                print(f"Exception occured while sending end email {e}")
+                                logging.info(f"Exception occured while sending end email {e}")
                         else:
-                            print("JSON Loader not generated")
+                            logging.info("JSON Loader not generated")
                             """
                             if 'driver' in locals():
                                 sign_out(driver, config_dict, CinData)
+                            """
                             raise Exception(f"Exception occured for json loader generation {cin} {exception_message}")
-                        sign_out(driver, config_dict, CinData)
-                        """
+                        #sign_out(driver, config_dict, CinData)
                     except Exception as e:
-                        print(f"Exception occured for cin {cin} {e}")
+                        logging.info(f"Exception occured for cin {cin} {e}")
                         exception_subject = str(config_dict['Exception_subject']).format(cin,receipt_number)
                         exception_body = str(config_dict['Exception_message']).format(cin,receipt_number,e)
                         try:

@@ -38,7 +38,7 @@ def JSON_loader(db_config,config_json_file_path,cin,root_path,excel_path,sheet_n
         # Call the function with your JSON data, starting directly with the 'data' child nodes
         json_nodes = get_json_node_names(json_data.get('data', {}), parent_name='')
         config_dict_loader, status = create_main_config_dictionary(excel_path, sheet_name)
-        print(json_nodes)
+        #print(json_nodes)
         for json_node in json_nodes:
             try:
                 connection = mysql.connector.connect(**db_config)
@@ -47,17 +47,25 @@ def JSON_loader(db_config,config_json_file_path,cin,root_path,excel_path,sheet_n
                     company_query = config_dict_loader[json_node]
                 except Exception as e:
                     continue
-                if json_node == 'contact_details' or json_node == 'authorized_signatories':
-                    values = (cin,cin)
-                elif json_node == 'subsidiary_entities' or json_node == 'associate_entities' or json_node == 'joint_ventures' or json_node == 'holding_entities':
-                    values = (cin,cin,cin)
+                if json_node == 'company' or json_node == 'authorized_signatories' or json_node == 'charge_sequence' or json_node == 'director_network' or json_node == 'open_charges' or json_node == 'open_charges_latest_event' or json_node == 'stock_exchange':
+                    if json_node == 'authorized_signatories':
+                       query = company_query.format(cin,cin)
+                    else:
+                       query = company_query.format(cin)
+                    print(query)
+                    cursor.execute(query)
                 else:
-                    values = (cin,)
-                print(company_query % values)
-                cursor.execute(company_query, values)
+                    if json_node == 'contact_details':
+                        values = (cin,cin)
+                    elif json_node == 'subsidiary_entities' or json_node == 'associate_entities' or json_node == 'joint_ventures' or json_node == 'holding_entities':
+                        values = (cin,cin,cin)
+                    else:
+                        values = (cin,)
+                    print(company_query % values)
+                    cursor.execute(company_query, values)
                 result_company = cursor.fetchall()
                 json_string = ', '.join(result_company[0])
-                print(json_string)
+                #print(json_string)
 
                 # Convert the JSON string to a Python dictionary
                 company_data = json.loads(json_string)
@@ -66,7 +74,7 @@ def JSON_loader(db_config,config_json_file_path,cin,root_path,excel_path,sheet_n
                 json_data["data"][json_node] = company_data
 
                 # Print or use the updated JSON structure
-                print(json.dumps(json_data, indent=2))
+                #print(json.dumps(json_data, indent=2))
                 with open(json_file_path, 'w') as json_file:
                     json.dump(json_data, json_file, indent=2)
                 cursor.close()

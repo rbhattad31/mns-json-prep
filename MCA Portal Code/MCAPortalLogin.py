@@ -12,7 +12,8 @@ import mysql.connector
 import sys
 import traceback
 from selenium.webdriver.common.keys import Keys
-
+from logging_config import setup_logging
+import logging
 def update_login_status(username, db_config):
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
@@ -29,91 +30,94 @@ def update_login_status(username, db_config):
 
 def login_to_website(url, chrome_driver_path,username,password,db_config):
     try:
+        setup_logging()
         options = Options()
+        options.headless = False
         options.add_argument('--start-maximized')
         service = Service(chrome_driver_path)
-        driver = webdriver.Chrome(service=service, options=options)
-        driver.get(url)
-        time.sleep(2)
-        driver.maximize_window()
         pytesseract.pytesseract.tesseract_cmd = r"C:\Users\BRADSOL123\AppData\Local\Programs\Tesseract-OCR\tesseract.exe"
         retry_count = 10
         for attempt in range(1, retry_count + 1):
-            print(f"Attempt {attempt}:")
-
+            driver = webdriver.Chrome(service=service, options=options)
+            driver.get(url)
+            time.sleep(2)
+            driver.set_window_size(1920, 1080)
+            driver.maximize_window()
+            logging.info(f"Attempt {attempt}:")
             try:
                 upload_forms_button = driver.find_element(By.XPATH,
                                                           '//input[@type="button" and @value="Upload e-Forms"]')
                 if upload_forms_button.is_displayed():
-                    print("Already logged in!")
+                    logging.info("Already logged in!")
                     sign_out_button = driver.find_element(By.XPATH, '//a[@id="loginAnchor" and text()="Signout"]')
                     sign_out_button.click()
-                    print("Logged out. Retrying login...")
+                    logging.info("Logged out. Retrying login...")
             except:
                 pass
                 # Find and input the username
-            username_input = driver.find_element(By.XPATH, '//input[@type="text" and @id="userName"]')
-            username_input.clear()
-            username_input.send_keys(username)
-            print("UserName Entered", username)
-            time.sleep(5)
+            for attempt in range(1, retry_count + 1):
+                username_input = driver.find_element(By.XPATH, '//input[@type="text" and @id="userName"]')
+                username_input.clear()
+                username_input.send_keys(username)
+                logging.info("UserName Entered", username)
+                time.sleep(5)
 
-            # Get the password from environment variables
-            password_input = driver.find_element(By.XPATH, '//input[@type="password" and @id="password"]')
-            password_input.clear()
-            password_input.send_keys(password)
-            print("Password Entered", password)
-            time.sleep(5)
+                # Get the password from environment variables
+                password_input = driver.find_element(By.XPATH, '//input[@type="password" and @id="password"]')
+                password_input.clear()
+                password_input.send_keys(password)
+                logging.info("Password Entered", password)
+                time.sleep(5)
 
-            # Get the captcha image element
-            captcha_image = driver.find_element(By.XPATH, '//img[@alt="Captcha" and @id="captcha"]')
+                # Get the captcha image element
+                captcha_image = driver.find_element(By.XPATH, '//img[@alt="Captcha" and @id="captcha"]')
 
-            # Capture the screenshot of the captcha image
-            captcha_image.screenshot("captcha.png")
-            time.sleep(5)
+                # Capture the screenshot of the captcha image
+                captcha_image.screenshot("captcha.png")
+                time.sleep(5)
 
-            # Perform OCR on the captcha image
-            # captcha_text = pytesseract.image_to_string(Image.open("captcha.png"))
-            reader = easyocr.Reader(["en"])
-            image = 'captcha.png'
-            result = reader.readtext(image)
-            captcha_text = " ".join([text[1] for text in result])
-            print(f"Captcha Text: {captcha_text}")
+                # Perform OCR on the captcha image
+                # captcha_text = pytesseract.image_to_string(Image.open("captcha.png"))
+                reader = easyocr.Reader(["en"])
+                image = 'captcha.png'
+                result = reader.readtext(image)
+                captcha_text = " ".join([text[1] for text in result])
+                logging.info(f"Captcha Text: {captcha_text}")
 
-            # Enter captcha text
-            captcha_input = driver.find_element(By.XPATH, '//input[@type="text" and @id="userEnteredCaptcha"]')
-            captcha_input.clear()
-            captcha_input.send_keys(captcha_text)
-            print("Entered Captcha")
-            time.sleep(5)
-            sign_in = driver.find_element(By.XPATH, '//input[@type="submit" and @value="Sign In"]')
-            sign_in.click()
-            print("Clicked on Sign in")
-            time.sleep(5)
-            try:
-                no_captcha = driver.find_element(By.XPATH,'//li[text()="Please enter letters shown."]')
-                if no_captcha.is_displayed():
-                    print("No Captcha Entered")
-                    time.sleep(2)
-                    no_captcha_close_button = driver.find_element((By.XPATH,'//a[@class="boxclose" and @id="alertboxclose"]'))
-                    time.sleep(2)
-                    no_captcha_close_button.click()
-                    time.sleep(1)
-                    continue
-            except:
-                pass
-            try:
-                incorrect_captcha = driver.find_element(By.XPATH, '//li[text()="Enter valid Letters shown."]')
-                if incorrect_captcha.is_displayed():
-                    print("Incorrect Captcha entered")
-                    time.sleep(3)
-                    close_box_button = driver.find_element(By.XPATH, '//a[@class="boxclose" and @id="msgboxclose"]')
-                    time.sleep(2)
-                    close_box_button.click()
-                    time.sleep(2)
-                    continue
-            except:
-                pass
+                # Enter captcha text
+                captcha_input = driver.find_element(By.XPATH, '//input[@type="text" and @id="userEnteredCaptcha"]')
+                captcha_input.clear()
+                captcha_input.send_keys(captcha_text)
+                logging.info("Entered Captcha")
+                time.sleep(5)
+                sign_in = driver.find_element(By.XPATH, '//input[@type="submit" and @value="Sign In"]')
+                sign_in.click()
+                logging.info("Clicked on Sign in")
+                time.sleep(5)
+                try:
+                    no_captcha = driver.find_element(By.XPATH,'//li[text()="Please enter letters shown."]')
+                    if no_captcha.is_displayed():
+                        logging.info("No Captcha Entered")
+                        time.sleep(2)
+                        no_captcha_close_button = driver.find_element((By.XPATH,'//a[@class="boxclose" and @id="alertboxclose"]'))
+                        time.sleep(2)
+                        no_captcha_close_button.click()
+                        time.sleep(1)
+                        continue
+                except:
+                    break
+                try:
+                    incorrect_captcha = driver.find_element(By.XPATH, '//li[text()="Enter valid Letters shown."]')
+                    if incorrect_captcha.is_displayed():
+                        logging.info("Incorrect Captcha entered")
+                        time.sleep(3)
+                        close_box_button = driver.find_element(By.XPATH, '//a[@class="boxclose" and @id="msgboxclose"]')
+                        time.sleep(2)
+                        close_box_button.click()
+                        time.sleep(2)
+                        continue
+                except:
+                    break
 
                 # Click on the Sign In button
 
@@ -129,8 +133,8 @@ def login_to_website(url, chrome_driver_path,username,password,db_config):
                 time.sleep(5)
                 return Status, driver,options,'Login Failed'
             except:
-                print("Login failed. Retrying...")
-
+                logging.info("Login failed. Retrying...")
+                driver.close()
             # If login fails after the last attempt, print a message
         if attempt == retry_count:
             print("Login failed after 3 attempts.")
@@ -141,7 +145,7 @@ def login_to_website(url, chrome_driver_path,username,password,db_config):
         time.sleep(10)
 
     except Exception as e:
-        print(f"Error Logging in {e}")
+        logging.warning(f"Error Logging in {e}")
         Status = "Fail"
         exc_type, exc_value, exc_traceback = sys.exc_info()
 
@@ -150,7 +154,7 @@ def login_to_website(url, chrome_driver_path,username,password,db_config):
 
         # Print the traceback details
         for line in traceback_details:
-            print(line.strip())
+            logging.info(line.strip())
         return Status,driver,options,e
 
 

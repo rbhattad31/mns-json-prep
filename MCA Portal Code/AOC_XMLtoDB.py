@@ -522,7 +522,7 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                 # Convert each dictionary to a JSON string
                 auditor_json = None
                 for row_dict in row_dicts:
-                    row_dict["ADDRESS"] = row_dict.pop("ADDRESS_LINE_I") + ", " + row_dict.pop("ADDRESS_LINE_II") + ", " + row_dict.pop("CITY") + ", " + row_dict.pop("STATE") + ", " + row_dict.pop("COUNTRY") + ", " + row_dict.pop("PIN_CODE")
+                    row_dict["address"] = row_dict.pop("ADDRESS_LINE_I") + ", " + row_dict.pop("ADDRESS_LINE_II") + ", " + row_dict.pop("CITY") + ", " + row_dict.pop("STATE") + ", " + row_dict.pop("COUNTRY") + ", " + row_dict.pop("PIN_CODE")
                     # row_dict["ADDRESS"] = {
                     #     "ADDRESS_LINE_I": row_dict.pop("ADDRESS_LINE_I"),
                     #     "ADDRESS_LINE_II": row_dict.pop("ADDRESS_LINE_II"),
@@ -531,6 +531,13 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                     #     "COUNTRY": row_dict.pop("COUNTRY"),
                     #     "PIN_CODE": row_dict.pop("PIN_CODE")
                     # }
+                   
+                    row_dict["auditor_name"] = row_dict.pop("NAME_OF_MEMBER")
+                    row_dict["auditor_firm_name"] = row_dict.pop("NAME_AUDT_AUDTRF")
+                    row_dict["pan"] = row_dict.pop("IT_PAN")
+                    row_dict["membership_number"] = row_dict.pop("MEMBERSHIP_NUMBR")
+                    row_dict["firm_registration_number"] = row_dict.pop("MEMBERSHIP_NUM_A")
+                    
                     auditor_json = json.dumps(row_dict)
                 group_df.at[index, 'Value'] = auditor_json
                 for year in years:
@@ -539,7 +546,7 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                     remaining_row_df = table_df.iloc[1:]
                     rows_dicts_remaining = remaining_row_df.to_dict(orient='records')
                     for row_dict_remaining in rows_dicts_remaining:
-                        row_dict_remaining["ADDRESS"] = row_dict_remaining.pop("ADDRESS_LINE_I") + ", " + row_dict_remaining.pop(
+                        row_dict_remaining["address"] = row_dict_remaining.pop("ADDRESS_LINE_I") + ", " + row_dict_remaining.pop(
                             "ADDRESS_LINE_II") + ", " + row_dict_remaining.pop("CITY") + ", " + row_dict_remaining.pop(
                             "STATE") + ", " + row_dict_remaining.pop("COUNTRY") + ", " + row_dict_remaining.pop("PIN_CODE")
                         # row_dict_remaining["ADDRESS"] = {
@@ -550,6 +557,12 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                         #     "COUNTRY": row_dict_remaining.pop("COUNTRY"),
                         #     "PIN_CODE": row_dict_remaining.pop("PIN_CODE")
                         # }
+                        
+                        row_dict["auditor_name"] = row_dict.pop("NAME_OF_MEMBER")
+                        row_dict["auditor_firm_name"] = row_dict.pop("NAME_AUDT_AUDTRF")
+                        row_dict["pan"] = row_dict.pop("IT_PAN")
+                        row_dict["membership_number"] = row_dict.pop("MEMBERSHIP_NUMBR")
+                        row_dict["firm_registration_number"] = row_dict.pop("MEMBERSHIP_NUM_A")
                     remaining_row_df_new = pd.DataFrame(rows_dicts_remaining)
                     remaining_row_df_new.columns = column_json_node_list
                     remaining_row_df_new["address"] = remaining_row_df_new["address"].apply(lambda x: json.dumps(x))

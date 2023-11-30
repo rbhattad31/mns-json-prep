@@ -3,7 +3,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
-
+import os
 
 def send_email(config_dict,subject, body, to_emails, attachment_path=None):
     try:
@@ -28,7 +28,10 @@ def send_email(config_dict,subject, body, to_emails, attachment_path=None):
             part = MIMEBase('application', 'octet-stream')
             part.set_payload((attachment).read())
             encoders.encode_base64(part)
-            part.add_header('Content-Disposition', "attachment; filename= " + attachment_path)
+            file_name_with_extension = os.path.basename(attachment_path)
+            file_name, _ = os.path.splitext(file_name_with_extension)
+            file_name = file_name + '.json'
+            part.add_header('Content-Disposition', "attachment; filename= " + file_name)
             msg.attach(part)
 
         # Connect to the SMTP server
