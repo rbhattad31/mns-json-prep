@@ -1,0 +1,33 @@
+{
+  "metatag": {
+    "api_version": "xxxx",
+    "last_updated": "2023-06-21"
+  },
+  "data": {
+    "llp": {},
+    "description": {},
+    "name_history": [],
+    "directors": [],
+    "director_network": [],
+    "contact_details": {},
+    "open_charges": [],
+    "open_charges_latest_event": [],
+    "charge_sequence": [],
+    "holding_entities": {},
+    "subsidiary_entities": {},
+    "financials": [],
+    "credit_ratings": [],
+    "unaccepted_rating": [],
+    "defaulter_list": [],
+    "legal_history": [],
+    "contribution_details": {},
+    "summary_designated_partners": [],
+    "industry_segments": [],
+    "principal_business_activities": [],
+    "gst_details": [],
+    "struckoff248_details": {},
+    "epfo": [],
+    "press_news": [],
+	"stock_exchange":[]
+  }
+}
