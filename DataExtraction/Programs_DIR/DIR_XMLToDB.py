@@ -66,7 +66,11 @@ def extract_table_values_from_hidden_xml(xml_root, table_node_name, child_nodes)
     return data_list
 
 
-def insert_datatable_with_table(config_dict, db_cursor, sql_table_name, column_names_list, df_row):
+def insert_datatable_with_table(config_dict, db_config, sql_table_name, column_names_list, df_row):
+    db_connection = mysql.connector.connect(**db_config)
+    db_cursor = db_connection.cursor()
+    db_connection.autocommit = True
+
     combined = list(zip(column_names_list, df_row))
     # Create a dictionary from the list of tuples
     result_dict = dict(combined)
@@ -123,8 +127,15 @@ def insert_datatable_with_table(config_dict, db_cursor, sql_table_name, column_n
         db_cursor.execute(update_query)
         print(f"Data row values are saved in table '{sql_table_name}' with \n {df_row}")
 
+    db_cursor.close()
+    db_connection.close()
 
-def update_attachment_table(db_cursor, config_dict, sql_table_name, column_names_list, df_row):
+
+def update_attachment_table(db_config, config_dict, sql_table_name, column_names_list, df_row):
+    db_connection = mysql.connector.connect(**db_config)
+    db_cursor = db_connection.cursor()
+    db_connection.autocommit = True
+
     combined = list(zip(column_names_list, df_row))
     # Create a dictionary from the list of tuples
     result_dict = dict(combined)
@@ -218,9 +229,11 @@ def update_attachment_table(db_cursor, config_dict, sql_table_name, column_names
                     print(e)
         else:
             print(f"Entry for din '{din}' with cin '{cin}' not exists in table {sql_table_name}")
+    db_cursor.close()
+    db_connection.close()
 
 
-def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path, hidden_xml_file_path,
+def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, hidden_xml_file_path,
               output_file_path, cin_column_value, company_name, filing_date):
     # field_name_index = 0
     xml_type_index = 1
@@ -367,7 +380,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
         for _, df_row in table_df.iterrows():
             try:
-                insert_datatable_with_table(config_dict, db_cursor, sql_table_name, table_df.columns, df_row)
+                insert_datatable_with_table(config_dict, db_config, sql_table_name, table_df.columns, df_row)
             except Exception as e:
                 print(f'Exception {e} occurred while inserting below table row in table {sql_table_name}- \n',
                       df_row)
@@ -384,7 +397,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
     output_dataframes_list.clear()
 
 
-def attachment_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
+def attachment_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
                          output_file_path, cin):
     # field_name_index = 0
     single_group_type_index = 2
@@ -467,7 +480,7 @@ def attachment_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_n
         for _, df_row in table_df.iterrows():
             print(df_row)
             try:
-                update_attachment_table(db_cursor, config_dict, sql_table_name, table_df.columns, df_row)
+                update_attachment_table(db_config, config_dict, sql_table_name, table_df.columns, df_row)
             except Exception as e:
                 print(f'Exception {e} occurred while inserting below table row in table {sql_table_name}- \n',
                       df_row)
@@ -483,10 +496,10 @@ def attachment_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_n
     output_dataframes_list.clear()
 
 
-def dir_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path, hidden_xml_file_path,
+def dir_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, hidden_xml_file_path,
                   output_file_path, cin_column_value, company_name, filing_date):
     try:
-        xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path, hidden_xml_file_path,
+        xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, hidden_xml_file_path,
                   output_file_path, cin_column_value, company_name, filing_date)
     except Exception as e:
         print("Below Exception occurred while processing DIR file: \n ", e)
@@ -503,10 +516,10 @@ def dir_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xm
         return True
 
 
-def dir_attachment_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
+def dir_attachment_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
                              output_file_path, cin):
     try:
-        attachment_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
+        attachment_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
                              output_file_path, cin)
     except Exception as e:
         print("Below Exception occurred while processing DIR file: \n ", e)
