@@ -7,6 +7,8 @@ import pandas as pd
 import re
 import sys
 import traceback
+from datetime import datetime
+
 def update_database_single_value_GST(db_config, table_name, cin_column_name, cin_value,company_name_column_name,company_name, column_name, column_value,gst_number):
     db_connection = mysql.connector.connect(**db_config)
     db_cursor = db_connection.cursor()
