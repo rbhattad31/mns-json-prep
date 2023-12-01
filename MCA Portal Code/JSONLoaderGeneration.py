@@ -47,8 +47,8 @@ def JSON_loader(db_config,config_json_file_path,cin,root_path,excel_path,sheet_n
                     company_query = config_dict_loader[json_node]
                 except Exception as e:
                     continue
-                if json_node == 'company' or json_node == 'authorized_signatories' or json_node == 'charge_sequence' or json_node == 'director_network' or json_node == 'open_charges' or json_node == 'open_charges_latest_event' or json_node == 'stock_exchange':
-                    if json_node == 'authorized_signatories':
+                if json_node == 'company' or json_node == 'authorized_signatories' or json_node == 'charge_sequence' or json_node == 'director_network' or json_node == 'open_charges' or json_node == 'open_charges_latest_event' or json_node == 'stock_exchange' or json_node == 'directors' or json_node == 'llp':
+                    if json_node == 'authorized_signatories' or json_node == 'directors':
                        query = company_query.format(cin,cin)
                     else:
                        query = company_query.format(cin)

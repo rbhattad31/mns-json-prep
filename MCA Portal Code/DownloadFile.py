@@ -544,6 +544,50 @@ WHERE d1.cin = '{}' AND d1.document LIKE '%AOC%';""".format(cin,cin)
             connection.commit()
         except Exception as e:
             logging.info(f"Exception occured for XBRL{e}")
+        try:
+            form11_query = "UPDATE documents set form_data_extraction_needed = 'Y' where document LIKE '%%Form11%%' and `cin`=%s and Category = 'Annual Returns and Balance Sheet eForms'"
+            value_form11 = (cin,)
+            logging.info(form11_query % value_form11)
+            cursor.execute(form11_query,value_form11)
+            connection.commit()
+        except Exception as e:
+            logging.info(f"Exception occured for form11 status updating {e}")
+
+        try:
+            form_fillip_query = "UPDATE documents set form_data_extraction_needed = 'Y' where document LIKE '%%Form Fillip%%' and `cin`=%s and Category = 'Incorporation Documents'"
+            value_formfillip = (cin,)
+            logging.info(form_fillip_query % value_formfillip)
+            cursor.execute(form_fillip_query,value_formfillip)
+            connection.commit()
+        except Exception as e:
+            logging.info(f"Exception occured for formfillip status updating {e}")
+
+        try:
+            form8_annual_query = """UPDATE documents AS d1
+JOIN (
+    SELECT MAX(STR_TO_DATE(document_date_year, '%d-%m-%Y')) AS latest_date
+    FROM documents
+    WHERE cin = '{}' AND document LIKE '%Form8%' AND Category = 'Annual Returns and Balance Sheet eForms'
+    GROUP BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y'))
+    ORDER BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y')) DESC
+    LIMIT 4
+) AS d2 ON STR_TO_DATE(d1.document_date_year, '%d-%m-%Y') = d2.latest_date
+SET d1.form_data_extraction_needed = 'Y'
+WHERE d1.cin = '{}' AND d1.document LIKE '%Form8%' AND Category = 'Annual Returns and Balance Sheet eForms' ;""".format(cin,cin)
+            logging.info(form8_annual_query)
+            cursor.execute(form8_annual_query)
+            connection.commit()
+        except Exception as e:
+            logging.info(f"Exception occured for form8 annual status updating {e}")
+
+        try:
+            form8_interim_query = "UPDATE documents set form_data_extraction_needed = 'Y' where document LIKE '%%Form8%%' and `cin`=%s and Category = 'Charge Documents'"
+            values_form8 = (cin,)
+            logging.info(form8_interim_query % values_form8)
+            cursor.execute(form8_interim_query,values_form8)
+            connection.commit()
+        except Exception as e:
+            logging.info(f"Exception occured for form8 interim status updating {e}")
     except Exception as e:
         logging.info(f"Error updating login status in the database: {str(e)}")
         return False
@@ -688,15 +732,23 @@ def download_captcha_and_enter_text(CompanyName, driver, file_path, filename, Ci
                 other_attachments_directory = os.path.dirname(file_path)
                 if os.path.exists(other_attachments_directory):
                     files = [os.path.join(other_attachments_directory, file) for file in os.listdir(other_attachments_directory)]
-                    for file in files:
-                        if 'XBRL financial statements' in file:
-                            updated_filename = filename
-                            updated_file_path = os.path.join(other_attachments_directory, updated_filename)
-                            if '.pdf' not in updated_file_path:
-                                updated_file_path = updated_file_path + '.pdf'
-                            os.rename(file, updated_file_path)
-                            logging.info(f"Renamed from {file} to {updated_file_path}")
-                            return True
+                    latest_file = max(files, key=os.path.getctime)
+                    if 'XBRL financial statements' in latest_file:
+                        updated_filename = filename
+                        updated_file_path = os.path.join(other_attachments_directory, updated_filename)
+                        if '.pdf' not in updated_file_path:
+                            updated_file_path = updated_file_path + '.pdf'
+                        os.rename(latest_file, updated_file_path)
+                        logging.info(f"Renamed from {latest_file} to {updated_file_path}")
+                        return True
+                    # for file in files:
+                    #     if 'XBRL financial statements' in file:
+                    #         updated_filename = filename
+                    #         updated_file_path = os.path.join(other_attachments_directory, updated_filename)
+                    #         if '.pdf' not in updated_file_path:
+                    #             updated_file_path = updated_file_path + '.pdf'
+                    #         os.rename(file, updated_file_path)
+                    #         logging.info(f"Renamed from {file} to {updated_file_path}")
                 else:
                     logging.info("Not Downloaded successfully")
                     return False

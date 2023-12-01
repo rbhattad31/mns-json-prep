@@ -474,12 +474,20 @@ def json_loader_generation(cindata,dbconfig,config_dict,excel_file_path):
             exception_message = 'Invalid Cin to generate loader'
         if json_loader:
             print("JSON Loader generated successfully")
+            if len(Cin) == 21:
+                order_sheet_name = "JSON Non-LLP Order"
+                logging.info("Starting to order Non-LLP")
+            elif len(Cin) == 8:
+                order_sheet_name = "JSON LLP Order"
+                logging.info("Starting to order LLP")
+            else:
+                order_Sheet_name = None
+                raise Exception("Invalid Cin")
+            config_dict_order, config_status = create_main_config_dictionary(excel_file_path, order_sheet_name)
             for json_node in json_nodes:
                 try:
-                    order_sheet_name = "JSON Non-LLP Order"
-                    print(json_node)
-                    config_dict_order,config_status = create_main_config_dictionary(excel_file_path,order_sheet_name)
                     json_order = order_json(config_dict_order,json_node,json_file_path)
+                    print(json_node)
                     if json_order:
                         print("Json ordered successfully")
                 except Exception as e:
