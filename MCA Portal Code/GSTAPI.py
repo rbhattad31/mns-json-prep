@@ -181,8 +181,10 @@ def fetch_gst_details(config_dict,gst_number,status):
                     value = gst_json_response[config_dict['gst_result_keyword']][config_dict['gst_result_keyword']][json_node]
                     for entry in value:
                         # Convert the dateOfFiling to yyyy-mm-dd format
-                        entry["dateOfFiling"] = datetime.strptime(entry["dateOfFiling"], "%d/%m/%Y").strftime(
-                            "%Y-%m-%d")
+                        try:
+                            entry["dateOfFiling"] = datetime.strptime(entry["dateOfFiling"], "%d/%m/%Y").strftime("%Y-%m-%d")
+                        except Exception as e:
+                            continue
                     value = json.dumps(value)
                     value = value.replace("'", '"')
                 elif field_name == config_dict['gstin_keyword']:

@@ -516,7 +516,10 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                 column_json_node_list = [x.strip() for x in column_json_node.split(',')]
                 column_child_node_list = [x.strip() for x in child_nodes.split(',')]
                 table_df.columns = column_child_node_list
-                first_row_df = table_df.iloc[[0]]
+                try:
+                    first_row_df = table_df.iloc[[0]]
+                except Exception as e:
+                    continue
                 row_dicts = first_row_df.to_dict(orient='records')
 
                 # Convert each dictionary to a JSON string

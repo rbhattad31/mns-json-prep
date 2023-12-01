@@ -4,7 +4,24 @@ import sys
 import traceback
 import logging
 from logging_config import setup_logging
-def order_json(config_dict,json_node,input_file_path):
+
+def process_nested_dict(data, sub_keys):
+    ordered_dict = OrderedDict()
+    for nested_key, nested_sub_keys in sub_keys.items():
+        if nested_key in data:
+            if isinstance(data[nested_key], list):
+                ordered_dict[nested_key] = [
+                    OrderedDict((sub_key, item.get(sub_key, "")) for sub_key in nested_sub_keys) for item in
+                    data[nested_key]
+                ]
+            elif isinstance(data[nested_key], dict):
+                ordered_dict[nested_key] = process_nested_dict(data[nested_key], nested_sub_keys)
+            else:
+                # If it's not a list of dictionaries, simply copy the value
+                ordered_dict[nested_key] = data[nested_key]
+    return ordered_dict
+
+def order_json(config_dict, json_node, input_file_path):
     try:
         setup_logging()
         with open(input_file_path, "r") as file:
@@ -18,7 +35,7 @@ def order_json(config_dict,json_node,input_file_path):
             print(order_dict)
             order_dict = json.loads(order_dict)
         """
-        
+
         order_dict = json.loads(order_dict)
         print(order_dict)
         # Process the dictionary or a list of dictionaries
@@ -44,7 +61,6 @@ def order_json(config_dict,json_node,input_file_path):
                                         order_dict[key][sub_key]) for
                                         company in companies_list]
                                     ordered_network_data[sub_key] = ordered_companies_list
-
                             else:
                                 # For other sub-keys, simply copy the value
                                 ordered_network_data[sub_key] = network_data.get(sub_key, "")
@@ -56,20 +72,10 @@ def order_json(config_dict,json_node,input_file_path):
                                 # If it's a list of dictionaries, process each dictionary in the list
                                 ordered_json[key] = [
                                     OrderedDict((sub_key, item.get(sub_key, "")) for sub_key in sub_keys) for item in
-                                    company_object[key]]
-                                print("Converted")
+                                    company_object[key]
+                                ]
                             elif key in company_object and isinstance(company_object[key], dict):
-                                ordered_json[key] = OrderedDict()
-                                for nested_key, nested_sub_keys in sub_keys.items():
-                                    print(nested_key, nested_sub_keys)
-                                    if nested_key in company_object[key]:
-                                        # Process each sub-key within the nested dictionary
-                                        if type(company_object[key][nested_key]) == str:
-                                            continue
-                                        ordered_json[key][nested_key] = OrderedDict(
-                                            (sub_key, company_object[key][nested_key].get(sub_key, "")) for sub_key in
-                                            nested_sub_keys
-                                        )
+                                ordered_json[key] = process_nested_dict(company_object[key], sub_keys)
                             else:
                                 # If it's not a list of dictionaries, simply copy the value
                                 ordered_json[key] = company_object.get(key, "")
@@ -93,6 +99,8 @@ def order_json(config_dict,json_node,input_file_path):
                         print("List in dict")
                         ordered_json[key] = [OrderedDict((sub_key, item.get(sub_key, "")) for sub_key in sub_keys) for
                                              item in company_data[key]]
+                    elif key in company_data and isinstance(company_data[key],dict):
+                        ordered_json = process_nested_dict(company_data, order_dict)
                     else:
                         # If it's not a list of dictionaries, simply copy the value
                         ordered_json[key] = company_data.get(key, "")
@@ -117,7 +125,9 @@ def order_json(config_dict,json_node,input_file_path):
 
         # logging.info the traceback details
         for line in traceback_details:
-            logging.info(line.strip())
-        return False    
+            print(line.strip())
+        return False
     else:
         return True
+
+

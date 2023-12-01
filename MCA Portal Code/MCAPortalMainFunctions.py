@@ -132,16 +132,13 @@ def Login_and_Download(config_dict,CinData):
                 print(f"Excpetion occured while downloading{e}")
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor()
-        download_check_query = "select * from documents where cin = %s and form_data_extraction_needed='Y'"
-        download_file_details = "select * from documents where cin = %s and form_data_extraction_needed='Y' and Download_Status='Downloaded'"
+        download_file_details = "select * from documents where cin = %s and form_data_extraction_needed='Y' and Download_Status='Pending'"
         values = (Cin,)
-        cursor.execute(download_check_query,values)
-        total_files = cursor.fetchall()
         cursor.execute(download_file_details,values)
         download_files = cursor.fetchall()
         cursor.close()
         connection.close()
-        if len(total_files) == len(download_files):
+        if len(download_files) < 5:
             return True,driver,None
         else:
             exception_message = f"Download failed for {Cin}"
@@ -443,7 +440,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
         cursor.execute(db_insert_check_query,values_check)
         result_db_insertion = cursor.fetchall()
         print(len(result_db_insertion))
-        if len(result_db_insertion) == 0:
+        if len(result_db_insertion) < 5:
             return True,None
         else:
             db_insertion_exception_message = f"Db insertion failed for {Cin}"
