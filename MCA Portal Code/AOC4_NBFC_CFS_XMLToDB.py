@@ -569,6 +569,12 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 #     "COUNTRY": row_dict.pop("COUNTRY"),
                 #     "PIN_CODE": row_dict.pop("PIN_CODE")
                 # }
+
+                row_dict["auditor_name"] = row_dict.pop("NAME_OF_MEMBER")
+                row_dict["auditor_firm_name"] = row_dict.pop("NAME_AUDT_AUDTRF")
+                row_dict["pan"] = row_dict.pop("IT_PAN")
+                row_dict["membership_number"] = row_dict.pop("MEMBERSHIP_NUMBR")
+                row_dict["firm_registration_number"] = row_dict.pop("MEMBERSHIP_NUM_A")
                 auditor_json = json.dumps(row_dict)
             group_df.at[index, 'Value'] = auditor_json
             for year in years:
@@ -590,6 +596,11 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                     #     "COUNTRY": row_dict_remaining.pop("COUNTRY"),
                     #     "PIN_CODE": row_dict_remaining.pop("PIN_CODE")
                     # }
+                    row_dict_remaining["auditor_name"] = row_dict_remaining.pop("NAME_OF_MEMBER")
+                    row_dict_remaining["auditor_firm_name"] = row_dict_remaining.pop("NAME_AUDT_AUDTRF")
+                    row_dict_remaining["pan"] = row_dict_remaining.pop("IT_PAN")
+                    row_dict_remaining["membership_number"] = row_dict_remaining.pop("MEMBERSHIP_NUMBR")
+                    row_dict_remaining["firm_registration_number"] = row_dict_remaining.pop("MEMBERSHIP_NUM_A")
                 remaining_row_df_new = pd.DataFrame(rows_dicts_remaining)
                 remaining_row_df_new.columns = column_json_node_list
                 remaining_row_df_new["address"] = remaining_row_df_new["address"].apply(lambda x: json.dumps(x))
