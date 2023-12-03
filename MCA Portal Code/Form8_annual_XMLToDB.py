@@ -432,7 +432,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             common_json_dict = common_column_df.set_index(common_table_df.columns[0])['Value'].to_dict()
             # print(common_json_dict)
 
-            common_json_dict[config_dict['address_column_name']] = common_json_dict.pop(config_dict["line_1_field_name"])+","+common_json_dict.pop(config_dict["line_2_field_name"])+","+common_json_dict.pop(config_dict["city_field_name"])+","+common_json_dict.pop(config_dict["district_field_name"])+","+common_json_dict.pop(config_dict["state_field_name"])+","+common_json_dict.pop(config_dict["pincode_field_name"])
+            common_json_dict[config_dict['address_column_name']] = str(common_json_dict.pop(config_dict["line_1_field_name"]))+","+str(common_json_dict.pop(config_dict["line_2_field_name"]))+","+str(common_json_dict.pop(config_dict["city_field_name"]))+","+str(common_json_dict.pop(config_dict["district_field_name"]))+","+str(common_json_dict.pop(config_dict["state_field_name"]))+","+str(common_json_dict.pop(config_dict["pincode_field_name"]))
             # print(common_json_dict)
             #common_json_dict.pop(config_dict["auditor_type_field_name"])
             # print(common_json_dict)
