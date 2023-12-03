@@ -60,8 +60,11 @@ def update_database_single_value(db_config, config_dict, table_name, cin_column_
         year = config_dict['year']
         query = "SELECT * FROM {} WHERE {} = '{}' AND {} = '{}'".format(table_name, cin_column_name, cin_value,
                                                                         year_column_name, year)
-    else:
+    elif table_name == config_dict['company_table_name']:
         query = "SELECT * FROM {} WHERE {} = '{}'".format(table_name, cin_column_name, cin_value)
+    else:
+        print(f"Irrelevant table {table_name} to update data for Form11")
+        return
     print(query)
     try:
         db_cursor.execute(query)
@@ -70,7 +73,7 @@ def update_database_single_value(db_config, config_dict, table_name, cin_column_
     result = db_cursor.fetchall()
     # print(result)
     print(column_value)
-    # if cin value already exists
+    # if cin value already exists, update
     if len(result) > 0:
         print(f"cin {cin_value} is exist in table {table_name}")
         if table_name == config_dict['principal_business_activities_table_name']:
@@ -84,20 +87,23 @@ def update_database_single_value(db_config, config_dict, table_name, cin_column_
                                                                                          year_column_name,
                                                                                          year
                                                                                          )
-        else:
+        elif table_name == config_dict['company_table_name']:
             update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}'".format(table_name,
                                                                             column_name, column_value,
                                                                             cin_column_name, cin_value
                                                                             )
+        else:
+            print(f"Irrelevant table {table_name} to update data for Form11")
+            return
         print(update_query)
         try:
             db_cursor.execute(update_query)
         except Exception as e:
             raise e
         else:
-            print("updated")
+            print(f"updated form 11 data in table {table_name}")
 
-    # if cin value doesn't exist
+    # if cin value doesn't exist, insert
     else:
         print(f"cin {cin_value} is not exist in table {table_name}")
         # print(type(cin_value))
@@ -115,18 +121,22 @@ def update_database_single_value(db_config, config_dict, table_name, cin_column_
                                                                                           year,
                                                                                           column_value
                                                                                           )
+            print(insert_query)
+            try:
+                db_cursor.execute(insert_query)
+            except Exception as e:
+                raise e
+            else:
+                print("Inserted into principal business activities")
+        elif table_name == config_dict['company_table_name']:
+            # insert_query = "INSERT INTO {} ({}, {}) VALUES ('{}', '{}')".format(table_name, cin_column_name,
+            #                                                                     column_name,
+            #                                                                     cin_value,
+            #                                                                     column_value)
+            return
         else:
-            insert_query = "INSERT INTO {} ({}, {}) VALUES ('{}', '{}')".format(table_name, cin_column_name,
-                                                                                column_name,
-                                                                                cin_value,
-                                                                                column_value)
-        print(insert_query)
-        try:
-            db_cursor.execute(insert_query)
-        except Exception as e:
-            raise e
-        else:
-            print("inserted")
+            return
+
     db_cursor.close()
     db_connection.close()
 
@@ -308,7 +318,8 @@ def insert_datatable_with_table(db_config, config_dict, sql_table_name, column_n
             if nominee_id_value is not None:
                 update_query = f'''UPDATE {sql_table_name}
                                 SET {', '.join([f"{col} = '{str(result_dict[col])}'" for col in column_names_list])} 
-                                WHERE {cin_column_name} = '{cin}' AND {nominee_id_column_name} = '{nominee_id_value}' '''
+                                WHERE {cin_column_name} = '{cin}' AND {nominee_id_column_name} = '{nominee_id_value}' 
+                '''
             else:
                 raise Exception(f"Nominee id is not available for sql query for table {sql_table_name}")
             print(update_query)
@@ -329,7 +340,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                         'parent_node_index',
                         'child_nodes_index', 'sql_table_name_index',
                         'column_name_index', 'column_json_node_index',
-                        'Company_table_name', 'summary_designated_partners_table_name',
+                        'company_table_name', 'summary_designated_partners_table_name',
                         'principal_business_activities_table_name',
                         'individual_partners_table_name',
                         'authorized_signatories_table_name',
@@ -433,7 +444,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         print(sql_table_name)
         # filter only table
 
-        if (sql_table_name == config_dict["Company_table_name"] or sql_table_name ==
+        if (sql_table_name == config_dict["company_table_name"] or sql_table_name ==
                 config_dict["principal_business_activities_table_name"]):
             table_df = single_df[single_df[single_df.columns[sql_table_name_index]] == sql_table_name]
             print(table_df)
@@ -494,7 +505,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
     # extract group values
     for index, row in group_df.iterrows():
-        field_name = str(row.iloc[field_name_index]).strip()
+        # field_name = str(row.iloc[field_name_index]).strip()
         parent_node = str(row.iloc[parent_node_index]).strip()
         child_nodes = str(row.iloc[child_nodes_index]).strip()
         sql_table_name = str(row.iloc[sql_table_name_index]).strip()
