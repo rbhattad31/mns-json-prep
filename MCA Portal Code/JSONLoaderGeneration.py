@@ -50,6 +50,8 @@ def JSON_loader(db_config,config_json_file_path,cin,root_path,excel_path,sheet_n
                 if json_node == 'company' or json_node == 'authorized_signatories' or json_node == 'charge_sequence' or json_node == 'director_network' or json_node == 'open_charges' or json_node == 'open_charges_latest_event' or json_node == 'stock_exchange' or json_node == 'directors' or json_node == 'llp':
                     if json_node == 'authorized_signatories' or json_node == 'directors':
                        query = company_query.format(cin,cin)
+                    elif json_node == 'contribution_details':
+                        query = company_query.format(cin,cin,cin,cin)
                     else:
                        query = company_query.format(cin)
                     print(query)
@@ -59,8 +61,6 @@ def JSON_loader(db_config,config_json_file_path,cin,root_path,excel_path,sheet_n
                         values = (cin,cin)
                     elif json_node == 'subsidiary_entities' or json_node == 'associate_entities' or json_node == 'joint_ventures' or json_node == 'holding_entities':
                         values = (cin,cin,cin)
-                    elif json_node == 'contribution_details':
-                        values = (cin,cin,cin,cin)
                     else:
                         values = (cin,)
                     print(company_query % values)
