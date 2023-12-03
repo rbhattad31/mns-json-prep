@@ -59,6 +59,8 @@ def JSON_loader(db_config,config_json_file_path,cin,root_path,excel_path,sheet_n
                         values = (cin,cin)
                     elif json_node == 'subsidiary_entities' or json_node == 'associate_entities' or json_node == 'joint_ventures' or json_node == 'holding_entities':
                         values = (cin,cin,cin)
+                    elif json_node == 'contribution_details':
+                        values = (cin,cin,cin,cin)
                     else:
                         values = (cin,)
                     print(company_query % values)

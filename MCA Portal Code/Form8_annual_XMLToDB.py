@@ -189,6 +189,10 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         column_json_node = str(row.iloc[column_json_node_index]).strip()
 
         value_common = get_single_value_from_xml(xml_root, parent_node, child_nodes)
+        try:
+            value_common = int(value_common)
+        except Exception as e:
+            pass
         common_df.at[index, 'Value'] = value_common
         results_common.append([field_name, value_common, sql_table_name, column_name, column_json_node])
     print(common_df)
@@ -233,6 +237,10 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                     value_previous_year = value_previous_year.strftime("%Y-%m-%d")
                 print(value_previous_year)
         # print(value)
+        try:
+            value_previous_year = int(value_previous_year)
+        except Exception as e:
+            pass
         previous_year_df.at[index, 'Value'] = value_previous_year
         results_previous_year.append([field_name, value_previous_year, sql_table_name, column_name, column_json_node])
     # print("previous year df:\n", previous_year_df)
@@ -294,6 +302,10 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         # print(child_nodes)
         # print(value_current_year)
         # print(value)
+        try:
+            value_current_year = int(value_current_year)
+        except Exception as e:
+            pass
         current_year_df.at[index, 'Value'] = value_current_year
         results_current_year.append([field_name, value_current_year, sql_table_name, column_name, column_json_node])
 

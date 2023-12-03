@@ -1,3 +1,4 @@
+import time
 import requests
 import json
 import mysql.connector
@@ -182,8 +183,18 @@ def fetch_gst_details(config_dict,gst_number,status):
                     for entry in value:
                         # Convert the dateOfFiling to yyyy-mm-dd format
                         try:
-                            entry["dateOfFiling"] = datetime.strptime(entry["dateOfFiling"], "%d/%m/%Y").strftime("%Y-%m-%d")
+                            entry["dateOfFiling"] = datetime.strptime(entry["dateOfFiling"], "%d/%m/%Y").strftime(
+                                "%Y-%m-%d")
+                        except:
+                            pass
+                        try:
+                            entry["return_type"] = entry.pop("gstType", entry["gstType"])
+                            entry["date_of_filing"] = entry.pop("dateOfFiling", entry["dateOfFiling"])
+                            entry["financial_year"] = entry.pop("filingYear", entry["filingYear"])
+                            entry["tax_period"] = entry.pop("monthOfFiling", entry["monthOfFiling"])
+                            entry["status"] = entry.pop("gstStatus", entry["gstStatus"])
                         except Exception as e:
+                            print(f"Exception in updating key names {e}")
                             continue
                     value = json.dumps(value)
                     value = value.replace("'", '"')
@@ -224,4 +235,4 @@ def fetch_gst_details(config_dict,gst_number,status):
 # excel_path = r"C:\MCA Portal\Config.xlsx"
 # sheet_name = 'GST'
 # config_dict,status = create_main_config_dictionary(excel_path,sheet_name)
-# insert_gst_number(db_config,config_dict,'U45201RJ2014PTC044956','JCC INFRAPROJECTS PRIVATE LIMITED')
+# insert_gst_number(db_config,config_dict,'U45201RJ2014PTC044956','JCC INFRAPROJECTS PRIVATE LIMITED',"C:\MCA Portal")

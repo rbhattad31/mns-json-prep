@@ -1,10 +1,11 @@
 import json
+import os
 from collections import OrderedDict
 import sys
 import traceback
 import logging
 from logging_config import setup_logging
-
+from Config import create_main_config_dictionary
 def process_nested_dict(data, sub_keys):
     ordered_dict = OrderedDict()
     for nested_key, nested_sub_keys in sub_keys.items():
@@ -130,4 +131,9 @@ def order_json(config_dict, json_node, input_file_path):
     else:
         return True
 
-
+# excel_file = os.environ.get("MCA_Config")
+# sheet_name = "JSON LLP Order"
+# config_dict,config_status = create_main_config_dictionary(excel_file,sheet_name)
+# json_node  = "contribution_details"
+# input_file_path = r"C:\Users\BRADSOL123\Desktop\AAL-7717.json"
+# order_json(config_dict,json_node,input_file_path)
