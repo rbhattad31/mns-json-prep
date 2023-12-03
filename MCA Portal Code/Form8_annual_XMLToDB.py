@@ -190,8 +190,9 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
         value_common = get_single_value_from_xml(xml_root, parent_node, child_nodes)
         try:
-            value_common = int(value_common)
+            value_common = float(value_common)
         except Exception as e:
+            print(f"Exception occured in converting to float {e}")
             pass
         common_df.at[index, 'Value'] = value_common
         results_common.append([field_name, value_common, sql_table_name, column_name, column_json_node])
@@ -238,8 +239,9 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 print(value_previous_year)
         # print(value)
         try:
-            value_previous_year = int(value_previous_year)
+            value_previous_year = float(value_previous_year)
         except Exception as e:
+            print(f"Exception occured in converting to float {e}")
             pass
         previous_year_df.at[index, 'Value'] = value_previous_year
         results_previous_year.append([field_name, value_previous_year, sql_table_name, column_name, column_json_node])
@@ -303,8 +305,9 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         # print(value_current_year)
         # print(value)
         try:
-            value_current_year = int(value_current_year)
+            value_current_year = float(value_current_year)
         except Exception as e:
+            print(f"Exception occured in converting to float {e}")
             pass
         current_year_df.at[index, 'Value'] = value_current_year
         results_current_year.append([field_name, value_current_year, sql_table_name, column_name, column_json_node])
@@ -429,16 +432,9 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             common_json_dict = common_column_df.set_index(common_table_df.columns[0])['Value'].to_dict()
             # print(common_json_dict)
 
-            common_json_dict[config_dict['address_column_name']] = {
-                config_dict["line_1_field_name"]: common_json_dict.pop(config_dict["line_1_field_name"]),
-                config_dict["line_2_field_name"]: common_json_dict.pop(config_dict["line_2_field_name"]),
-                config_dict["city_field_name"]: common_json_dict.pop(config_dict["city_field_name"]),
-                config_dict["district_field_name"]: common_json_dict.pop(config_dict["district_field_name"]),
-                config_dict["state_field_name"]: common_json_dict.pop(config_dict["state_field_name"]),
-                config_dict["pincode_field_name"]: common_json_dict.pop(config_dict["pincode_field_name"]),
-            }
+            common_json_dict[config_dict['address_column_name']] = common_json_dict.pop(config_dict["line_1_field_name"])+","+common_json_dict.pop(config_dict["line_2_field_name"])+","+common_json_dict.pop(config_dict["city_field_name"])+","+common_json_dict.pop(config_dict["district_field_name"])+","+common_json_dict.pop(config_dict["state_field_name"])+","+common_json_dict.pop(config_dict["pincode_field_name"])
             # print(common_json_dict)
-            common_json_dict.pop(config_dict["auditor_type_field_name"])
+            #common_json_dict.pop(config_dict["auditor_type_field_name"])
             # print(common_json_dict)
             # Convert the dictionary to a JSON string
             common_json_string = json.dumps(common_json_dict)
