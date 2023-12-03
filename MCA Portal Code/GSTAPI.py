@@ -70,7 +70,12 @@ def insert_gst_number(db_config,config_dict,cin,company,root_path):
         url = config_dict['pan_to_gst_url']
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor()
-        pan_number_query = "select pan from Company where cin=%s"
+        if len(cin) == 21:
+            pan_number_query = "select pan from Company where cin=%s"
+        elif len(cin) == 8:
+            pan_number_query = "select pan_number from LLP where llpin=%s"
+        else:
+            raise Exception("Invalid Cin to fetch GST Details")
         values = (cin,)
         cursor.execute(pan_number_query,values)
         pan_number = cursor.fetchone()[0]
