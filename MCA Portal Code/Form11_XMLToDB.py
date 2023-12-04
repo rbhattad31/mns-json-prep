@@ -412,7 +412,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
     except Exception as e:
         raise Exception("Below exception occurred while reading xml file " + '\n' + str(e))
 
-    cin_column_name = config_dict['cin_column_name']
+    cin_column_name = None
 
     # initializing empty list to save all the result dataframes for saving to output excel
     output_dataframes_list = []
@@ -444,6 +444,10 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         print(sql_table_name)
         # filter only table
 
+        if sql_table_name == config_dict["company_table_name"]:
+            cin_column_name = config_dict["llp_column_name"]
+        else:
+            cin_column_name = config_dict['cin_column_name']
         if (sql_table_name == config_dict["company_table_name"] or sql_table_name ==
                 config_dict["principal_business_activities_table_name"]):
             table_df = single_df[single_df[single_df.columns[sql_table_name_index]] == sql_table_name]
@@ -526,9 +530,11 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         except Exception as e:
             print(f'Exception {e} occurred while extracting data from xml for table {table_node_name}')
             continue
-
+        if sql_table_name == config_dict["company_table_name"]:
+            cin_column_name = config_dict["llp_column_name"]
+        else:
+            cin_column_name = config_dict['cin_column_name']
         # print(table_df)
-
         table_df[cin_column_name] = cin
         column_names_list.append(cin_column_name)
         # print(table_df)
