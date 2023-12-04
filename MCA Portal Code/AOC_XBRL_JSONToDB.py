@@ -449,9 +449,15 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                 print(f"{child_nodes}:{values}")
                 if len(values) != 0:
                     if year_category == 'Previous':
-                        single_df.at[index, 'Value'] = values[1]
+                        try:
+                            single_df.at[index, 'Value'] = float(values[1])
+                        except Exception as e:
+                            single_df.at[index, 'Value'] = values[1]
                     elif year_category == 'Current':
-                        single_df.at[index,'Value'] = values[0]
+                        try:
+                            single_df.at[index, 'Value'] = float(values[0])
+                        except Exception as e:
+                            single_df.at[index,'Value'] = values[0]
                     elif year_category == config_dict['Financial_Parameter_Keyword']:
                         single_df.at[index, 'Value'] = values[0]
                     else:
@@ -606,7 +612,7 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                     if auditor_comments_row_index is not None:
                         comment_value = common_column_df.loc[auditor_comments_row_index, 'Value']
                         print(f'{comment_value=}')
-                        if comment_value == 'NO':
+                        if comment_value == 'No':
                             report_value = '''As per Auditors Report, the accounts give a true and fair view, as per the accounting principles generally accepted, of the
                                               state of affairs in the case of Balance sheet and, Profit or Loss in the case of Profit & Loss Accounts. Auditors Report is
                                               Unqualified i.e. Clean'''

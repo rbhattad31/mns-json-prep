@@ -294,6 +294,10 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 value_previous_year = str(datetime_object.date())
                 print(value_previous_year)
         # print(value)
+        try:
+            value_previous_year = float(value_previous_year)
+        except Exception as e:
+            print(f"Exception occured in converting{e}")
         previous_year_df.at[index, 'Value'] = value_previous_year
         results_previous_year.append([field_name, value_previous_year, sql_table_name, column_name, column_json_node])
     # print("previous year df:\n", previous_year_df)
@@ -352,6 +356,10 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         # print(child_nodes)
         # print(value_current_year)
         # print(value)
+        try:
+            value_current_year = float(value_current_year)
+        except Exception as e:
+            print(f"Exception occured in converting{e}")
         current_year_df.at[index, 'Value'] = value_current_year
         results_current_year.append([field_name, value_current_year, sql_table_name, column_name, column_json_node])
 

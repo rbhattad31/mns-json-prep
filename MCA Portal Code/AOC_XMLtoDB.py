@@ -287,6 +287,10 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                     value_previous_year = 'Consolidated'
                 else:
                     pass
+            try:
+                value_previous_year = float(value_previous_year)
+            except Exception as e:
+                print(f"Exception occured in converting{e}")
             previous_year_df.at[index, 'Value'] = value_previous_year
             results_previous_year.append(
                 [field_name, value_previous_year, sql_table_name, column_name, column_json_node])
@@ -334,6 +338,10 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                     value_current_year = 'Consolidated'
                 else:
                     pass
+            try:
+                value_current_year = float(value_current_year)
+            except Exception as e:
+                print(f"Exception occured in converting{e}")
             current_year_df.at[index, 'Value'] = value_current_year
             results_current_year.append([field_name, value_current_year, sql_table_name, column_name, column_json_node])
 
