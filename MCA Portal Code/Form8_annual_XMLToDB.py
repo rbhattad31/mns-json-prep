@@ -189,11 +189,6 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         column_json_node = str(row.iloc[column_json_node_index]).strip()
 
         value_common = get_single_value_from_xml(xml_root, parent_node, child_nodes)
-        try:
-            value_common = float(value_common)
-        except Exception as e:
-            print(f"Exception occured in converting to float {e}")
-            pass
         common_df.at[index, 'Value'] = value_common
         results_common.append([field_name, value_common, sql_table_name, column_name, column_json_node])
     print(common_df)
@@ -427,6 +422,13 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                         print(f"Auditor type is not equal to {auditor_type_value_to_check}, hence skipping updating"
                               f" auditor details into datatable {common_table_name}")
                         continue
+                    if auditor_type_value == 'AUDR':
+                        auditor_type_value = 'auditor'
+                    elif auditor_type_value == 'D':
+                        auditor_type_value = 'designated partner'
+                    elif auditor_type_value == 'A':
+                        auditor_type_value = 'authorized representative'
+                    common_df.loc[auditor_type_row_index, 'Value'] = auditor_type_value
             # print(common_column_df)
             # create json dict with keys of field name and values for the same column name entries
             common_json_dict = common_column_df.set_index(common_table_df.columns[0])['Value'].to_dict()

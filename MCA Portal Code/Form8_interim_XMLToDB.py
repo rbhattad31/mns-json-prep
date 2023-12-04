@@ -139,6 +139,12 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
     status_abbreviation_list = [x.strip() for x in config_dict['status_abbreviation_list'].split(',')]
     status_list = [x.strip() for x in config_dict['status_list'].split(',')]
     status_dict = dict(zip(status_abbreviation_list, status_list))
+    print(status_dict)
+
+    property_type_abbreviation_list = [x.strip() for x in config_dict['property_type_abbreviation_list'].split(',')]
+    property_type_list = [x.strip() for x in config_dict['property_type_list'].split(',')]
+    property_type_dict = dict(zip(property_type_abbreviation_list, property_type_list))
+    print(property_type_dict)
 
     # extract single values
     for index, row in single_df.iterrows():
@@ -188,7 +194,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
             # print(f'{status_row_index=}')
             if status_row_index is not None:
                 status_value = table_df.loc[status_row_index, 'Value']
-                table_df.loc[status_row_index, 'Value'] = status_dict.get(status_value, "Status Not Found")
+                table_df.loc[status_row_index, 'Value'] = status_dict.get(status_value, status_value)
                 status_value = table_df.loc[status_row_index, 'Value']
                 if status_value == config_dict['creation_keyword']:
                     table_df = table_df[table_df[table_df.columns[field_name_index]] !=
@@ -213,7 +219,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
             # print(f'{status_row_index=}')
             if status_row_index is not None:
                 status_value = table_df.loc[status_row_index, 'Value']
-                table_df.loc[status_row_index, 'Value'] = status_dict.get(status_value, "Status Not Found")
+                table_df.loc[status_row_index, 'Value'] = status_dict.get(status_value, status_value)
                 status_value = table_df.loc[status_row_index, 'Value']
                 if status_value == config_dict['creation_keyword']:
                     table_df = table_df[table_df[table_df.columns[field_name_index]] !=
@@ -238,7 +244,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
             # print(f'{status_row_index=}')
             if status_row_index is not None:
                 status_value = table_df.loc[status_row_index, 'Value']
-                table_df.loc[status_row_index, 'Value'] = status_dict.get(status_value, "Status Not Found")
+                table_df.loc[status_row_index, 'Value'] = status_dict.get(status_value, status_value)
                 status_value = table_df.loc[status_row_index, 'Value']
                 if status_value == config_dict['creation_keyword']:
                     table_df = table_df[table_df[table_df.columns[field_name_index]] !=
@@ -277,7 +283,8 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
         date_column_name = config_dict['date_column_name']
         # print(date_column_name)
         try:
-            charge_id_row_index = table_df[table_df[table_df.columns[column_name_index]] == charge_id_column_name].index[0]
+            charge_id_row_index = table_df[table_df[table_df.columns[column_name_index]] == charge_id_column_name]. \
+                index[0]
             status_row_index = table_df[table_df[table_df.columns[column_name_index]] == status_column_name].index[0]
             date_row_index = table_df[table_df[table_df.columns[column_name_index]] == date_column_name].index[0]
             charge_id = table_df.loc[charge_id_row_index, 'Value']
@@ -370,9 +377,13 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
             # create json dict with keys of field name and values for the same column name entries
             json_dict = column_df.set_index(table_df.columns[field_name_index])['Value'].to_dict()
+            if column_name == config_dict['property_type_column_name']:
+                json_dict = {key: property_type_dict.get(value, value) for key, value in json_dict.items() if value !=
+                             'NONE'}
+
             # Convert the dictionary to a JSON string
             json_string = json.dumps(json_dict)
-            # print(json_string)
+            print(json_string)
 
             try:
                 update_form8_interim_datatable_single_value(db_cursor, sql_table_name,
