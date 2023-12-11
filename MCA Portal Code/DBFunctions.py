@@ -21,9 +21,9 @@ def fetch_order_data_from_table(connection):
         if connection:
             cursor = connection.cursor()
             # Construct the SQL query
-            query = "SELECT * FROM orders where (workflow_status=%s or workflow_status=%s)"
+            query = "SELECT * FROM orders where workflow_status=%s"
             #value1 = ("Download_Pending")
-            cursor.execute(query, ("json_loader_pending(llp)","download_insertion_success"))
+            cursor.execute(query, ("json_loader_pending",))
 
             # Get the column names from the cursor description
             column_names = [desc[0] for desc in cursor.description]
@@ -38,6 +38,18 @@ def fetch_order_data_from_table(connection):
         print("Error:", error)
         return None
 
+
+def fetch_workflow_status(db_config,cin):
+    connection = mysql.connector.connect(**db_config)
+    cursor = connection.cursor()
+    query = "select workflow_status from orders where cin=%s"
+    values = (cin,)
+    print(query % values)
+    cursor.execute(query,values)
+    workflow_status = cursor.fetchone()[0]
+    cursor.close()
+    connection.close()
+    return workflow_status
 
 def update_status(user,Status,db_config,cin):
     connection = mysql.connector.connect(**db_config)

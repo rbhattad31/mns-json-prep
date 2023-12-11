@@ -138,7 +138,7 @@ def Login_and_Download(config_dict,CinData):
         download_files = cursor.fetchall()
         cursor.close()
         connection.close()
-        if len(download_files) < 5:
+        if len(download_files) < 8:
             return True,driver,None
         else:
             exception_message = f"Download failed for {Cin}"
@@ -278,7 +278,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     else:
                         map_file_path = config_dict_MGT['map_file_path']
                     map_file_sheet_name = config_dict_MGT['map_file_sheet_name']
-                    mgt_7_db_insertion = mgt7_xml_to_db(db_cursor, config_dict_MGT, map_file_path, map_file_sheet_name, xml_file_path,output_excel_path, Cin, CompanyName)
+                    mgt_7_db_insertion = mgt7_xml_to_db(db_config, config_dict_MGT, map_file_path, map_file_sheet_name, xml_file_path,output_excel_path, Cin, CompanyName)
                     if mgt_7_db_insertion:
                         update_db_insertion_status(Cin,file_name,config_dict,'Success')
                 elif 'MSME'.lower() in str(path).lower():
@@ -440,7 +440,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
         cursor.execute(db_insert_check_query,values_check)
         result_db_insertion = cursor.fetchall()
         print(len(result_db_insertion))
-        if len(result_db_insertion) < 5:
+        if len(result_db_insertion) < 10:
             return True,None
         else:
             db_insertion_exception_message = f"Db insertion failed for {Cin}"

@@ -5,6 +5,8 @@ import os
 import shutil
 import sys
 import traceback
+import logging
+from logging_config import setup_logging
 def get_json_node_names(data, parent_name=''):
     node_names = []
     if isinstance(data, dict):
@@ -22,6 +24,7 @@ def get_json_node_names(data, parent_name=''):
 
 def JSON_loader(db_config,config_json_file_path,cin,root_path,excel_path,sheet_name):
     try:
+        setup_logging()
         if not os.path.exists(config_json_file_path):
             raise Exception("Config file not exists")
 
@@ -38,7 +41,7 @@ def JSON_loader(db_config,config_json_file_path,cin,root_path,excel_path,sheet_n
         # Call the function with your JSON data, starting directly with the 'data' child nodes
         json_nodes = get_json_node_names(json_data.get('data', {}), parent_name='')
         config_dict_loader, status = create_main_config_dictionary(excel_path, sheet_name)
-        #print(json_nodes)
+        #logging.info(json_nodes)
         for json_node in json_nodes:
             try:
                 connection = mysql.connector.connect(**db_config)
@@ -47,14 +50,12 @@ def JSON_loader(db_config,config_json_file_path,cin,root_path,excel_path,sheet_n
                     company_query = config_dict_loader[json_node]
                 except Exception as e:
                     continue
-                if json_node == 'company' or json_node == 'authorized_signatories' or json_node == 'charge_sequence' or json_node == 'director_network' or json_node == 'open_charges' or json_node == 'open_charges_latest_event' or json_node == 'stock_exchange' or json_node == 'directors' or json_node == 'llp':
-                    if json_node == 'authorized_signatories' or json_node == 'directors':
-                       query = company_query.format(cin,cin)
-                    elif json_node == 'contribution_details':
-                        query = company_query.format(cin,cin,cin,cin)
+                if json_node == 'company' or json_node == 'authorized_signatories' or json_node == 'charge_sequence' or json_node == 'director_network' or json_node == 'open_charges' or json_node == 'open_charges_latest_event' or json_node == 'stock_exchange' or json_node == 'directors' or json_node == 'llp' or json_node == 'contribution_details':
+                    if json_node == 'contribution_details':
+                       query = company_query.format(cin,cin,cin,cin)
                     else:
                        query = company_query.format(cin)
-                    print(query)
+                    logging.info(query)
                     cursor.execute(query)
                 else:
                     if json_node == 'contact_details':
@@ -63,11 +64,11 @@ def JSON_loader(db_config,config_json_file_path,cin,root_path,excel_path,sheet_n
                         values = (cin,cin,cin)
                     else:
                         values = (cin,)
-                    print(company_query % values)
+                    logging.info(company_query % values)
                     cursor.execute(company_query, values)
                 result_company = cursor.fetchall()
                 json_string = ', '.join(result_company[0])
-                #print(json_string)
+                #logging.info(json_string)
 
                 # Convert the JSON string to a Python dictionary
                 company_data = json.loads(json_string)
@@ -75,25 +76,25 @@ def JSON_loader(db_config,config_json_file_path,cin,root_path,excel_path,sheet_n
                 # Replace the entire "company" dictionary with the new company data
                 json_data["data"][json_node] = company_data
 
-                # Print or use the updated JSON structure
-                #print(json.dumps(json_data, indent=2))
+                # logging.info or use the updated JSON structure
+                #logging.info(json.dumps(json_data, indent=2))
                 with open(json_file_path, 'w') as json_file:
                     json.dump(json_data, json_file, indent=2)
                 cursor.close()
                 connection.close()
             except Exception as e:
-                print(f"Exception occured or no value for {json_node}{e}")
+                logging.error(f"Exception occured or no value for {json_node}{e}")
 
     except Exception as e:
-        print(f"Exception occured while preparing JSON Loader {e}")
+        logging.error(f"Exception occured while preparing JSON Loader {e}")
         exc_type, exc_value, exc_traceback = sys.exc_info()
 
         # Get the formatted traceback as a string
         traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
 
-        # Print the traceback details
+        # logging.info the traceback details
         for line in traceback_details:
-            print(line.strip())
+            logging.error(line.strip())
         return False,None,e,[]
     else:
         return True,json_file_path,None,json_nodes

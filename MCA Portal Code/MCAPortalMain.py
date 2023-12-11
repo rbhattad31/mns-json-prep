@@ -14,7 +14,8 @@ from DBFunctions import update_json_loader_db
 from SendEmail import send_email
 import logging
 from logging_config import setup_logging
-
+from DBFunctions import fetch_workflow_status
+from DBFunctions import update_status
 
 def main():
     excel_file = os.environ.get("MCA_Config")
@@ -41,55 +42,59 @@ def main():
                     try:
                         cin = CinData[2]
                         receipt_number = CinData[1]
+                        user = CinData[15]
                         logging.info(f"Starting to download for {cin}")
-                        """
-                        Download_Status, driver,exception_message = Login_and_Download(config_dict, CinData)
-                        if Download_Status:
-                            logging.info("Downloaded Successfully")
-                        else:
-                            logging.info("Not Downloaded")
-                            if 'driver' in locals():
-                                sign_out(driver, config_dict, CinData)
-                            raise Exception(f"Download failed for {cin} {exception_message}")
-                        """
-                        XML_Generation, hidden_attachments = XMLGeneration(db_config, CinData, config_dict)
-                        if XML_Generation:
-                            logging.info("XML Generated successfully")
-                        else:
-                            logging.info("XML Not Generated successfully")
-                            """
-                            if 'driver' in locals():
-                                sign_out(driver, config_dict, CinData)
-                            """
-                            continue
-                        Insert_fields_into_DB,exception_message_db = insert_fields_into_db(hidden_attachments, config_dict, CinData,excel_file)
-                        if Insert_fields_into_DB:
-                            logging.info("Successfully Inserted into DB")
-                        else:
-                            logging.info("Not Successfully Inserted into DB")
-                            """
-                            if 'driver' in locals():
-                                sign_out(driver, config_dict, CinData)
-                            """
-                            raise Exception(exception_message_db)
-                        json_loader,json_file_path,exception_message = json_loader_generation(CinData, db_config, config_dict,excel_file)
-                        if json_loader:
-                            logging.info("JSON Loader generated succesfully")
-                            update_json_loader_db(CinData, config_dict)
-                            cin_complete_subject = str(config_dict['cin_Completed_subject']).format(cin,receipt_number)
-                            cin_completed_body = str(config_dict['cin_Completed_body']).format(cin,receipt_number)
-                            try:
-                                send_email(config_dict,cin_complete_subject,cin_completed_body,emails,json_file_path)
-                            except Exception as e:
-                                logging.info(f"Exception occured while sending end email {e}")
-                        else:
-                            logging.info("JSON Loader not generated")
-                            """
-                            if 'driver' in locals():
-                                sign_out(driver, config_dict, CinData)
-                            """
-                            raise Exception(f"Exception occured for json loader generation {cin} {exception_message}")
-                        #sign_out(driver, config_dict, CinData)
+                        workflow_status = fetch_workflow_status(db_config,cin)
+                        if workflow_status == 'json_loader_pending':
+                            Download_Status, driver,exception_message = Login_and_Download(config_dict, CinData)
+                            if Download_Status:
+                                logging.info("Downloaded Successfully")
+                                update_status(user,'XML_Pending',db_config,cin)
+                            else:
+                                logging.info("Not Downloaded")
+                                if 'driver' in locals():
+                                    sign_out(driver, config_dict, CinData)
+                                raise Exception(f"Download failed for {cin} {exception_message}")
+                        workflow_status = fetch_workflow_status(db_config,cin)
+                        if workflow_status == 'XML_Pending':
+                            XML_Generation, hidden_attachments = XMLGeneration(db_config, CinData, config_dict)
+                            if XML_Generation:
+                                logging.info("XML Generated successfully")
+                                update_status(user,'db_insertion_pending',db_config,cin)
+                            else:
+                                logging.info("XML Not Generated successfully")
+                                if 'driver' in locals():
+                                    sign_out(driver, config_dict, CinData)
+                                continue
+                        workflow_status = fetch_workflow_status(db_config,cin)
+                        if workflow_status == 'db_insertion_pending'
+                            Insert_fields_into_DB,exception_message_db = insert_fields_into_db(hidden_attachments, config_dict, CinData,excel_file)
+                            if Insert_fields_into_DB:
+                                logging.info("Successfully Inserted into DB")
+                                update_status(user,'Loader_pending',db_config,cin)
+                            else:
+                                logging.info("Not Successfully Inserted into DB")
+                                if 'driver' in locals():
+                                    sign_out(driver, config_dict, CinData)
+                                raise Exception(exception_message_db)
+                        workflow_status = fetch_workflow_status(db_config,cin)
+                        if workflow_status == 'Loader_pending':
+                            json_loader,json_file_path,exception_message = json_loader_generation(CinData, db_config, config_dict,excel_file)
+                            if json_loader:
+                                logging.info("JSON Loader generated succesfully")
+                                update_json_loader_db(CinData, config_dict)
+                                cin_complete_subject = str(config_dict['cin_Completed_subject']).format(cin,receipt_number)
+                                cin_completed_body = str(config_dict['cin_Completed_body']).format(cin,receipt_number)
+                                try:
+                                    send_email(config_dict,cin_complete_subject,cin_completed_body,emails,json_file_path)
+                                except Exception as e:
+                                    logging.info(f"Exception occured while sending end email {e}")
+                            else:
+                                logging.info("JSON Loader not generated")
+                                if 'driver' in locals():
+                                    sign_out(driver, config_dict, CinData)
+                                raise Exception(f"Exception occured for json loader generation {cin} {exception_message}")
+                        sign_out(driver, config_dict, CinData)
                     except Exception as e:
                         logging.info(f"Exception occured for cin {cin} {e}")
                         exception_subject = str(config_dict['Exception_subject']).format(cin,receipt_number)
