@@ -1,14 +1,15 @@
 import pandas as pd
 import xml.etree.ElementTree as Et
 import os
-
+import logging
+from logging_config import setup_logging
 
 pd.set_option('display.max_columns', None)
 
 
 def get_single_value_from_xml(xml_root, parent_node, child_node):
     try:
-
+        setup_logging()
         if child_node == 'nan':
             elements = xml_root.findall(f'.//{parent_node}')
         else:
@@ -24,36 +25,38 @@ def get_single_value_from_xml(xml_root, parent_node, child_node):
                     return str(element.text)
         return None
     except Exception as e:
-        print(f"An error occurred: {e}")
+        logging.info(f"An error occurred: {e}")
         return None
 
 
 def extract_table_values_from_xml(xml_root, table_node_name, child_nodes):
+    setup_logging()
     data_list = []
     child_nodes_list = [x.strip() for x in child_nodes.split(',')]
-    # print(child_nodes_list)
-    # print(table_node_name)
+    # logging.info(child_nodes_list)
+    # logging.info(table_node_name)
     for data in xml_root.findall(f'.//{table_node_name}'):
         temp_list = []
         for node in child_nodes_list:
-            # print(node)
+            # logging.info(node)
             try:
                 node_value = data.find(node).text
             except AttributeError:
                 node_value = None
-            # print(node_value)
+            # logging.info(node_value)
             temp_list.append(node_value)
-        # print(temp_list)
+        # logging.info(temp_list)
         data_list.append(temp_list)
-        # print(data_list)
+        # logging.info(data_list)
     return data_list
 
 
 def insert_datatable_with_table(db_cursor, sql_table_name, column_names_list, df_row):
+    setup_logging()
     combined = list(zip(column_names_list, df_row))
     # Create a dictionary from the list of tuples
     result_dict = dict(combined)
-    # print(result_dict)
+    # logging.info(result_dict)
 
     where_clause = f'SELECT * FROM {sql_table_name} WHERE '
     for key, value in result_dict.items():
@@ -63,10 +66,10 @@ def insert_datatable_with_table(db_cursor, sql_table_name, column_names_list, df
             where_clause += f"(`{key}` is NULL OR `{key}` = '') AND "
 
     select_query = where_clause[:-4]
-    print(select_query)
+    logging.info(select_query)
     db_cursor.execute(select_query)
     result = db_cursor.fetchall()
-    print(len(result))
+    logging.info(len(result))
     if len(result) == 0:  # If no matching record found
         # Insert the record
         insert_query = f"""
@@ -74,13 +77,14 @@ def insert_datatable_with_table(db_cursor, sql_table_name, column_names_list, df
                         SET {', '.join([f'{col} = %s' for col in column_names_list])};
                         """
         db_cursor.execute(insert_query, tuple(df_row.values))
-        # print(f"Data row values are saved in table {sql_table_name} with \n {df_row}")
+        # logging.info(f"Data row values are saved in table {sql_table_name} with \n {df_row}")
     else:
-        print(f"Entry with values already exists in table {sql_table_name}")
+        logging.info(f"Entry with values already exists in table {sql_table_name}")
 
 
 def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
               output_file_path, cin_column_value, company_name):
+    setup_logging()
     config_dict_keys = [
     ]
     missing_keys = [key for key in config_dict_keys if key not in config_dict]
@@ -96,7 +100,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
     try:
         df_map = pd.read_excel(map_file_path, engine='openpyxl', sheet_name=map_file_sheet_name)
-        # print(df_map)
+        # logging.info(df_map)
     except Exception as e:
         raise Exception("Below exception occurred while reading mapping file " + '\n' + str(e))
 
@@ -123,7 +127,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
     # initializing list to save single values data
     results = []
 
-    # print(single_df)
+    # logging.info(single_df)
     # extract single values
     for index, row in single_df.iterrows():
         field_name = str(row.iloc[0]).strip()
@@ -134,20 +138,20 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
         column_json_node = str(row.iloc[7]).strip()
 
         value = get_single_value_from_xml(xml_root, parent_node, child_nodes)
-        # print(value)
+        # logging.info(value)
         single_df.at[index, 'Value'] = value
         results.append([field_name, value, sql_table_name, column_name, column_json_node])
-        # print(results)
-    # print(single_df)
+        # logging.info(results)
+    # logging.info(single_df)
 
-    print("Completed processing single rows")
+    logging.info("Completed processing single rows")
 
     total_outstanding_amount = single_df[single_df[single_df.columns[0]]
                                          == config_dict['total_outstanding_amount_field_name']]['Value'].values[0]
     payment_due_reason = single_df[single_df[single_df.columns[0]]
                                    == config_dict['payment_due_reason_field_name']]['Value'].values[0]
-    # print(total_outstanding_amount)
-    # print(payment_due_reason)
+    # logging.info(total_outstanding_amount)
+    # logging.info(payment_due_reason)
 
     # extract group values
     for index, row in group_df.iterrows():
@@ -159,13 +163,13 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
         # column_json_node = str(row.iloc[7]).strip()
 
         table_node_name = parent_node
-        # print(table_node_name)
+        # logging.info(table_node_name)
         try:
             table_in_list = extract_table_values_from_xml(xml_root, table_node_name, child_nodes)
         except Exception as e:
-            print(f'Exception {e} occurred while extracting data from xml for table {table_node_name}')
+            logging.info(f'Exception {e} occurred while extracting data from xml for table {table_node_name}')
             continue
-        # print(table_in_list)
+        # logging.info(table_in_list)
         table_df = pd.DataFrame(table_in_list)
 
         column_names_list = column_names.split(',')
@@ -183,21 +187,21 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
         column_names_list = [x.strip() for x in column_names_list]
         table_df.columns = column_names_list
         table_df = table_df[table_df[column_names_list[0]].notna()]
-        print(table_df)
+        logging.info(table_df)
 
         for _, df_row in table_df.iterrows():
             try:
                 insert_datatable_with_table(db_cursor, sql_table_name, table_df.columns, df_row)
             except Exception as e:
-                print(f'Exception {e} occurred while inserting below table row in table {sql_table_name}- \n',
+                logging.info(f'Exception {e} occurred while inserting below table row in table {sql_table_name}- \n',
                       df_row)
-        print(f"DB execution is complete for {sql_table_name}")
+        logging.info(f"DB execution is complete for {sql_table_name}")
         output_dataframes_list.append(table_df)
 
     with pd.ExcelWriter(output_file_path, engine='xlsxwriter') as writer:
         row_index = 0
         for dataframe in output_dataframes_list:
-            # print(dataframe)
+            # logging.info(dataframe)
             dataframe.to_excel(writer, sheet_name='Sheet1', index=False, startrow=row_index)
             row_index += len(dataframe.index) + 2
 
@@ -207,10 +211,11 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
 def msme_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
                    output_file_path, cin_column_value, company_name):
     try:
+        setup_logging()
         xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
                   output_file_path, cin_column_value, company_name)
     except Exception as e:
-        print("Below Exception occurred while processing msme file: \n ", e)
+        logging.error("Below Exception occurred while processing msme file: \n ", e)
         return False
     else:
         return True

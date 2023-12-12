@@ -16,6 +16,11 @@ import logging
 from logging_config import setup_logging
 from DBFunctions import fetch_workflow_status
 from DBFunctions import update_status
+from DBFunctions import update_process_status
+from DBFunctions import update_locked_by_empty
+import sys
+import traceback
+
 
 def main():
     excel_file = os.environ.get("MCA_Config")
@@ -38,22 +43,22 @@ def main():
                     logging.info(f"Error sending email {e}")
                 cin = None
                 receipt_number = None
+                hidden_attachments = []
                 for CinData in CinDBData:
                     try:
                         cin = CinData[2]
                         receipt_number = CinData[1]
                         user = CinData[15]
-                        logging.info(f"Starting to download for {cin}")
                         workflow_status = fetch_workflow_status(db_config,cin)
-                        if workflow_status == 'json_loader_pending':
+                        logging.info(workflow_status)
+                        if workflow_status == 'download_pending' or workflow_status == 'download_insertion_success':
+                            logging.info(f"Starting to download for {cin}")
                             Download_Status, driver,exception_message = Login_and_Download(config_dict, CinData)
                             if Download_Status:
                                 logging.info("Downloaded Successfully")
                                 update_status(user,'XML_Pending',db_config,cin)
                             else:
                                 logging.info("Not Downloaded")
-                                if 'driver' in locals():
-                                    sign_out(driver, config_dict, CinData)
                                 raise Exception(f"Download failed for {cin} {exception_message}")
                         workflow_status = fetch_workflow_status(db_config,cin)
                         if workflow_status == 'XML_Pending':
@@ -67,15 +72,13 @@ def main():
                                     sign_out(driver, config_dict, CinData)
                                 continue
                         workflow_status = fetch_workflow_status(db_config,cin)
-                        if workflow_status == 'db_insertion_pending'
+                        if workflow_status == 'db_insertion_pending':
                             Insert_fields_into_DB,exception_message_db = insert_fields_into_db(hidden_attachments, config_dict, CinData,excel_file)
                             if Insert_fields_into_DB:
                                 logging.info("Successfully Inserted into DB")
                                 update_status(user,'Loader_pending',db_config,cin)
                             else:
                                 logging.info("Not Successfully Inserted into DB")
-                                if 'driver' in locals():
-                                    sign_out(driver, config_dict, CinData)
                                 raise Exception(exception_message_db)
                         workflow_status = fetch_workflow_status(db_config,cin)
                         if workflow_status == 'Loader_pending':
@@ -85,20 +88,36 @@ def main():
                                 update_json_loader_db(CinData, config_dict)
                                 cin_complete_subject = str(config_dict['cin_Completed_subject']).format(cin,receipt_number)
                                 cin_completed_body = str(config_dict['cin_Completed_body']).format(cin,receipt_number)
+                                update_process_status('Completed',db_config,cin)
+                                update_locked_by_empty(db_config,cin)
                                 try:
                                     send_email(config_dict,cin_complete_subject,cin_completed_body,emails,json_file_path)
                                 except Exception as e:
                                     logging.info(f"Exception occured while sending end email {e}")
                             else:
                                 logging.info("JSON Loader not generated")
-                                if 'driver' in locals():
-                                    sign_out(driver, config_dict, CinData)
                                 raise Exception(f"Exception occured for json loader generation {cin} {exception_message}")
-                        sign_out(driver, config_dict, CinData)
+                        try:
+                            sign_out(driver, config_dict, CinData)
+                        except:
+                            pass
                     except Exception as e:
                         logging.info(f"Exception occured for cin {cin} {e}")
+                        exc_type, exc_value, exc_traceback = sys.exc_info()
+
+                        # Get the formatted traceback as a string
+                        traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+                        # logging.info the traceback details
+                        for line in traceback_details:
+                            logging.error(line.strip())
                         exception_subject = str(config_dict['Exception_subject']).format(cin,receipt_number)
                         exception_body = str(config_dict['Exception_message']).format(cin,receipt_number,e)
+                        try:
+                            if 'driver' in locals():
+                                sign_out(driver, config_dict, CinData)
+                        except:
+                            pass
                         try:
                             send_email(config_dict,exception_subject,exception_body,emails,None)
                         except Exception as e:

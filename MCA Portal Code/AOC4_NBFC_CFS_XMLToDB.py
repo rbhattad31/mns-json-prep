@@ -8,11 +8,12 @@ import os
 import json
 import mysql.connector
 import re
-
+import logging
+from logging_config import setup_logging
 
 def get_single_value_from_xml(xml_root, parent_node, child_node):
     try:
-
+        setup_logging()
         if child_node == 'nan':
             elements = xml_root.findall(f'.//{parent_node}')
         else:
@@ -28,18 +29,19 @@ def get_single_value_from_xml(xml_root, parent_node, child_node):
                     return str(element.text)
         return None
     except Exception as e:
-        print(f"Below error occurred for processing parent node: {parent_node} and child node: {child_node}"
+        logging.info(f"Below error occurred for processing parent node: {parent_node} and child node: {child_node}"
               f"\n {e}")
         return None
 
 
 def update_database_single_value_aoc(db_config, table_name, cin_column_name, cin_value, company_name_column_name,
                                      company_name, column_name, column_value, year):
+    setup_logging()
     db_connection = mysql.connector.connect(**db_config)
     db_cursor = db_connection.cursor()
     json_dict = json.loads(column_value)
     num_elements = len(json_dict)
-    # print(num_elements)
+    # logging.info(num_elements)
     # if column_name == "nbfc_financials_auditor" and num_elements == 1:
     #     first_key = next(iter(json_dict))
     #     first_value_json_list = json_dict[first_key]
@@ -51,18 +53,18 @@ def update_database_single_value_aoc(db_config, table_name, cin_column_name, cin
         column_value = first_value
     else:
         column_value = json.dumps(json_dict)
-    # print(column_value)
+    # logging.info(column_value)
     # check if there is already entry with cin
     query = "SELECT * FROM {} WHERE {} = '{}' and {}='{}' and {}='{}'".format(table_name, cin_column_name, cin_value,
                                                                               company_name_column_name, company_name,
                                                                               'year', year)
-    # print(query)
+    # logging.info(query)
     try:
         db_cursor.execute(query)
     except mysql.connector.Error as err:
-        print(err)
+        logging.info(err)
     result = db_cursor.fetchall()
-    # print(result)
+    # logging.info(result)
 
     # if cin value already exists
     if len(result) > 0:
@@ -76,9 +78,9 @@ def update_database_single_value_aoc(db_config, table_name, cin_column_name, cin
                                               company_name,
                                               'Year',
                                               year)
-        # print(update_query)
+        # logging.info(update_query)
         db_cursor.execute(update_query)
-        # print("Updated")
+        # logging.info("Updated")
     # if cin value doesn't exist
     else:
         insert_query = "INSERT INTO {} ({}, {}, {}) VALUES ('{}', '{}', '{}')".format(table_name, cin_column_name,
@@ -87,9 +89,9 @@ def update_database_single_value_aoc(db_config, table_name, cin_column_name, cin
                                                                                       cin_value,
                                                                                       company_name,
                                                                                       column_value)
-        # print(insert_query)
+        # logging.info(insert_query)
         db_cursor.execute(insert_query)
-        # print("Inserted")
+        # logging.info("Inserted")
     db_connection.commit()
     db_cursor.close()
     db_connection.close()
@@ -97,13 +99,14 @@ def update_database_single_value_aoc(db_config, table_name, cin_column_name, cin
 
 def insert_datatable_with_table(db_config, sql_table_name, column_names_list, df_row,cin_column_name,cin_value,
                                 company_column_name, company_value,year):
+    setup_logging()
     db_connection = mysql.connector.connect(**db_config)
     db_cursor = db_connection.cursor()
     db_connection.autocommit = True
     combined = list(zip(column_names_list, df_row))
     # Create a dictionary from the list of tuples
     result_dict = dict(combined)
-    # print(result_dict)
+    # logging.info(result_dict)
     result_dict[cin_column_name] = cin_value
     result_dict[company_column_name] = company_value
     result_dict['year'] = year
@@ -116,10 +119,10 @@ def insert_datatable_with_table(db_config, sql_table_name, column_names_list, df
             where_clause += f"(`{key}` is NULL OR `{key}` = '') AND "
 
     select_query = where_clause[:-4]
-    print(select_query)
+    logging.info(select_query)
     db_cursor.execute(select_query)
     result = db_cursor.fetchall()
-    print(len(result))
+    logging.info(len(result))
     if len(result) == 0:  # If no matching record found
         # Insert the record
         insert_query = f"""INSERT INTO {sql_table_name} SET """
@@ -129,38 +132,40 @@ def insert_datatable_with_table(db_config, sql_table_name, column_names_list, df
             else:
                 insert_query += f"`{key}` = '{value}' , "
         insert_query = insert_query[:-2]
-        print(insert_query)
+        logging.info(insert_query)
         db_cursor.execute(insert_query)
-        # print(f"Data row values are saved in table {sql_table_name} with \n {df_row}")
+        # logging.info(f"Data row values are saved in table {sql_table_name} with \n {df_row}")
     else:
-        print(f"Entry with values already exists in table {sql_table_name}")
+        logging.info(f"Entry with values already exists in table {sql_table_name}")
     db_cursor.close()
     db_connection.close()
 
 
 def extract_table_values_from_xml(xml_root, table_node_name, child_nodes):
+    setup_logging()
     data_list = []
     child_nodes_list = [x.strip() for x in child_nodes.split(',')]
-    # print(child_nodes_list)
-    # print(table_node_name)
+    # logging.info(child_nodes_list)
+    # logging.info(table_node_name)
     for data in xml_root.findall(f'.//{table_node_name}'):
         temp_list = []
         for node in child_nodes_list:
-            # print(node)
+            # logging.info(node)
             try:
                 node_value = data.find(node).text
             except AttributeError:
                 node_value = None
-            # print(node_value)
+            # logging.info(node_value)
             temp_list.append(node_value)
-        # print(temp_list)
+        # logging.info(temp_list)
         data_list.append(temp_list)
-        # print(data_list)
+        # logging.info(data_list)
     return data_list
 
 
 def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, output_file_path,
               cin_column_value, company_name, aoc4_nbfc_cfs_first_file_found):
+    setup_logging()
     config_dict_keys = ['cin_column_name_in_db', 'company_name_column_name_in_db',
                         'single_type_indicator', 'group_type_indicator',
                         'Previous_year_keyword', 'Current_year_keyword',
@@ -194,7 +199,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
     try:
         df_map = pd.read_excel(map_file_path, engine='openpyxl', sheet_name=map_file_sheet_name)
-        # print(df_map)
+        # logging.info(df_map)
     except Exception as e:
         raise Exception("Below exception occurred while reading mapping file " + '\n' + str(e))
 
@@ -220,7 +225,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
     results_current_year = []
     results_financial_parameter = []
     results_common = []
-    # print(single_df)
+    # logging.info(single_df)
     # extract single values
     previous_year_df = single_df[single_df[single_df.columns[year_index]] == config_dict['Previous_year_keyword']]
     current_year_df = single_df[single_df[single_df.columns[year_index]] == config_dict['Current_year_keyword']]
@@ -228,7 +233,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         single_df[single_df.columns[year_index]] == config_dict['Financial_Parameter_Keyword']]
     common_df = single_df[single_df[single_df.columns[year_index]] == config_dict['Common_Keyword']]
     single_df_list = []
-    print("Processing common data")
+    logging.info("Processing common data")
     for index, row in common_df.iterrows():
         field_name = str(row.iloc[field_name_index]).strip()
         parent_node = str(row.iloc[parent_node_index]).strip()
@@ -243,7 +248,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             value_common = get_single_value_from_xml(xml_root, parent_node, child_nodes)
         common_df.at[index, 'Value'] = value_common
         results_common.append([field_name, value_common, sql_table_name, column_name, column_json_node])
-    print("Processing financial parameter data")
+    logging.info("Processing financial parameter data")
     for index, row in financial_parameter_df.iterrows():
         field_name = str(row.iloc[field_name_index]).strip()
         parent_node = str(row.iloc[parent_node_index]).strip()
@@ -262,7 +267,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 except ValueError:
                     datetime_object = datetime.strptime(value_financial_parameter, "%Y-%m-%d")
                 value_financial_parameter = str(datetime_object.year)
-                # print(value_financial_parameter)
+                # logging.info(value_financial_parameter)
             elif field_name == 'proposed_dividend':
                 if value_financial_parameter != 0 or value_financial_parameter is not None:
                     value_financial_parameter = 'Yes'
@@ -272,7 +277,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         financial_parameter_df.at[index, 'Value'] = value_financial_parameter
         results_financial_parameter.append(
             [field_name, value_financial_parameter, sql_table_name, column_name, column_json_node])
-    print("Processing previous year data")
+    logging.info("Processing previous year data")
     for index, row in previous_year_df.iterrows():
         field_name = str(row.iloc[field_name_index]).strip()
         parent_node = str(row.iloc[parent_node_index]).strip()
@@ -292,20 +297,20 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 except ValueError:
                     datetime_object = datetime.strptime(value_previous_year, "%Y-%m-%d")
                 value_previous_year = str(datetime_object.date())
-                print(value_previous_year)
-        # print(value)
+                logging.info(value_previous_year)
+        # logging.info(value)
         try:
             value_previous_year = float(value_previous_year)
         except Exception as e:
-            print(f"Exception occured in converting{e}")
+            logging.info(f"Exception occured in converting{e}")
         previous_year_df.at[index, 'Value'] = value_previous_year
         results_previous_year.append([field_name, value_previous_year, sql_table_name, column_name, column_json_node])
-    # print("previous year df:\n", previous_year_df)
+    # logging.info("previous year df:\n", previous_year_df)
 
     previous_year_formula_df = previous_year_df[
         previous_year_df[previous_year_df.columns[parent_node_index]] == config_dict['Formula_Keyword']]
-    print("Processing previous year formulas")
-    # print(previous_year_formula_df)
+    logging.info("Processing previous year formulas")
+    # logging.info(previous_year_formula_df)
     for _, row in previous_year_formula_df.iterrows():
         previous_formula = row['Child_Nodes']
         previous_formula_field_name = row['Field_Name']
@@ -313,26 +318,26 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             previous_pattern = r'\b' + re.escape(previous_field_name) + r'\b'
             # current_formula = current_formula.replace(field_name, str(current_year_df[current_year_df['Field_Name']
             # == field_name]['Value'].values[0]))
-            # print(f'{previous_pattern=}')
+            # logging.info(f'{previous_pattern=}')
             previous_formula = re.sub(previous_pattern, str(
                 previous_year_df[previous_year_df['Field_Name'] == previous_field_name]['Value'].values[0]),
                                       previous_formula)
-            # print(f'{previous_formula=}')
-        # print(previous_formula_field_name + ":" + previous_formula)
+            # logging.info(f'{previous_formula=}')
+        # logging.info(previous_formula_field_name + ":" + previous_formula)
         try:
-            # print(f'{previous_formula=}')
+            # logging.info(f'{previous_formula=}')
             if 'None' in previous_formula:
                 previous_formula = previous_formula.replace('None', '0')
-                # print(f'{previous_formula=}')
+                # logging.info(f'{previous_formula=}')
             # Calculate the value using the provided formula and insert it
             previous_year_df.at[previous_year_df[previous_year_df['Field_Name'] == previous_formula_field_name].index[
                 0], 'Value'] = eval(previous_formula)
         except (NameError, SyntaxError):
             # Handle the case where the formula is invalid or contains a missing field name
-            print(f"Exception occurred while processing previous year data - \n "
+            logging.info(f"Exception occurred while processing previous year data - \n "
                   f"Invalid formula for {previous_formula_field_name}: {previous_formula}")
-    print("Completed processing previous year data")
-    print("Processing present year data")
+    logging.info("Completed processing previous year data")
+    logging.info("Processing present year data")
     for index, row in current_year_df.iterrows():
         field_name = str(row.iloc[field_name_index]).strip()
         parent_node = str(row.iloc[parent_node_index]).strip()
@@ -352,47 +357,47 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 except ValueError:
                     datetime_object = datetime.strptime(value_current_year, "%Y-%m-%d")
                 value_current_year = str(datetime_object.year)
-                # print(value_current_year)
-        # print(child_nodes)
-        # print(value_current_year)
-        # print(value)
+                # logging.info(value_current_year)
+        # logging.info(child_nodes)
+        # logging.info(value_current_year)
+        # logging.info(value)
         try:
             value_current_year = float(value_current_year)
         except Exception as e:
-            print(f"Exception occured in converting{e}")
+            logging.info(f"Exception occured in converting{e}")
         current_year_df.at[index, 'Value'] = value_current_year
         results_current_year.append([field_name, value_current_year, sql_table_name, column_name, column_json_node])
 
     current_year_formula_df = current_year_df[
         current_year_df[current_year_df.columns[parent_node_index]] == config_dict['Formula_Keyword']]
-    print("processing present year formulae data ")
-    # print(current_year_formula_df)
+    logging.info("processing present year formulae data ")
+    # logging.info(current_year_formula_df)
     for _, row in current_year_formula_df.iterrows():
         current_formula = row['Child_Nodes']
         current_formula_field_name = row['Field_Name']
         for field_name in current_year_df['Field_Name']:
             pattern = r'\b' + re.escape(field_name) + r'\b'
-            # print(f'{pattern=}')
+            # logging.info(f'{pattern=}')
             # current_formula = current_formula.replace(field_name, str(current_year_df[current_year_df['Field_Name']
             # == field_name]['Value'].values[0]))
             current_formula = re.sub(pattern, str(
                 current_year_df[current_year_df['Field_Name'] == field_name]['Value'].values[0]), current_formula)
-            # print(f'{current_formula=}')
-        # print(current_formula_field_name + ":" + current_formula)
+            # logging.info(f'{current_formula=}')
+        # logging.info(current_formula_field_name + ":" + current_formula)
         try:
-            # print(f'{current_formula=}')
+            # logging.info(f'{current_formula=}')
             if 'None' in current_formula:
                 current_formula = current_formula.replace('None', '0')
-                # print(f'{current_formula=}')
+                # logging.info(f'{current_formula=}')
             # Calculate the value using the provided formula and insert it
             current_year_df.at[
                 current_year_df[current_year_df['Field_Name'] == current_formula_field_name].index[0], 'Value'] = eval(
                 current_formula)
         except (NameError, SyntaxError):
             # Handle the case where the formula is invalid or contains a missing field name
-            print(f"Invalid formula for {current_formula_field_name}: {current_formula}")
-    print("Completed processing present year data")
-    # print(current_year_df)
+            logging.info(f"Invalid formula for {current_formula_field_name}: {current_formula}")
+    logging.info("Completed processing present year data")
+    # logging.info(current_year_df)
 
     current_year = current_year_df[current_year_df['Field_Name'] == 'year']['Value'].values[0]
     if current_year is None:
@@ -402,8 +407,8 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
     if previous_year is None:
         raise Exception(f"Exception occurred while extracting year value {previous_year} from previous year data")
     years.append(previous_year)
-    print(years)
-    print("Saving Single Values to database")
+    logging.info(years)
+    logging.info("Saving Single Values to database")
     if not aoc4_nbfc_cfs_first_file_found:
         single_df_list.append(current_year_df)
     single_df_list.append(previous_year_df)
@@ -422,65 +427,65 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
     output_dataframes_list.append(common_output_df)
     output_dataframes_list.append(financial_output_df)
     for df in single_df_list:
-        # print(df)
+        # logging.info(df)
         sql_tables_list = df[df.columns[sql_table_name_index]].unique()
-        # print(sql_tables_list)
+        # logging.info(sql_tables_list)
         year_value = df[df['Field_Name'] == 'year']['Value'].values[0]
-        # print(year_value)
+        # logging.info(year_value)
         for table_name in sql_tables_list:
             table_df = df[df[df.columns[sql_table_name_index]] == table_name]
             columns_list = table_df[table_df.columns[column_name_index]].unique()
-            # print(columns_list)
+            # logging.info(columns_list)
             for column_name in columns_list:
-                # print(column_name)
+                # logging.info(column_name)
                 # filter table df with only column value
                 column_df = table_df[table_df[table_df.columns[column_name_index]] == column_name]
-                # print(column_df)
+                # logging.info(column_df)
                 # create json dict with keys of field name and values for the same column name entries
                 json_dict = column_df.set_index(table_df.columns[0])['Value'].to_dict()
                 # Convert the dictionary to a JSON string
                 json_string = json.dumps(json_dict)
-                # print(json_string)
+                # logging.info(json_string)
                 try:
                     update_database_single_value_aoc(db_config, table_name, cin_column_name, cin_column_value,
                                                      company_column_name, company_name, column_name, json_string,
                                                      year_value)
                 except Exception as e:
-                    print(f"Exception {e} occurred while updating data in dataframe for {table_name} "
+                    logging.info(f"Exception {e} occurred while updating data in dataframe for {table_name} "
                           f"with data {json_string}")
     common_sql_tables_list = common_df[common_df.columns[sql_table_name_index]].unique()
-    # print(common_sql_tables_list)
+    # logging.info(common_sql_tables_list)
     if aoc4_nbfc_cfs_first_file_found:
         years = years[1:]
     for common_table_name in common_sql_tables_list:
-        print(common_table_name)
+        logging.info(common_table_name)
         if common_table_name != config_dict['financials_table_name']:
-            print("Continuing table")
+            logging.info("Continuing table")
             continue
         common_table_df = common_df[common_df[common_df.columns[7]] == common_table_name]
-        print(common_table_df)
+        logging.info(common_table_df)
         common_columns_list = common_table_df[common_table_df.columns[8]].unique()
-        print(common_columns_list)
+        logging.info(common_columns_list)
         for common_column_name in common_columns_list:
-            print(common_column_name)
+            logging.info(common_column_name)
             if common_column_name != config_dict['auditor_comments_column_name']:
-                print("continuing column")
+                logging.info("continuing column")
                 continue
-            print(common_column_name)
+            logging.info(common_column_name)
             # filter table df with only column value
             common_column_df = common_table_df[common_table_df[common_table_df.columns[8]] == common_column_name]
-            print(common_column_df)
+            logging.info(common_column_df)
             if common_column_name == config_dict['auditor_comments_column_name']:
                 auditor_comments_row_index = common_column_df[common_column_df[common_column_df.columns[8]] ==
                                                               config_dict['auditor_comments_column_name']].index[0]
                 if auditor_comments_row_index is not None:
                     comment_value = common_column_df.loc[auditor_comments_row_index, 'Value']
-                    print(f'{comment_value=}')
+                    logging.info(f'{comment_value=}')
                     if comment_value == 'NO':
                         report_value = '''As per Auditors Report, the accounts give a true and fair view, as per the accounting principles generally accepted, of the
                                              state of affairs in the case of Balance sheet and, Profit or Loss in the case of Profit & Loss Accounts. Auditors Report is
                                              Unqualified i.e. Clean'''
-                        print(report_value)
+                        logging.info(report_value)
                         auditor_report_row_index = common_table_df[common_table_df[common_table_df.columns[8]] ==
                                                                    config_dict[
                                                                        'disclosures_auditor_report_column_name']].index[
@@ -496,9 +501,9 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                         break
                     else:
                         report_value = None
-                        print(report_value)
+                        logging.info(report_value)
                         break
-            print(common_table_df)
+            logging.info(common_table_df)
         # auditor_report_row_index = common_table_df[common_table_df[common_table_df.columns[8]] ==
         #                                             config_dict['disclosures_auditor_report_column_name']].index[0]
         # director_report_row_index = common_table_df[common_table_df[common_table_df.columns[8]] ==
@@ -511,17 +516,17 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
     for common_table_name in common_sql_tables_list:
         common_table_df = common_df[common_df[common_df.columns[7]] == common_table_name]
         common_columns_list = common_table_df[common_table_df.columns[8]].unique()
-        print(common_columns_list)
+        logging.info(common_columns_list)
         for common_column_name in common_columns_list:
-            print(common_column_name)
+            logging.info(common_column_name)
             # filter table df with only column value
             common_column_df = common_table_df[common_table_df[common_table_df.columns[8]] == common_column_name]
-            print(common_column_df)
+            logging.info(common_column_df)
             common_json_dict = common_column_df.set_index(common_table_df.columns[0])['Value'].to_dict()
             # Convert the dictionary to a JSON string
             common_json_string = json.dumps(common_json_dict)
-            print(common_json_string)
-            print(years)
+            logging.info(common_json_string)
+            logging.info(years)
             for year in years:
                 if year is None or year == '':
                     continue
@@ -532,12 +537,12 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                                                      common_json_string,
                                                      year)
                 except Exception as e:
-                    print(f"Exception {e} occurred while updating data in dataframe for {common_table_name} "
+                    logging.info(f"Exception {e} occurred while updating data in dataframe for {common_table_name} "
                           f"with data {common_json_string}")
-    print("Saving Single Values to database is complete")
-    print("Saving group values to database")
+    logging.info("Saving Single Values to database is complete")
+    logging.info("Saving group values to database")
     for index, row in group_df.iterrows():
-        # print(row)
+        # logging.info(row)
         field_name = str(row.iloc[field_name_index]).strip()
         parent_node = str(row.iloc[parent_node_index]).strip()
         child_nodes = str(row.iloc[child_nodes_index]).strip()
@@ -546,16 +551,16 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         column_json_node = str(row.iloc[column_json_node_index]).strip()
 
         table_node_name = parent_node
-        # print(table_node_name)
+        # logging.info(table_node_name)
         try:
             table_in_list = extract_table_values_from_xml(xml_root, table_node_name, child_nodes)
-            # print(table_in_list)
+            # logging.info(table_in_list)
         except Exception as e:
-            print(f'Exception {e} occurred while extracting data from xml for table {table_node_name}')
+            logging.info(f'Exception {e} occurred while extracting data from xml for table {table_node_name}')
             continue
         table_df = pd.DataFrame(table_in_list)
         table_df.dropna(inplace=True)
-        # print(table_df)
+        # logging.info(table_df)
         if field_name == 'nbfc_financials_auditor':
             column_json_node_list = [x.strip() for x in column_json_node.split(',')]
             column_child_node_list = [x.strip() for x in child_nodes.split(',')]
@@ -614,14 +619,14 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 remaining_row_df_new["address"] = remaining_row_df_new["address"].apply(lambda x: json.dumps(x))
                 for year in years:
                     for _, df_row in remaining_row_df_new.iterrows():
-                        # print(df_row)
-                        # print(table_df.columns)
+                        # logging.info(df_row)
+                        # logging.info(table_df.columns)
                         try:
                             insert_datatable_with_table(db_config, config_dict['Additional_Auditor_Table_Name'],
                                                         remaining_row_df_new.columns, df_row, cin_column_name,
                                                         cin_column_value, company_column_name, company_name, year)
                         except Exception as e:
-                            print(
+                            logging.info(
                                 f'Exception {e} occurred while inserting below table row in table {sql_table_name}- \n',
                                 df_row)
 
@@ -642,24 +647,24 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             #     update_database_single_value_aoc(db_config, sql_table_name, cin_column_name, cin_column_value,
             #                                      company_column_name, company_name, column_names, auditor_json, year)
             #     for _, df_row in remaining_row_df_new.iterrows():
-            #         # print(df_row)
-            #         # print(table_df.columns)
+            #         # logging.info(df_row)
+            #         # logging.info(table_df.columns)
             #         try:
             #             insert_datatable_with_table(db_config, config_dict['Additional_Auditor_Table_Name'],
             #                                         remaining_row_df_new.columns, df_row, cin_column_name,
             #                                         cin_column_value, company_column_name, company_name, year)
             #         except Exception as e:
-            #             print(
+            #             logging.info(
             #                 f'Exception {e} occurred while inserting below table row in table {sql_table_name}- \n',
             #                 df_row)
-    print(group_df)
+    logging.info(group_df)
     output_dataframes_list.append(group_df)
 
-    print("Saving group values to database is complete")
+    logging.info("Saving group values to database is complete")
     with pd.ExcelWriter(output_file_path, engine='xlsxwriter') as writer:
         row_index = 0
         for dataframe in output_dataframes_list:
-            # print(dataframe)
+            # logging.info(dataframe)
             dataframe.to_excel(writer, sheet_name='Sheet1', index=False, startrow=row_index)
             row_index += len(dataframe.index) + 2
 
@@ -669,21 +674,22 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
 def aoc_nbfc_cfs_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, output_file_path,
                            cin_column_value, company_name, aoc4_nbfc_cfs_first_file_found):
     try:
-        print("Started Executing AOC NBFC CFS Program")
+        setup_logging()
+        logging.info("Started Executing AOC NBFC CFS Program")
         xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, output_file_path,
                   cin_column_value, company_name, aoc4_nbfc_cfs_first_file_found)
     except Exception as e:
-        print("Below Exception occurred while processing AOC NBFC CFS program \n ")
+        logging.info("Below Exception occurred while processing AOC NBFC CFS program \n ")
         # Get the current exception information
         exc_type, exc_value, exc_traceback = sys.exc_info()
 
         # Get the formatted traceback as a string
         traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
 
-        # Print the traceback details
+        # logging.info the traceback details
         for line in traceback_details:
-            print(line.strip())
+            logging.info(line.strip())
         return False
     else:
-        print("Completed Executing AOC NBFC CFS Program")
+        logging.info("Completed Executing AOC NBFC CFS Program")
         return True

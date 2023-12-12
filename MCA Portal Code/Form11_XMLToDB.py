@@ -41,13 +41,23 @@ def update_database_single_value(db_config, config_dict, table_name, cin_column_
     db_connection = mysql.connector.connect(**db_config)
     db_cursor = db_connection.cursor()
     db_connection.autocommit = True
+
+    financial_year_column_name = config_dict['financial_year_column_name']
+    financial_year = config_dict['financial_year']
+
+    year_column_name = config_dict['year_column_name']
+    year = config_dict['year']
+
     json_dict = json.loads(column_value)
     num_elements = len(json_dict)
+
     if num_elements == 1:
         first_key = next(iter(json_dict))
         first_value = json_dict[first_key]
         if first_value is None:
-            print(f"Value is None for table '{table_name}' column '{column_name}'")
+            print(f"Value is None for column '{column_name}' to update in table '{table_name}'")
+            db_cursor.close()
+            db_connection.close()
             return
         column_value = first_value.replace('"', '\\"').replace("'", "\\'")
         # print(column_value)
@@ -56,30 +66,39 @@ def update_database_single_value(db_config, config_dict, table_name, cin_column_
 
     # check if there is already entry with cin
     if table_name == config_dict['principal_business_activities_table_name']:
-        year_column_name = config_dict['year_column_name']
-        year = config_dict['year']
         query = "SELECT * FROM {} WHERE {} = '{}' AND {} = '{}'".format(table_name, cin_column_name, cin_value,
                                                                         year_column_name, year)
     elif table_name == config_dict['company_table_name']:
-        query = "SELECT * FROM {} WHERE {} = '{}'".format(table_name, cin_column_name, cin_value)
+        query = "SELECT * FROM {} WHERE {} = '{}' AND {} = '{}'".format(table_name, cin_column_name,
+                                                                        cin_value,
+                                                                        financial_year_column_name,
+                                                                        financial_year
+                                                                        )
+
     else:
         print(f"Irrelevant table {table_name} to update data for Form11")
+        db_cursor.close()
+        db_connection.close()
         return
     print(query)
+
     try:
         db_cursor.execute(query)
-    except mysql.connector.Error as err:
-        print(err)
+    except mysql.connector.Error as e:
+        print(f"Exception {e} occurred while executing db selection query for table {table_name}")
+    except Exception as e:
+        print(f"Exception {e} occurred while executing db selection query for table {table_name}")
+
     result = db_cursor.fetchall()
     # print(result)
     print(column_value)
     # if cin value already exists, update
     if len(result) > 0:
-        print(f"cin {cin_value} is exist in table {table_name}")
         if table_name == config_dict['principal_business_activities_table_name']:
-            year_column_name = config_dict['year_column_name']
-            year = config_dict['year']
+            print(f"cin {cin_value} with year {year} is exist in table {table_name}")
             if column_name == year_column_name:
+                db_cursor.close()
+                db_connection.close()
                 return
             update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} ='{}'".format(table_name,
                                                                                          column_name, column_value,
@@ -88,12 +107,21 @@ def update_database_single_value(db_config, config_dict, table_name, cin_column_
                                                                                          year
                                                                                          )
         elif table_name == config_dict['company_table_name']:
-            update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}'".format(table_name,
-                                                                            column_name, column_value,
-                                                                            cin_column_name, cin_value
-                                                                            )
+            print(f"cin {cin_value} with financial year {financial_year} is exist in table {table_name}")
+            # print(f"Entry already exist for cin '{cin_value}' with value '{column_value}' for column '{column_name}' "
+            #       f"for financial year '{financial_year}', hence updating")
+            update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}'".format(table_name,
+                                                                                          column_name,
+                                                                                          column_value,
+                                                                                          cin_column_name,
+                                                                                          cin_value,
+                                                                                          financial_year_column_name,
+                                                                                          financial_year
+                                                                                          )
         else:
             print(f"Irrelevant table {table_name} to update data for Form11")
+            db_cursor.close()
+            db_connection.close()
             return
         print(update_query)
         try:
@@ -102,16 +130,19 @@ def update_database_single_value(db_config, config_dict, table_name, cin_column_
             raise e
         else:
             print(f"updated form 11 data in table {table_name}")
+            db_cursor.close()
+            db_connection.close()
+            return
 
     # if cin value doesn't exist, insert
     else:
-        print(f"cin {cin_value} is not exist in table {table_name}")
         # print(type(cin_value))
         # print(type(column_value))
         if table_name == config_dict['principal_business_activities_table_name']:
-            year_column_name = config_dict['year_column_name']
-            year = config_dict['year']
+            print(f"cin {cin_value} with year {year} is not exist in table {table_name}")
             if column_name == year_column_name:
+                db_cursor.close()
+                db_connection.close()
                 return
             insert_query = "INSERT INTO {} ({}, {}, {}) VALUES ('{}', '{}', '{}')".format(table_name,
                                                                                           cin_column_name,
@@ -121,24 +152,31 @@ def update_database_single_value(db_config, config_dict, table_name, cin_column_
                                                                                           year,
                                                                                           column_value
                                                                                           )
-            print(insert_query)
-            try:
-                db_cursor.execute(insert_query)
-            except Exception as e:
-                raise e
-            else:
-                print("Inserted into principal business activities")
         elif table_name == config_dict['company_table_name']:
-            # insert_query = "INSERT INTO {} ({}, {}) VALUES ('{}', '{}')".format(table_name, cin_column_name,
-            #                                                                     column_name,
-            #                                                                     cin_value,
-            #                                                                     column_value)
-            return
-        else:
-            return
+            print(f"cin {cin_value} with financial year {financial_year} is not exist in table {table_name}")
+            insert_query = "INSERT INTO {} ({}, {}, {}) VALUES ('{}', '{}', '{}')".format(table_name,
+                                                                                          cin_column_name,
+                                                                                          column_name,
+                                                                                          financial_year_column_name,
+                                                                                          cin_value,
+                                                                                          column_value,
+                                                                                          financial_year
+                                                                                          )
 
-    db_cursor.close()
-    db_connection.close()
+        else:
+            db_cursor.close()
+            db_connection.close()
+            return
+        print(insert_query)
+        try:
+            db_cursor.execute(insert_query)
+        except Exception as e:
+            raise e
+        else:
+            print(f"Inserted into table {table_name}")
+            db_cursor.close()
+            db_connection.close()
+            return
 
 
 def extract_table_values_from_xml(xml_root, table_node_name, child_nodes):
@@ -412,7 +450,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
     except Exception as e:
         raise Exception("Below exception occurred while reading xml file " + '\n' + str(e))
 
-    cin_column_name = None
+    cin_column_name = config_dict['cin_column_name']
 
     # initializing empty list to save all the result dataframes for saving to output excel
     output_dataframes_list = []
@@ -435,6 +473,55 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         results.append([field_name, value, sql_table_name, column_name, column_json_node])
     # print(single_df)
 
+    # get year and financial year data from single df and save it in config dict
+
+    all_columns_list = single_df[single_df.columns[column_name_index]].unique()
+    for column_name in all_columns_list:
+        if column_name == config_dict['year_column_name']:
+            column_df = single_df[single_df[single_df.columns[column_name_index]] == column_name]
+            year = column_df['Value'].iloc[0]
+            print(year)
+            config_dict['year'] = year
+        if column_name == config_dict['financial_year_column_name']:
+            column_df = single_df[single_df[single_df.columns[column_name_index]] == column_name]
+            financial_year = column_df['Value'].iloc[0]
+            print(financial_year)
+            config_dict['financial_year'] = financial_year
+            print(f'{financial_year=}')
+        # save address values in config dictionary
+        if column_name == config_dict['ba_address_line1_column_name'] or \
+                column_name == config_dict['ba_address_line2_column_name'] or \
+                column_name == config_dict['ba_city_column_name'] or \
+                column_name == config_dict['ba_state_column_name'] or \
+                column_name == config_dict['ba_pincode_column_name']:
+            column_df = single_df[single_df[single_df.columns[column_name_index]] == column_name]
+            config_dict[column_name] = column_df['Value'].iloc[0]  # config_dict['ba_address_line1'] = value
+            print(config_dict[column_name])
+    # create full address from config dict saved values
+    full_address = ', '.join(value for value in [config_dict[config_dict['ba_address_line1_column_name']],
+                                                 config_dict[config_dict['ba_address_line2_column_name']],
+                                                 config_dict[config_dict['ba_city_column_name']],
+                                                 config_dict[config_dict['ba_state_column_name']],
+                                                 config_dict[config_dict['ba_pincode_column_name']]]
+                             if value is not None
+                             )
+    print(f'{full_address=}')
+
+    # assign full address value to single df full address row
+    full_address_row_index = single_df[single_df[single_df.columns[column_name_index]] ==
+                                       config_dict['full_address_column_name']].index[0]
+    print(f'{full_address_row_index=}')
+    if full_address_row_index is not None:
+        if full_address is not None:
+            single_df.loc[full_address_row_index, 'Value'] = full_address
+        else:
+            single_df.loc[full_address_row_index, 'Value'] = None
+    else:
+        print(f"full_address details is not in mapping file.")
+
+    # print("single df after updating full address")
+    # print(single_df)
+
     # update single values in datatable
     # get all the tables names for all single values df
     sql_tables_list = single_df[single_df.columns[sql_table_name_index]].unique()
@@ -444,10 +531,6 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         print(sql_table_name)
         # filter only table
 
-        if sql_table_name == config_dict["company_table_name"]:
-            cin_column_name = config_dict["llp_column_name"]
-        else:
-            cin_column_name = config_dict['cin_column_name']
         if (sql_table_name == config_dict["company_table_name"] or sql_table_name ==
                 config_dict["principal_business_activities_table_name"]):
             table_df = single_df[single_df[single_df.columns[sql_table_name_index]] == sql_table_name]
@@ -467,10 +550,6 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 # Convert the dictionary to a JSON string
                 json_string = json.dumps(json_dict)
                 print(json_string)
-                if column_name == config_dict['year_column_name']:
-                    year = column_df['Value'].iloc[0]
-                    print(year)
-                    config_dict['year'] = year
                 try:
                     update_database_single_value(db_config, config_dict, sql_table_name,
                                                  cin_column_name,
@@ -478,7 +557,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                                                  column_name,
                                                  json_string)
                 except Exception as e:
-                    print(f"Exception {e} occurred while updating data in dataframe for {sql_table_name} "
+                    print(f"Exception {e} occurred while updating data in table {sql_table_name} "
                           f"with data {json_string}")
                 else:
                     print(f'{sql_table_name} Table is updated')
@@ -489,16 +568,6 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             continue
         else:
             continue
-
-    financial_year_row_index = single_df[single_df[single_df.columns[column_name_index]] ==
-                                         config_dict['financial_year_column_name']].index[0]
-    print(f'{financial_year_row_index=}')
-    if financial_year_row_index is not None:
-        financial_year = single_df.loc[financial_year_row_index, 'Value']
-    else:
-        print(f"financial year details is not  in mapping file.")
-        financial_year = None
-    print(f'{financial_year=}')
 
     single_output_df = pd.DataFrame(results, columns=['Field Name', 'Value',
                                                       'Table Name', 'Column Name',
@@ -530,16 +599,14 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         except Exception as e:
             print(f'Exception {e} occurred while extracting data from xml for table {table_node_name}')
             continue
-        if sql_table_name == config_dict["company_table_name"]:
-            cin_column_name = config_dict["llp_column_name"]
-        else:
-            cin_column_name = config_dict['cin_column_name']
+
         # print(table_df)
+
         table_df[cin_column_name] = cin
         column_names_list.append(cin_column_name)
         # print(table_df)
         if sql_table_name == config_dict['individual_partners_table_name']:
-            table_df[config_dict['financial_year_column_name']] = financial_year
+            table_df[config_dict['financial_year_column_name']] = config_dict['financial_year']
             column_names_list.append(config_dict['financial_year_column_name'])
         table_df.columns = column_names_list
         table_df = table_df[table_df[column_names_list[field_name_index]].notna()]

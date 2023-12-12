@@ -49,12 +49,20 @@ def sign_out(driver,config_dict,CinData):
         if 'driver' in locals():
             driver.delete_all_cookies()
             driver.quit()
+            driver.close()
         db_config = get_db_credentials(config_dict)
         username = CinData[15]
         update_logout_status(username,db_config)
     except Exception as e:
         print(f"Error Signing out {e}")
         db_config = get_db_credentials(config_dict)
+        try:
+            if 'driver' in locals():
+                driver.delete_all_cookies()
+                driver.quit()
+                driver.close()
+        except:
+            pass
         username = CinData[15]
         update_logout_status(username, db_config)
 def Login_and_Download(config_dict,CinData):
@@ -142,10 +150,10 @@ def Login_and_Download(config_dict,CinData):
             return True,driver,None
         else:
             exception_message = f"Download failed for {Cin}"
-            return False,None,exception_message
+            return False,driver,exception_message
     except Exception as e:
         print(f"Exception Occured in downloading Main {e}")
-        return False, None, e
+        return False, driver, e
         # connection = mysql.connector.connect(**db_config)
         # cursor = connection.cursor()
         # Check_download_files_query = "select * from documents where cin=%s and company=%s and Download_Status='Downloaded' and form_data_extraction_needed='Y'"

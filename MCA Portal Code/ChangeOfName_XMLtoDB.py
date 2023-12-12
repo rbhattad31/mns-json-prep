@@ -6,8 +6,11 @@ import mysql.connector
 from Config import create_main_config_dictionary
 from DBFunctions import update_database_single_value
 from word2number import w2n
+import logging
+from logging_config import setup_logging
 
 def word_to_number(word):
+    setup_logging()
     # Remove spaces and hyphens from the input word
     word = word.replace(" ", "").replace("-", "").lower()
 
@@ -53,6 +56,7 @@ def word_to_number(word):
     else:
         return None  # Word not found in the dictionary
 def month_to_number(month_name):
+    setup_logging()
     month_dict = {
         'January': 1,
         'February': 2,
@@ -75,6 +79,7 @@ def month_to_number(month_name):
     return month_dict.get(month_name)
 def get_single_value_from_xml(xml_root, parent_node, child_node):
     try:
+        setup_logging()
         if child_node == 'nan':
             elements = xml_root.findall(f'.//{parent_node}')
         else:
@@ -90,12 +95,13 @@ def get_single_value_from_xml(xml_root, parent_node, child_node):
                     return str(element.text)
         return None
     except Exception as e:
-        print(f"An error occurred: {e}")
+        logging.info(f"An error occurred: {e}")
         return None
 
 
 def ChangeOfName_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,output_file_path, cin_column_value, company_name):
     try:
+        setup_logging()
         Cin_Column_Name = config_dict['cin_column_name_in_db']
         Company_column_name = config_dict['company_name_column_name_in_db']
         output_dataframes_list = []
@@ -103,7 +109,7 @@ def ChangeOfName_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet
             raise FileNotFoundError(f"The Mapping file '{map_file_path}' is not found.")
         try:
             df_map = pd.read_excel(map_file_path, engine='openpyxl', sheet_name=map_file_sheet_name)
-            # print(df_map)
+            # logging.info(df_map)
         except Exception as e:
             raise Exception("Below exception occurred while reading mapping file " + '\n' + str(e))
 
@@ -163,24 +169,24 @@ def ChangeOfName_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet
                 column_df = table_df[table_df[table_df.columns[6]] == column]
                 json_dict = column_df.set_index(table_df.columns[0])['Value'].to_dict()
                 json_string = json.dumps(json_dict)
-                print(json_string)
+                logging.info(json_string)
                 try:
                     update_database_single_value(db_config, sql_table, Cin_Column_Name, cin_column_value,
                                                  Company_column_name, company_name, column, json_string)
                 except Exception as e:
-                    print(f"Exception {e} occurred while updating data in dataframe for {sql_table} "
+                    logging.info(f"Exception {e} occurred while updating data in dataframe for {sql_table} "
                           f"with data {json_string}")
         output_dataframes_list.append(single_df)
         with pd.ExcelWriter(output_file_path, engine='xlsxwriter') as writer:
             row_index = 0
             for dataframe in output_dataframes_list:
-                # print(dataframe)
+                # logging.info(dataframe)
                 dataframe.to_excel(writer, sheet_name='Sheet1', index=False, startrow=row_index)
                 row_index += len(dataframe.index) + 2
 
         output_dataframes_list.clear()
     except Exception as e:
-        print(f"Exception occured while inserting into db for Change of Name {e}")
+        logging.error(f"Exception occured while inserting into db for Change of Name {e}")
         return False
     else:
         return True

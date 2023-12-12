@@ -187,8 +187,11 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         sql_table_name = str(row.iloc[sql_table_name_index]).strip()
         column_name = str(row.iloc[column_name_index]).strip()
         column_json_node = str(row.iloc[column_json_node_index]).strip()
-
-        value_common = get_single_value_from_xml(xml_root, parent_node, child_nodes)
+        if field_name == 'firm_registration_number' or field_name == 'auditor_firm_name':
+            value_common = 'NA'
+        else:
+            value_common = get_single_value_from_xml(xml_root, parent_node, child_nodes)
+            
         common_df.at[index, 'Value'] = value_common
         results_common.append([field_name, value_common, sql_table_name, column_name, column_json_node])
     print(common_df)
@@ -235,6 +238,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         # print(value)
         try:
             value_previous_year = float(value_previous_year)
+            value_previous_year = round(value_previous_year, 2)
         except Exception as e:
             print(f"Exception occured in converting to float {e}")
             pass
@@ -301,6 +305,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         # print(value)
         try:
             value_current_year = float(value_current_year)
+            value_current_year = round(value_current_year, 2)
         except Exception as e:
             print(f"Exception occured in converting to float {e}")
             pass
@@ -428,7 +433,8 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                         auditor_type_value = 'designated partner'
                     elif auditor_type_value == 'A':
                         auditor_type_value = 'authorized representative'
-                    common_df.loc[auditor_type_row_index, 'Value'] = auditor_type_value
+                    print(auditor_type_value)
+                    common_column_df.loc[auditor_type_row_index, 'Value'] = auditor_type_value
             # print(common_column_df)
             # create json dict with keys of field name and values for the same column name entries
             common_json_dict = common_column_df.set_index(common_table_df.columns[0])['Value'].to_dict()

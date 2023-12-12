@@ -1,6 +1,11 @@
 import mysql.connector
 import json
 import os
+from logging_config import setup_logging
+import logging
+import time
+
+
 def connect_to_database(db_config):
     try:
         # Connect to the MySQL server
@@ -19,12 +24,13 @@ def connect_to_database(db_config):
 def fetch_order_data_from_table(connection):
     try:
         if connection:
+            setup_logging()
             cursor = connection.cursor()
             # Construct the SQL query
-            query = "SELECT * FROM orders where workflow_status=%s"
+            query = "SELECT * FROM orders where process_status=%s and payment_by_user!=''"
             #value1 = ("Download_Pending")
-            cursor.execute(query, ("json_loader_pending",))
-
+            cursor.execute(query, ('InProgress',))
+            logging.info(query, ('InProgress',))
             # Get the column names from the cursor description
             column_names = [desc[0] for desc in cursor.description]
 
@@ -40,21 +46,36 @@ def fetch_order_data_from_table(connection):
 
 
 def fetch_workflow_status(db_config,cin):
+    setup_logging()
     connection = mysql.connector.connect(**db_config)
-    cursor = connection.cursor()
+    cursor = connection.cursor(buffered=True)
     query = "select workflow_status from orders where cin=%s"
     values = (cin,)
-    print(query % values)
+    logging.info(query % values)
     cursor.execute(query,values)
     workflow_status = cursor.fetchone()[0]
+    time.sleep(1)
     cursor.close()
     connection.close()
     return workflow_status
 
+def update_process_status(Status,db_config,cin):
+    connection = mysql.connector.connect(**db_config)
+    cursor = connection.cursor()
+    try:
+        query = "UPDATE orders SET process_status = %s WHERE cin=%s"
+        print(query)
+        cursor.execute(query, (Status,cin))
+        connection.commit()
+    except Exception as e:
+        print(f"Error updating login status in the database: {str(e)}")
+    finally:
+        cursor.close()
+        connection.close()
+
 def update_status(user,Status,db_config,cin):
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
-
     try:
         query = "UPDATE orders SET workflow_status = %s WHERE payment_by_user = %s and cin=%s"
         print(query)
@@ -80,6 +101,22 @@ def update_locked_by(dbconfig,Cin):
     finally:
         cursor.close()
         connection.close()
+
+def update_locked_by_empty(dbconfig,Cin):
+    connection = mysql.connector.connect(**dbconfig)
+    cursor = connection.cursor()
+    try:
+        update_locked_query = "update orders set locked_by = '' where cin=%s"
+        values = (Cin,)
+        cursor.execute(update_locked_query, values)
+        connection.commit()
+    except Exception as e:
+        print(f"Excpetion occured while updating locked by {e}")
+    finally:
+        cursor.close()
+        connection.close()
+        
+        
 def update_logout_status(username, db_config):
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()

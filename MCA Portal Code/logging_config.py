@@ -11,7 +11,7 @@ def setup_logging():
     log_filename = os.path.join(log_directory, datetime.datetime.now().strftime("%d-%m-%Y.log"))
 
     # Configure logging to both console and file
-    logging.basicConfig(level=logging.DEBUG,
+    logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s - %(levelname)s - %(message)s',
                         handlers=[
                             logging.StreamHandler(),  # Log to console

@@ -154,7 +154,7 @@ def login_to_website(url, chrome_driver_path,username,password,db_config):
 
         # Print the traceback details
         for line in traceback_details:
-            logging.info(line.strip())
+            logging.error(line.strip())
         return Status,driver,options,e
 
 

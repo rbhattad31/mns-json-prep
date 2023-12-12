@@ -9,8 +9,10 @@ import re
 import sys
 import traceback
 from datetime import datetime
-
+import logging
+from logging_config import setup_logging
 def update_database_single_value_GST(db_config, table_name, cin_column_name, cin_value,company_name_column_name,company_name, column_name, column_value,gst_number):
+    setup_logging()
     db_connection = mysql.connector.connect(**db_config)
     db_cursor = db_connection.cursor()
     json_dict = json.loads(column_value)
@@ -29,13 +31,13 @@ def update_database_single_value_GST(db_config, table_name, cin_column_name, cin
 
     # check if there is already entry with cin
     query = "SELECT * FROM {} WHERE {} = '{}' and {}='{}' and {}='{}'".format(table_name, cin_column_name, cin_value,company_name_column_name,company_name,'gstin',gst_number)
-    print(query)
+    logging.info(query)
     try:
         db_cursor.execute(query)
     except mysql.connector.Error as err:
-        print(err)
+        logging.info(err)
     result = db_cursor.fetchall()
-    # print(result)
+    # logging.info(result)
 
     # if cin value already exists
     if len(result) > 0:
@@ -46,9 +48,9 @@ def update_database_single_value_GST(db_config, table_name, cin_column_name, cin
                                                                                       company_name,
                                                                                       'gstin',
                                                                                       gst_number)
-        print(update_query)
+        logging.info(update_query)
         db_cursor.execute(update_query)
-        print("Updating")
+        logging.info("Updating")
 
     # if cin value doesn't exist
     else:
@@ -58,15 +60,16 @@ def update_database_single_value_GST(db_config, table_name, cin_column_name, cin
                                                                                       cin_value,
                                                                                       company_name,
                                                                                       column_value)
-        print(insert_query)
+        logging.info(insert_query)
         db_cursor.execute(insert_query)
-        print("Inserting")
+        logging.info("Inserting")
     db_connection.commit()
     db_cursor.close()
     db_connection.close()
 
 def insert_gst_number(db_config,config_dict,cin,company,root_path):
     try:
+        setup_logging()
         url = config_dict['pan_to_gst_url']
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor()
@@ -79,7 +82,7 @@ def insert_gst_number(db_config,config_dict,cin,company,root_path):
         values = (cin,)
         cursor.execute(pan_number_query,values)
         pan_number = cursor.fetchone()[0]
-        print(pan_number)
+        logging.info(pan_number)
         payload = json.dumps({
             "panNumber": pan_number
         })
@@ -90,15 +93,15 @@ def insert_gst_number(db_config,config_dict,cin,company,root_path):
         response = requests.request("POST", url, headers=headers, data=payload)
         if response.status_code == 200:
             json_response = response.json()
-            print(json_response)
+            logging.info(json_response)
             result = json_response['result']
-            print(result)
+            logging.info(result)
             output_df = []
             for gst_details in result:
                 gst_number = gst_details[config_dict['gst_key_response']]
                 gst_status = gst_details[config_dict['status_key_response']]
                 if gst_status == config_dict['status_active_keyword']:
-                    print(gst_number, gst_status)
+                    logging.info(gst_number, gst_status)
                     df_map = fetch_gst_details(config_dict,gst_number,gst_status)
                     output_df.append(df_map)
             output_folder_path = os.path.join(root_path,cin)
@@ -132,22 +135,22 @@ def insert_gst_number(db_config,config_dict,cin,company,root_path):
         connection.close()
 
     except Exception as e:
-        print(f"Error in fetching GST number from API {e}")
+        logging.error(f"Error in fetching GST number from API {e}")
         exc_type, exc_value, exc_traceback = sys.exc_info()
 
         # Get the formatted traceback as a string
         traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
 
-        # Print the traceback details
+        # logging.info the traceback details
         for line in traceback_details:
-            print(line.strip())
+            logging.error(line.strip())
         return False
     else:
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor()
         update_query = "update orders set gst_status='Y' where cin = %s"
         values_cin = (cin,)
-        print(update_query % values_cin)
+        logging.info(update_query % values_cin)
         cursor.execute(update_query,values_cin)
         connection.commit()
         cursor.close()
@@ -156,13 +159,14 @@ def insert_gst_number(db_config,config_dict,cin,company,root_path):
 
 def fetch_gst_details(config_dict,gst_number,status):
     try:
+        setup_logging()
         map_file_path = config_dict['map_file_path']
         map_file_sheet_name = config_dict['map_file_sheet_name']
         if not os.path.exists(map_file_path):
             raise FileNotFoundError(f"The Mapping file '{map_file_path}' is not found.")
         try:
             df_map = pd.read_excel(map_file_path, engine='openpyxl', sheet_name=map_file_sheet_name)
-            # print(df_map)
+            # logging.info(df_map)
         except Exception as e:
             raise Exception("Below exception occurred while reading mapping file " + '\n' + str(e))
         df_map['Value'] = None
@@ -199,7 +203,7 @@ def fetch_gst_details(config_dict,gst_number,status):
                             entry["tax_period"] = entry.pop("monthOfFiling", entry["monthOfFiling"])
                             entry["status"] = entry.pop("gstStatus", entry["gstStatus"])
                         except Exception as e:
-                            print(f"Exception in updating key names {e}")
+                            logging.info(f"Exception in updating key names {e}")
                             continue
                     value = json.dumps(value)
                     value = value.replace("'", '"')
@@ -213,14 +217,14 @@ def fetch_gst_details(config_dict,gst_number,status):
                         pattern = re.compile(r'STATE - ([\w\s]+)(?:,|$)')
                         # Use the findall method to extract the state information
                         matches = pattern.findall(value)
-                        # Print the result
+                        # logging.info the result
                         if matches:
                             value = matches[0]
                     elif field_name == config_dict['centre_jurisdiction_keyword']:
                         pattern = re.compile(r'COMMISSIONERATE - (\w+)')
                         # Use the findall method to extract the state information
                         matches = pattern.findall(value)
-                        # Print the result
+                        # logging.info the result
                         if matches:
                             value = matches[0]
                     elif field_name == config_dict['nature_of_business_activities_keyword']:
@@ -228,7 +232,7 @@ def fetch_gst_details(config_dict,gst_number,status):
                 df_map.at[index, 'Value'] = value
             return df_map
     except Exception as e:
-        print(f"Error in fetching GST Details {e}")
+        logging.error(f"Error in fetching GST Details {e}")
 
 
 # db_config = {

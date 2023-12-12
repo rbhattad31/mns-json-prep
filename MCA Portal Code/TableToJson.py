@@ -1,11 +1,13 @@
 import tabula
 import pandas as pd
 import json
-import fitz  # PyMuPDF library for extracting text
-
+import fitz
+import logging
+from logging_config import setup_logging  # PyMuPDF library for extracting text
 # Specify the PDF file path
 def json_generation(pdf_file,json_file_path):
     try:
+        setup_logging()
         tables = tabula.read_pdf(pdf_file, pages='all', multiple_tables=True)
 
         # Initialize an empty list to hold the table data and plain text
@@ -42,12 +44,14 @@ def json_generation(pdf_file,json_file_path):
         with open(json_file_path, "w") as json_file:
             json_file.write(json_data)
     except Exception as e:
-        print(f"Exception occured while generating json for xbrl {e}")
+        logging.error(f"Exception occured while generating json for xbrl {e}")
         return False
     else:
         return True
 
-#pdf_file = r"C:\MCA portal Test\Extracted PDFs\XML\18_XBRL (110000) document in respect Consolidated financial statement-19012022_19-01-2022.pdf"
+#pdf_file = r"C:\Users\mns-admin\Documents\POWERA~1\MNSCRE~1\Output\U50400~1\TVSMOB~1\OTHERA~1\XBRLFI~1.PDF"
+#json_file_path = 'output.json'
+#json_generation(pdf_file,json_file_path)
 
 # Use tabula.read_pdf to extract all tables
 
