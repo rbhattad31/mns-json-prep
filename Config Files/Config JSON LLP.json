@@ -17,7 +17,6 @@
     "subsidiary_entities": {},
     "financials": [],
     "credit_ratings": [],
-    "unaccepted_rating": [],
     "defaulter_list": [],
     "legal_history": [],
     "contribution_details": {},
@@ -27,7 +26,6 @@
     "gst_details": [],
     "struckoff248_details": {},
     "epfo": [],
-    "press_news": [],
-	"stock_exchange":[]
+    "press_news": []
   }
 }
