@@ -383,10 +383,10 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     map_file_path_DIR = config_dict_DIR['mapping file path']
                     map_sheet_name_dir = config_dict_DIR['mapping file sheet name']
                     xml_hidden_file_path = xml_file_path.replace('.xml', '_hidden.xml')
-                    dir_db_insertion = dir_xml_to_db(db_config,config_dict_DIR,map_file_path_DIR,map_sheet_name_dir,xml_file_path,xml_hidden_file_path,output_excel_path,Cin,CompanyName,date)
+                    dir_db_insertion = dir_xml_to_db(db_config,config_dict_DIR,map_file_path_DIR,map_sheet_name_dir,xml_file_path,xml_hidden_file_path,output_excel_path,Cin,date)
                     if dir_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
-                    dir_hidden_xml = dir_attachment_xml_to_db(db_config,config_dict,map_file_path_DIR,map_sheet_name_dir,xml_file_path,output_excel_path)
+                    dir_hidden_xml = dir_attachment_xml_to_db(db_config,config_dict_DIR,map_file_path_DIR,map_sheet_name_dir,xml_file_path,output_excel_path,Cin)
                 elif 'Form8'.lower() in str(path).lower():
                     Sheet_name = 'Form_8_annual'
                     config_dict_form8,config_status = create_main_config_dictionary(excel_file,Sheet_name)
