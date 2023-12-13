@@ -2,13 +2,47 @@ import json
 import re
 import sys
 import traceback
-
+import requests
 import pandas as pd
 import xml.etree.ElementTree as Et
 import os
 import mysql.connector
-
+from logging_config import setup_logging
+import logging
 pd.set_option('display.max_columns', None)
+
+
+def get_state_from_openai(city,config_dict):
+    setup_logging()
+    url = config_dict['url']
+    prompt = config_dict['Prompt'] + ' ' + city
+    payload = json.dumps({
+        "model": "gpt-3.5-turbo",
+        "messages": [
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        "temperature": 0.7,
+        "max_tokens": 100,
+        "top_p": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0
+    })
+    headers = {
+        'Authorization': config_dict['api_key'],
+        'Content-Type': 'application/json',
+        'Cookie': config_dict['cookie_key']
+    }
+
+    response = requests.request("POST", url, headers=headers, data=payload)
+
+    json_response = response.json()
+    content = json_response[config_dict['choices_keyword']][0][config_dict['message_keyword']][
+        config_dict['content_keyword']]
+    logging.info(content)
+    return content
 
 
 def get_single_value_from_xml(xml_root, parent_node, child_node):
@@ -466,6 +500,8 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         sql_table_name = str(row.iloc[sql_table_name_index]).strip()  # Table Name
         column_name = str(row.iloc[column_name_index]).strip()  # column name
         column_json_node = str(row.iloc[column_json_node_index]).strip()  # column json
+        if field_name == 'state':
+            continue
         value = get_single_value_from_xml(xml_root, parent_node, child_nodes)
         single_df.at[index, 'Value'] = value
         # print(field_name)
@@ -474,7 +510,11 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
     # print(single_df)
 
     # get year and financial year data from single df and save it in config dict
-
+    city = single_df[single_df['Field_Name'] == 'city']['Value'].values[0]
+    state = get_state_from_openai(city,config_dict)
+    state_row_index = single_df[single_df[single_df.columns[0]] == 'state'].index[0]
+    if state_row_index is not None:
+        single_df.loc[state_row_index, 'Value'] = state
     all_columns_list = single_df[single_df.columns[column_name_index]].unique()
     for column_name in all_columns_list:
         if column_name == config_dict['year_column_name']:
