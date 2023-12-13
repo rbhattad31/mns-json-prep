@@ -38,6 +38,7 @@ from GSTAPI import insert_gst_number
 from logging_config import setup_logging
 import logging
 from OrderJson import order_json
+from AddressSplitUsingOpenAI import split_address
 def sign_out(driver,config_dict,CinData):
     try:
         sign_out_button = driver.find_element(By.XPATH, '//a[@id="loginAnchor" and text()="Signout"]')
@@ -440,6 +441,12 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
             gst = insert_gst_number(db_config,config_dict_GST,Cin,CompanyName,root_path)
             if gst:
                 print("Successfully inserted for GST")
+        try:
+            sheet_name = 'OpenAI'
+            config_dict_openai,status = create_main_config_dictionary(excel_file,sheet_name)
+            split_address(Cin,config_dict_openai,db_config)
+        except Exception as e:
+            print("Exception occured in updating address using open AI")
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor()
         db_insert_check_query = "select * from documents where cin=%s and form_data_extraction_needed='Y' and DB_insertion_status='Pending' and Download_Status='Downloaded'"
