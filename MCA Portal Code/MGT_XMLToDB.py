@@ -284,6 +284,8 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             # year = date_obj.year
             # single_df.at[index, 'Value'] = year
             single_df.at[index, 'Value'] = value
+        elif field_name == 'phoneNumber':
+            single_df.at[index, 'Value'] = value
         else:
             if value is not None:
                 if all(char == '0' for char in value):

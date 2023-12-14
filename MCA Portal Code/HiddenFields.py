@@ -8,6 +8,7 @@ import mysql.connector
 from Config import create_main_config_dictionary
 
 def update_database_single_value_DIR(db_config, table_name, cin_column_name, cin_value,column_name, column_value,din_column_name,din):
+    setup_logging()
     db_connection = mysql.connector.connect(**db_config)
     db_cursor = db_connection.cursor()
     # json_dict = json.loads(column_value)
@@ -26,11 +27,11 @@ def update_database_single_value_DIR(db_config, table_name, cin_column_name, cin
 
     # check if there is already entry with cin
     query = "SELECT * FROM {} WHERE {} = '{}' and {}='{}'".format(table_name, cin_column_name, cin_value,din_column_name,din)
-    print(query)
+    logging.info(query)
     try:
         db_cursor.execute(query)
     except mysql.connector.Error as err:
-        print(err)
+        logging.info(err)
     result = db_cursor.fetchall()
     # logging.info(result)
 
@@ -41,9 +42,9 @@ def update_database_single_value_DIR(db_config, table_name, cin_column_name, cin
                                                                                       cin_value,
                                                                                       din_column_name,
                                                                                       din)
-        print(update_query)
+        logging.info(update_query)
         db_cursor.execute(update_query)
-        print("Updating")
+        logging.info("Updating")
 
     # if cin value doesn't exist
     else:
@@ -53,9 +54,9 @@ def update_database_single_value_DIR(db_config, table_name, cin_column_name, cin
                                                                                       cin_value,
                                                                                       din,
                                                                                         column_value)
-        print(insert_query)
+        logging.info(insert_query)
         db_cursor.execute(insert_query)
-        print("Inserting")
+        logging.info("Inserting")
     db_connection.commit()
     db_cursor.close()
     db_connection.close()
@@ -117,6 +118,7 @@ def Get_HiddenXmlFields(Data, fieldname):
 
 
 def dir_hidden_fields(db_config,xml_file_path,map_file_path,config_dict,din_list,cin):
+    setup_logging()
     try:
         # Read the XML content from the file
         with open(xml_file_path, 'r') as file:
@@ -142,7 +144,7 @@ def dir_hidden_fields(db_config,xml_file_path,map_file_path,config_dict,din_list
                 if Field is not None:
                     if Field in ['date_of_birth', 'nationality','age']:
                         value = Get_MultipleDateFields(soup, parent_node)
-                        print(value)
+                        logging.info(value)
                         if Field == 'date_of_birth':
                             for date in value:
                                 value = Convert_HiddenDOBFormat(date)
@@ -157,8 +159,8 @@ def dir_hidden_fields(db_config,xml_file_path,map_file_path,config_dict,din_list
                         value = Get_MultipleFields(soup, parent_node)
                     single_df.at[index, 'Value'] = value
         sql_tables_list = single_df[single_df.columns[5]].unique()
-        print(single_df)
-        print(sql_tables_list)
+        logging.info(single_df)
+        logging.info(sql_tables_list)
         for table_name in sql_tables_list:
             table_df = single_df[single_df[single_df.columns[5]] == table_name]
             columns_list = table_df[table_df.columns[6]].unique()
@@ -170,25 +172,25 @@ def dir_hidden_fields(db_config,xml_file_path,map_file_path,config_dict,din_list
                 # Convert the dictionary to a JSON string
                 value_list = json_dict.get(column_name,[])
                 for value_to_insert,din in zip(value_list,din_list):
-                    print(din,value_to_insert)
+                    logging.info(din,value_to_insert)
                     update_database_single_value_DIR(db_config,table_name,cin_column_name,cin,column_name,value_to_insert,din_column_name,din)
         # Name = Get_MultipleFields(soup, 'Full1_C')
-        # print('Name-', str(Name) + '\n')
+        # logging.info('Name-', str(Name) + '\n')
         # Nationality = Get_MultipleDateFields(soup, 'Nationality1_N')
-        # print('Nationality-', str(Nationality) + '\n')
+        # logging.info('Nationality-', str(Nationality) + '\n')
         # DOB = Get_MultipleDateFields(soup, 'Birthdated1_D')
         #
         # for date in DOB:
         #     D_O_B = Convert_HiddenDOBFormat(date)
-        #     print('DOB-', str(D_O_B) + '\n')
+        #     logging.info('DOB-', str(D_O_B) + '\n')
         #     Age = Get_Age(D_O_B)
-        #     print('Age-', str(Age) + '\n')
+        #     logging.info('Age-', str(Age) + '\n')
         # FatherName = Get_MultipleFields(soup, 'Father1_C')
-        # print('FatherName-', str(FatherName) + '\n')
+        # logging.info('FatherName-', str(FatherName) + '\n')
         # Address = Get_MultipleFields(soup, 'PresentAdd1_C')
-        # print('Address-', str(Address) + '\n')
+        # logging.info('Address-', str(Address) + '\n')
         # Gender = Get_MultipleFields(soup, 'TextField1')
-        # print('Gender-', str(Gender) + '\n')
+        # logging.info('Gender-', str(Gender) + '\n')
     except Exception as e:
         raise Exception("Below exception occurred while reading xml file " + '\n' + str(e))
     # Replace 'your_file.xml' with the actual path to your XML file

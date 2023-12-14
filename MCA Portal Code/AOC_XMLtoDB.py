@@ -242,7 +242,7 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                 logging.info(value_financial_parameter)
                 Financial_Parameter_df.at[index, 'Value'] = value_financial_parameter
             elif field_name == 'proposed_dividend':
-                if value_financial_parameter != 0 and value_financial_parameter is not None:
+                if value_financial_parameter != 0 and (value_financial_parameter is not None or value !=''):
                     dividend_value = 'Yes'
                 else:
                     dividend_value = 'No'

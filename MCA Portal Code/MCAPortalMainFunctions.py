@@ -39,6 +39,8 @@ from logging_config import setup_logging
 import logging
 from OrderJson import order_json
 from AddressSplitUsingOpenAI import split_address
+import sys
+import traceback
 def sign_out(driver,config_dict,CinData):
     try:
         sign_out_button = driver.find_element(By.XPATH, '//a[@id="loginAnchor" and text()="Signout"]')
@@ -147,7 +149,7 @@ def Login_and_Download(config_dict,CinData):
         download_files = cursor.fetchall()
         cursor.close()
         connection.close()
-        if len(download_files) < 8:
+        if len(download_files) < 10:
             return True,driver,None
         else:
             exception_message = f"Download failed for {Cin}"
@@ -446,7 +448,14 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
             config_dict_openai,status = create_main_config_dictionary(excel_file,sheet_name)
             split_address(Cin,config_dict_openai,db_config)
         except Exception as e:
-            print("Exception occured in updating address using open AI")
+            print(f"Exception occured in updating address using open AI {e}")
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            # Get the formatted traceback as a string
+            traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+            # logging.info the traceback details
+            for line in traceback_details:
+                logging.info(line.strip())
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor()
         db_insert_check_query = "select * from documents where cin=%s and form_data_extraction_needed='Y' and DB_insertion_status='Pending' and Download_Status='Downloaded'"

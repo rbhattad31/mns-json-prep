@@ -50,7 +50,7 @@ def JSON_loader(db_config,config_json_file_path,cin,root_path,excel_path,sheet_n
                     company_query = config_dict_loader[json_node]
                 except Exception as e:
                     continue
-                if json_node == 'company' or json_node == 'authorized_signatories' or json_node == 'charge_sequence' or json_node == 'director_network' or json_node == 'open_charges' or json_node == 'open_charges_latest_event' or json_node == 'stock_exchange' or json_node == 'directors' or json_node == 'llp' or json_node == 'contribution_details':
+                if json_node == 'company' or json_node == 'authorized_signatories' or json_node == 'charge_sequence' or json_node == 'director_network' or json_node == 'open_charges' or json_node == 'open_charges_latest_event' or json_node == 'stock_exchange' or json_node == 'directors' or json_node == 'llp' or json_node == 'contribution_details' or json_node == 'financials' or json_node == 'nbfc_financials':
                     if json_node == 'contribution_details':
                        query = company_query.format(cin,cin,cin,cin)
                     else:
