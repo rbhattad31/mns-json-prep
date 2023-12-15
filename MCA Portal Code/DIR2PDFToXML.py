@@ -27,6 +27,11 @@ def find_name(text):
     name_match = re.search(name_pattern, text)
     return name_match.group(1) if name_match else None
 
+def find_din(text):
+    din_pattern = re.compile(r'\b\d{8}\b')
+    din_match = re.search(din_pattern, text)
+    return din_match.group() if din_match else None
+
 
 def DIR2_pdf_to_xml(pdf_path):
     pdf_document = fitz.open(pdf_path)
@@ -72,6 +77,12 @@ def DIR2_pdf_to_xml(pdf_path):
             if name:
                 name_element = ET.SubElement(page_data, "Name")
                 name_element.text = name
+                
+            din = find_din(text)
+            print(din)
+            if din:
+                din_element = ET.SubElement(page_data, "DIN")
+                din_element.text = din
 
         tree = ET.ElementTree(page_data)
         with open(xml_path, "ab") as xml_file:

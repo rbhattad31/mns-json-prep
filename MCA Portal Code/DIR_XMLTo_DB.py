@@ -772,7 +772,7 @@ def attachment_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_n
             continue
 
         table_df.columns = column_names_list
-        table_df = table_df[table_df[column_names_list[0]].notna()]
+        table_df = table_df[table_df[column_names_list[0]].notna() | table_df[column_names_list[1]].notna()]
         logging.info(table_df)
 
         # current year

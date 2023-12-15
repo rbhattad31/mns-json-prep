@@ -14,6 +14,8 @@ import mysql.connector
 from DIR2PDFToXML import DIR2_pdf_to_xml
 from logging_config import setup_logging
 import logging
+import sys
+import traceback
 # Get the current date
 current_date = datetime.date.today()
 
@@ -32,7 +34,7 @@ def get_embedded_pdfs(input_pdf_path, output_path,file_name_hidden_pdf):
         item_name_dict[each_item] = doc.embfile_info(each_item)["filename"]
 
     for item_name, file_name in item_name_dict.items():
-        out_pdf =  output_path + "\\" + file_name.replace('.pdf' ,'') + file_name_hidden_pdf + '.pdf'
+        out_pdf =  output_path + "\\" + file_name
         logging.info(out_pdf)
       ## get embeded_file in bytes
         fData = doc.embfile_get(item_name)
@@ -63,7 +65,7 @@ def extract_xfa_data(pdf_path,filename):
         if 'MSME' in filename or 'AOC-4' in filename or 'CHG' in filename or 'LLP' in filename or 'Form8' in filename or 'FiLLiP' in filename or 'Form11' in filename:
             xml = xfa[7].get_object().get_data()
             return xml
-        elif 'DIR' in filename:
+        elif 'DIR' in filename or 'Form11' in filename:
             xml_DIR= []
             for i in [7,13]:
                 xml= xfa[i].get_object().get_data()
@@ -137,8 +139,14 @@ def PDFtoXML(pdf_path,file_name):
     # file_names = [file.name for file in folder_path.iterdir() if file.is_file()]
     setup_logging()
     try:
+        if 'DIR_2'.lower() in file_name.lower() or 'DIR-2'.lower() in file_name.lower() or 'DIR 2'.lower() in file_name.lower():
+            DIR_XML_File_Path,DIR_2_Status = DIR2_pdf_to_xml(pdf_path)
+            if DIR_2_Status:
+                return DIR_XML_File_Path,True
+            else:
+                return None,False
         xfa_data = extract_xfa_data(pdf_path, file_name)
-
+        
         if xfa_data:
             # If XFA data is found, use the existing code to save it as XML
             if 'DIR' in file_name:
@@ -163,12 +171,6 @@ def PDFtoXML(pdf_path,file_name):
                 logging.info("Extracted XFA data for ", file_name)
                 logging.info("Saved to", xml_file_path)
                 return xml_file_path, True
-        elif 'DIR_2'.lower() in file_name.lower():
-            DIR_XML_File_Path,DIR_2_Status = DIR2_pdf_to_xml(pdf_path)
-            if DIR_2_Status:
-                return DIR_XML_File_Path,True
-            else:
-                return None,False
         else:
             # If XFA data is not found, extract table data and save it as XML
             tables = extract_tables_from_pdf(pdf_path)
@@ -192,6 +194,13 @@ def PDFtoXML(pdf_path,file_name):
                 return None, False
     except Exception as e:
         logging.info(f"Exception in concerting pdf to xml {e}")
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+            # Get the formatted traceback as a string
+        traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+            # logging.info the traceback details
+        for line in traceback_details:
+            logging.info(line.strip())
         return None,False
 
 
@@ -273,21 +282,26 @@ def CheckHiddenAttachemnts(xml_file_path,folder_path,pdf_path,file_name):
                 logging.info("Error parsing the XML file:", str(e))
 
         elif "DIR" in os.path.basename(pdf_path):
-            DIR_hidden_attachment_folder = os.path.join(folder_path,"DIR_2")
+            DIR_hidden_attachment_folder = os.path.join(folder_path,"DIR_2",str(os.path.basename(pdf_path)).replace('.pdf',''))
             if not os.path.exists(DIR_hidden_attachment_folder):
                 os.makedirs(DIR_hidden_attachment_folder)
             get_embedded_pdfs(pdf_path,DIR_hidden_attachment_folder,file_name)
             DIR_hidden_attachment_files = os.listdir(DIR_hidden_attachment_folder)
             for DIR_hidden in DIR_hidden_attachment_files:
-                if 'DIR_2'.lower() not in DIR_hidden.lower():
+                print(DIR_hidden)
+                if not any(keyword not in DIR_hidden for keyword in ["DIR_2", "DIR-2", "DIR 2", "DIR-2-"]):
                     DIR_file_path = os.path.join(DIR_hidden_attachment_folder,DIR_hidden)
+                    print(f"Removing{DIR_file_path}")
                     os.remove(DIR_file_path)
             DIR_hidden_attachment_files = os.listdir(DIR_hidden_attachment_folder)
             for DIR_2_files in DIR_hidden_attachment_files:
-                DIR_2_PDF_Path = os.path.join(DIR_hidden_attachment_folder,DIR_2_files)
-                result_DIR2 = PDFtoXML(DIR_2_PDF_Path,DIR_2_files)
-                hidden_xml_list.append(result_DIR2[0])
-                return hidden_xml_list
+                if 'DIR_2'.lower() in DIR_2_files.lower() or 'DIR-2'.lower() in DIR_2_files.lower() or 'DIR 2'.lower() in DIR_2_files.lower() or 'DIR-2-'.lower() in DIR_2_files.lower():
+                    print("Converting DIR-2 to XML")
+                    DIR_2_PDF_Path = os.path.join(DIR_hidden_attachment_folder,DIR_2_files)
+                    print(DIR_2_PDF_Path)
+                    result_DIR2 = PDFtoXML(DIR_2_PDF_Path,DIR_2_files)
+                    hidden_xml_list.append(result_DIR2[0])
+                    return hidden_xml_list
             return hidden_xml_list
         else:
             logging.info("XML file name does not contain 'MGT'")

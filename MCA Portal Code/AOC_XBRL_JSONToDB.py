@@ -458,16 +458,29 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                 if len(values) != 0:
                     if year_category == 'Previous':
                         try:
+                            values[1]=values[1].replace(',','')
                             single_df.at[index, 'Value'] = float(values[1])
                         except Exception as e:
                             single_df.at[index, 'Value'] = values[1]
                     elif year_category == 'Current':
                         try:
+                            values[0]=values[0].replace(',','')
                             single_df.at[index, 'Value'] = float(values[0])
                         except Exception as e:
                             single_df.at[index,'Value'] = values[0]
                     elif year_category == config_dict['Financial_Parameter_Keyword']:
-                        single_df.at[index, 'Value'] = values[0]
+                        if field_name == 'proposed_dividend':
+                            if values[0] == 0 or values[0] == 0.00 or values[0] == '0' or values[0] == '0.00' or values[0] == 0.0 or values[0] == '0.0':
+                                dividend_value = 'No'
+                            else:
+                                dividend_value = 'Yes'
+                            single_df.at[index, 'Value'] = dividend_value
+                        else:
+                            try:
+                                values[0]=values[0].replace(',','')
+                                single_df.at[index, 'Value'] = float(values[0])
+                            except Exception as e:
+                                single_df.at[index,'Value'] = values[0]
                     else:
                         single_df.at[index, 'Value'] = None
             elif parent_node == config_dict['Constant_Keyword']:
@@ -601,9 +614,9 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
             if common_table_name != config_dict['financials_table_name']:
                 logging.info("Continuing table")
                 continue
-            common_table_df = common_df[common_df[common_df.columns[7]] == common_table_name]
+            common_table_df = common_df[common_df[common_df.columns[8]] == common_table_name]
             logging.info(common_table_df)
-            common_columns_list = common_table_df[common_table_df.columns[8]].unique()
+            common_columns_list = common_table_df[common_table_df.columns[9]].unique()
             logging.info(common_columns_list)
             for common_column_name in common_columns_list:
                 logging.info(common_column_name)
@@ -612,10 +625,10 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                     continue
                 logging.info(common_column_name)
                 # filter table df with only column value
-                common_column_df = common_table_df[common_table_df[common_table_df.columns[8]] == common_column_name]
+                common_column_df = common_table_df[common_table_df[common_table_df.columns[9]] == common_column_name]
                 logging.info(common_column_df)
                 if common_column_name == config_dict['auditor_comments_column_name']:
-                    auditor_comments_row_index = common_column_df[common_column_df[common_column_df.columns[8]] ==
+                    auditor_comments_row_index = common_column_df[common_column_df[common_column_df.columns[9]] ==
                                                        config_dict['auditor_comments_column_name']].index[0]
                     if auditor_comments_row_index is not None:
                         comment_value = common_column_df.loc[auditor_comments_row_index, 'Value']
@@ -625,10 +638,10 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                                               state of affairs in the case of Balance sheet and, Profit or Loss in the case of Profit & Loss Accounts. Auditors Report is
                                               Unqualified i.e. Clean'''
                             logging.info(report_value)
-                            auditor_report_row_index = common_table_df[common_table_df[common_table_df.columns[8]] ==
+                            auditor_report_row_index = common_table_df[common_table_df[common_table_df.columns[9]] ==
                                                                        config_dict[
                                                                            'disclosures_auditor_report_column_name']].index[0]
-                            director_report_row_index = common_table_df[common_table_df[common_table_df.columns[8]] ==
+                            director_report_row_index = common_table_df[common_table_df[common_table_df.columns[9]] ==
                                                                         config_dict[
                                                                             'disclosures_director_report_column_name']].index[0]
                             if auditor_report_row_index is not None:

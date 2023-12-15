@@ -280,10 +280,12 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         value = get_single_value_from_xml(xml_root, parent_node, child_nodes)
         if field_name == 'year' and value is not None:
             logging.info(value)
-            # date_obj = datetime.strptime(value, "%Y-%m-%d")
-            # year = date_obj.year
-            # single_df.at[index, 'Value'] = year
-            single_df.at[index, 'Value'] = value
+            try:
+                date_obj = datetime.strptime(value, "%Y-%m-%d")
+                year = date_obj.year
+                single_df.at[index, 'Value'] = year
+            except:
+                single_df.at[index, 'Value'] = value
         elif field_name == 'phoneNumber':
             single_df.at[index, 'Value'] = value
         else:
