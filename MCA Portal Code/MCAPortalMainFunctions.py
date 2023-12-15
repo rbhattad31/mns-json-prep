@@ -39,6 +39,7 @@ from logging_config import setup_logging
 import logging
 from OrderJson import order_json
 from AddressSplitUsingOpenAI import split_address
+from EPFO_order import order_epfo
 import sys
 import traceback
 def sign_out(driver,config_dict,CinData):
@@ -184,6 +185,7 @@ def XMLGeneration(db_config,CinData,config_dict):
         files_to_be_extracted, Fetch_File_Data_Status = fetch_form_extraction_file_data_from_table(connection, Cin,CompanyName)
         cursor.close()
         connection.close()
+        hidden_attachments_list = []
         if Fetch_File_Data_Status == "Pass":
             hidden_attachments = []
             for files in files_to_be_extracted:
@@ -200,6 +202,8 @@ def XMLGeneration(db_config,CinData,config_dict):
                         if 'AOC-4(XBRL)'.lower() in str(pdf_path).lower():
                             XBRL_db_update = aoc_xbrl_db_update(db_config,config_dict,Cin,CompanyName,xml_file_path,file_date)
                         hidden_attachments = CheckHiddenAttachemnts(xml_file_path, folder_path, pdf_path, file_name)
+                        for element in hidden_attachments:
+                            hidden_attachments_list.append(element)
                     else:
                         update_xml_extraction_status(Cin, file_name, config_dict, 'Failure')
                         continue
@@ -236,7 +240,7 @@ def XMLGeneration(db_config,CinData,config_dict):
         print(f"Exception Occured {e}")
         return False,[]
     else:
-        return True, hidden_attachments
+        return True, hidden_attachments_list
 
 
 def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
@@ -256,6 +260,11 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     Subsidiary_Config_Sheet_Name = config_dict_Subs['Subsidiary_Config_Sheet_Name']
                     map_file_path = Subsidiary_Config
                     map_file_sheet_name = Subsidiary_Config_Sheet_Name
+                    output_excel_name = str(hiddenattachment).replace('.xml', '.xlsx')
+                    folder_path = os.path.dirname(hiddenattachment)
+                    output_excel_path = os.path.join(folder_path, output_excel_name)
+                    mgt7_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, hiddenattachment,
+                             output_excel_path, Cin, CompanyName)
                 elif "Business Activity" in hiddenattachment:
                     Sheet_name = "MGT"
                     config_dict_Business, config_status = create_main_config_dictionary(excel_file, Sheet_name)
@@ -263,13 +272,20 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     Business_Activity_Config_Sheet_Name = config_dict_Business['Business_Activity_Config_Sheet_Name']
                     map_file_path = Business_Activity_Config
                     map_file_sheet_name = Business_Activity_Config_Sheet_Name
+                    output_excel_name = str(hiddenattachment).replace('.xml', '.xlsx')
+                    folder_path = os.path.dirname(hiddenattachment)
+                    output_excel_path = os.path.join(folder_path, output_excel_name)
+                    mgt7_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, hiddenattachment,
+                             output_excel_path, Cin, CompanyName)
+                elif 'DIR_2'.lower() in hiddenattachment.lower() or 'DIR-2'.lower() in hiddenattachment.lower() or 'DIR 2'.lower() in hiddenattachment.lower() or 'DIR-2-'.lower() in hiddenattachment.lower():
+                    Sheet_name = "DIR"
+                    config_dict_dir, config_status = create_main_config_dictionary(excel_file, Sheet_name)
+                    map_file_path_dir2 = config_dict_dir['DIR2_map_file_path']
+                    map_file_sheet_name = config_dict_dir['mapping file sheet name']
+                    output_excel_path = str(hiddenattachment).replace('.xml', '.xlsx')
+                    dir_hidden_xml = dir_attachment_xml_to_db(db_config,config_dict_dir,map_file_path_dir2,map_file_sheet_name,hiddenattachment,output_excel_path,Cin)
                 else:
                     pass
-                output_excel_name = str(hiddenattachment).replace('.xml', '.xlsx')
-                folder_path = os.path.dirname(hiddenattachment)
-                output_excel_path = os.path.join(folder_path, output_excel_name)
-                mgt7_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, hiddenattachment,
-                             output_excel_path, Cin, CompanyName)
 
         xml_files_to_insert = get_xml_to_insert(Cin, config_dict)
         AOC_4_first_file_found = False
@@ -388,7 +404,6 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     dir_db_insertion = dir_xml_to_db(db_config,config_dict_DIR,map_file_path_DIR,map_sheet_name_dir,xml_file_path,xml_hidden_file_path,output_excel_path,Cin,date)
                     if dir_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
-                    dir_hidden_xml = dir_attachment_xml_to_db(db_config,config_dict_DIR,map_file_path_DIR,map_sheet_name_dir,xml_file_path,output_excel_path,Cin)
                 elif 'Form8'.lower() in str(path).lower():
                     Sheet_name = 'Form_8_annual'
                     config_dict_form8,config_status = create_main_config_dictionary(excel_file,Sheet_name)
@@ -424,25 +439,27 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                 print(f"Exception occured while inserting into DB {e}")
                 continue
 
-
-        gst_connection = mysql.connector.connect(**db_config)
-        gst_cursor = gst_connection.cursor()
-        gst_query = """SELECT * FROM orders
-                       WHERE MONTH(created_date) = MONTH(CURRENT_DATE())
-                        AND YEAR(created_date) = YEAR(CURRENT_DATE()) AND cin=%s AND gst_status='Y'"""
-        cin_value = (Cin,)
-        print(gst_query % cin_value)
-        gst_cursor.execute(gst_query,cin_value)
-        gst_result = gst_cursor.fetchall()
-        gst_cursor.close()
-        gst_connection.close()
-        if len(gst_result) == 0:
-            sheet_name_gst = 'GST'
-            config_dict_GST,status = create_main_config_dictionary(excel_file,sheet_name_gst)
-            root_path = config_dict['Root path']
-            gst = insert_gst_number(db_config,config_dict_GST,Cin,CompanyName,root_path)
-            if gst:
-                print("Successfully inserted for GST")
+        try:
+            gst_connection = mysql.connector.connect(**db_config)
+            gst_cursor = gst_connection.cursor()
+            gst_query = """SELECT * FROM orders
+                           WHERE MONTH(created_date) = MONTH(CURRENT_DATE())
+                            AND YEAR(created_date) = YEAR(CURRENT_DATE()) AND cin=%s AND gst_status='Y'"""
+            cin_value = (Cin,)
+            print(gst_query % cin_value)
+            gst_cursor.execute(gst_query,cin_value)
+            gst_result = gst_cursor.fetchall()
+            gst_cursor.close()
+            gst_connection.close()
+            if len(gst_result) == 0:
+                sheet_name_gst = 'GST'
+                config_dict_GST,status = create_main_config_dictionary(excel_file,sheet_name_gst)
+                root_path = config_dict['Root path']
+                gst = insert_gst_number(db_config,config_dict_GST,Cin,CompanyName,root_path)
+                if gst:
+                    print("Successfully inserted for GST")
+        except Exception as e:
+            print(f"Exception occured while inserting GST {e}")
         try:
             sheet_name = 'OpenAI'
             config_dict_openai,status = create_main_config_dictionary(excel_file,sheet_name)
@@ -464,13 +481,21 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
         cursor.execute(db_insert_check_query,values_check)
         result_db_insertion = cursor.fetchall()
         print(len(result_db_insertion))
-        if len(result_db_insertion) < 10:
+        if len(result_db_insertion) < 20:
             return True,None
         else:
             db_insertion_exception_message = f"Db insertion failed for {Cin}"
             return False,db_insertion_exception_message
     except Exception as e:
         print(f"Exception Occured while inserting for hidden attachments {e}")
+        logging.info(f"Exception in concerting pdf to xml {e}")
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+            # Get the formatted traceback as a string
+        traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+            # logging.info the traceback details
+        for line in traceback_details:
+            logging.info(line.strip())
         return False,e
     else:
         return True,None
@@ -511,6 +536,10 @@ def json_loader_generation(cindata,dbconfig,config_dict,excel_file_path):
                     print(json_node)
                     if json_order:
                         print("Json ordered successfully")
+                        if json_node == 'epfo':
+                            epfo_order = order_epfo(json_file_path,json_node)
+                            if epfo_order:
+                                print("Ordered successfully for epfo")
                 except Exception as e:
                     print(f"Exception occured for {json_node} {e}")
         else:
