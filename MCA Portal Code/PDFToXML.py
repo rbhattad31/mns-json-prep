@@ -62,13 +62,13 @@ def extract_xfa_data(pdf_path,filename):
     xfa = findInDict('/XFA', pdf.resolved_objects)
     logging.info(xfa)
     if xfa is not None:
-        if 'MSME' in filename or 'AOC-4' in filename or 'CHG' in filename or 'LLP' in filename or 'Form8' in filename or 'FiLLiP' in filename or 'Form11' in filename:
+        if 'MSME' in filename or 'AOC-4' in filename or 'CHG' in filename or 'Form8' in filename or 'FiLLiP' in filename:
             xml = xfa[7].get_object().get_data()
             return xml
         elif 'DIR' in filename or 'Form11' in filename:
             xml_DIR= []
             for i in [7,13]:
-                xml= xfa[i].get_object().get_data()
+                xml = xfa[i].get_object().get_data()
                 xml_DIR.append(xml)
             return xml_DIR
         else:
@@ -149,7 +149,7 @@ def PDFtoXML(pdf_path,file_name):
         
         if xfa_data:
             # If XFA data is found, use the existing code to save it as XML
-            if 'DIR' in file_name:
+            if 'DIR' in file_name or 'Form11' in file_name:
                 xml_plain = xfa_data[0]
                 xml_hidden = xfa_data[1]
                 xml_plain_file_path = pdf_path.replace('.pdf', '.xml')
@@ -337,8 +337,6 @@ def fetch_form_extraction_file_data_from_table(connection,Cin,Company):
     except mysql.connector.Error as error:
         logging.info("Error:", error)
         return None,None
-
-
 
 
 
