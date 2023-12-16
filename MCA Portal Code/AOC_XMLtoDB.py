@@ -315,7 +315,7 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                 if 'None' in previous_formula:
                     previous_formula = previous_formula.replace('None', '0')
                 # Calculate the value using the provided formula and insert it
-                previous_year_df.at[previous_year_df[previous_year_df['Field_Name'] == previous_formula_field_name].index[0], 'Value'] = eval(previous_formula)
+                previous_year_df.at[previous_year_df[previous_year_df['Field_Name'] == previous_formula_field_name].index[0], 'Value'] = round(eval(previous_formula),2)
             except (NameError, SyntaxError):
                 # Handle the case where the formula is invalid or contains a missing field name
                 logging.info(f"Invalid formula for {previous_formula_field_name}: {previous_formula}")
@@ -364,7 +364,7 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                 # Calculate the value using the provided formula and insert it
                 if 'None' in current_formula:
                     current_formula = current_formula.replace('None', '0')
-                current_year_df.at[current_year_df[current_year_df['Field_Name'] == current_formula_field_name].index[0], 'Value'] = eval(current_formula)
+                current_year_df.at[current_year_df[current_year_df['Field_Name'] == current_formula_field_name].index[0], 'Value'] = round(eval(current_formula),2)
             except (NameError, SyntaxError):
                 # Handle the case where the formula is invalid or contains a missing field name
                 logging.info(f"Invalid formula for {current_formula_field_name}: {current_formula}")
