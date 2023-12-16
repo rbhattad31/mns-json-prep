@@ -15,6 +15,15 @@ import logging
 from logging_config import setup_logging
 
 
+def extract_between_phrases(input_sentence, start_phrase, end_phrase):
+    pattern = re.compile(f'{re.escape(start_phrase)}(.*?){re.escape(end_phrase)}', re.DOTALL)
+    match = pattern.search(input_sentence)
+
+    if match:
+        return match.group(1).strip()
+    else:
+        return None
+
 def get_single_value_from_xml(xml_root, parent_node, child_node):
     try:
         setup_logging()
@@ -262,8 +271,9 @@ def JSON_Fields_for_breaks(json_file_path,input_header):
     else:
         logging.info("Header not found in the JSON structure.")
         return []
-    
-def capture_values_from_text(json_file_path,input_sentence,field_name):
+
+
+def capture_values_from_text(json_file_path,input_sentence,field_name,nature):
     setup_logging()
     with open(json_file_path, 'r') as json_file:
         data = json.load(json_file)
@@ -285,20 +295,29 @@ def capture_values_from_text(json_file_path,input_sentence,field_name):
                     value = match.group(1)
                     return value
             elif field_name == 'companies_caro_applicable':
-                keyword_position = complete_sentence.find(input_sentence)
-                sentence_part = complete_sentence[keyword_position + len(input_sentence):]
-                # Split the sentence part into words and capture the next two words
-                words = re.findall(r'\S+', sentence_part)
-                if len(words) >= 2:
-                    next_two_words = " ".join(words[:2])
-                    logging.info(f"Next Two Words: {next_two_words}")
-                    if 'not' in next_two_words.lower():
-                        next_two_words = 'Not Applicable'
-                    elif 'not' not in next_two_words.lower():
-                        next_two_words = 'Applicable'
-                    else:
-                        pass
-                    return next_two_words
+                # keyword_position = complete_sentence.find(input_sentence)
+                # sentence_part = complete_sentence[keyword_position + len(input_sentence):]
+                # # Split the sentence part into words and capture the next two words
+                # words = re.findall(r'\S+', sentence_part)
+                # if len(words) >= 2:
+                #     next_two_words = " ".join(words[:2])
+                #     logging.info(f"Next Two Words: {next_two_words}")
+                #     if 'not' in next_two_words.lower():
+                #         next_two_words = 'Not Applicable'
+                #     elif 'not' not in next_two_words.lower():
+                #         next_two_words = 'Applicable'
+                #     else:
+                #         pass
+                #     return next_two_words
+                print(nature)
+                print(field_name)
+                if nature == 'Standalone':
+                    end_sentence = 'Disclosure in auditors report relating to public offer and term loans'
+                    companies_caro_value = extract_between_phrases(complete_sentence,input_sentence,end_sentence)
+                    print(companies_caro_value)
+                else:
+                    companies_caro_value = None
+                return companies_caro_value
         else:
             logging.info("Word not found")
     else:
@@ -408,7 +427,7 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
 
         # adding an empty column to mapping df
         df_map['Value'] = None
-        filing_standard_check = capture_values_from_text(json_file_path, None, None)
+        filing_standard_check = capture_values_from_text(json_file_path, None, None,None)
         filing_standard = None
         if str(config_dict['IND_Taxonomy_Condition']) in filing_standard_check:
             filing_standard = config_dict['IND_Taxonomy_Keyword']
@@ -422,7 +441,7 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
 
         if not os.path.exists(json_file_path):
             raise FileNotFoundError(f"The XML file '{json_file_path}' is not found.")
-
+        nature = None
         for index,row in single_df.iterrows():
             field_name = str(row.iloc[0]).strip()
             parent_node = str(row.iloc[3]).strip()
@@ -475,6 +494,9 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                             else:
                                 dividend_value = 'Yes'
                             single_df.at[index, 'Value'] = dividend_value
+                        elif field_name == 'companies_caro_applicable':
+                            companies_value = capture_values_from_text(json_file_path,child_nodes,field_name,nature)
+                            single_df.at[index, 'Value'] = companies_value
                         else:
                             try:
                                 values[0]=values[0].replace(',','')
@@ -490,10 +512,10 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                     value = child_nodes
                 single_df.at[index, 'Value'] = value
             elif parent_node == config_dict['Description_Keyword']:
-                words_value = capture_values_from_text(json_file_path,child_nodes,field_name)
+                words_value = capture_values_from_text(json_file_path,child_nodes,field_name,nature)
                 single_df.at[index, 'Value'] = words_value
             elif parent_node == config_dict['Auditor_Keyword']:
-                auditor_complete_sentence = capture_values_from_text(json_file_path, None, None)
+                auditor_complete_sentence = capture_values_from_text(json_file_path, None, None,nature)
                 auditor_value = Auditor_information(auditor_complete_sentence,child_nodes)
                 logging.info(f"{field_name}:{auditor_value}")
                 single_df.at[index, 'Value'] = auditor_value
@@ -523,7 +545,7 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                 # Calculate the value using the provided formula and insert it
                 current_year_df.at[
                     current_year_df[current_year_df['Field_Name'] == current_formula_field_name].index[
-                        0], 'Value'] = eval(current_formula)
+                        0], 'Value'] = round(eval(current_formula),2)
             except Exception as e:
                 logging.info(f"Exception occured for current year formula {current_formula_field_name}: {current_formula} {e}")
             except (NameError, SyntaxError):
@@ -549,7 +571,7 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                 # Calculate the value using the provided formula and insert it
                 previous_year_df.at[
                     previous_year_df[previous_year_df['Field_Name'] == previous_formula_field_name].index[
-                        0], 'Value'] = eval(previous_formula)
+                        0], 'Value'] = round(eval(previous_formula),2)
             except Exception as e:
                 logging.info(f"Exception occured for Previous year formula {previous_formula_field_name}: {previous_formula} {e}")
             except (NameError, SyntaxError):
@@ -763,19 +785,21 @@ def aoc_xbrl_db_update(db_config,config_dict,cin,company_name,xml_file_path,file
         return False
     else:
         return True
+
+
 # config_excel_path = r"C:\MCA Portal\Config.xlsx"
 # config_sheet_name = 'AOC XBRL'
 # config_dict_xbrl,status = create_main_config_dictionary(config_excel_path,config_sheet_name)
 # map_file_path = config_dict_xbrl['mapping file path']
 # map_sheet_name = config_dict_xbrl['mapping file sheet name']
-# json_file_path = "all_data.json"
-# output_file_path = "XBRL.xlsx"
+# json_file_path = r"C:\Users\BRADSOL123\Desktop\XBRL financial statements duly authenticated as per section 134 (including Board's report,auditor's report and other documents)-26112019.json"
+# output_file_path = r"C:\Users\BRADSOL123\Desktop\XBRL financial statements duly authenticated as per section 134 (including Board's report,auditor's report and other documents)-26112019.xlsx"
 # db_config = {
 #     "host": "162.241.123.123",
 #     "user": "classle3_deal_saas",
 #     "password": "o2i=hi,64u*I",
 #     "database": "classle3_mns_credit",
 # }
-# cin = 'U01210MH1999PTC119449'
-# company = 'DHUMAL INDUSTRIES INDIA PRIVATE LIMITED'
-# AOC_XBRL_JSON_to_db(db_config,config_dict_xbrl,map_file_path,map_sheet_name,json_file_path,output_file_path,cin,company)
+# cin = 'U45201RJ2014PTC044956'
+# company = 'JCC INFRAPROJECTS PRIVATE LIMITED'
+# AOC_XBRL_JSON_to_db(db_config,config_dict_xbrl,map_file_path,map_sheet_name,json_file_path,output_file_path,cin,company,True)
