@@ -420,11 +420,14 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
     if no_of_directors_row_index is not None:
         no_of_directors_value = single_df.loc[no_of_directors_row_index, 'Value']
         logging.info(f'{no_of_directors_value=}')
-        if int(no_of_directors_value) > 0:
+        try:
+            if int(no_of_directors_value) > 0:
+                pass
+            else:
+                raise Exception(f"Number of Directors = '{no_of_directors_value}' found in xml is not greater than zero."
+                                f"Hence skipping processing directors program")
+        except Exception as e:
             pass
-        else:
-            raise Exception(f"Number of Directors = '{no_of_directors_value}' found in xml is not greater than zero."
-                            f"Hence skipping processing directors program")
     else:
         raise Exception("Number of Directors field is not found in director mapping file.")
 

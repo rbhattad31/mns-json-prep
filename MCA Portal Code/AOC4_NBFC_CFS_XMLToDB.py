@@ -58,7 +58,7 @@ def update_database_single_value_aoc(db_config, table_name, cin_column_name, cin
     query = "SELECT * FROM {} WHERE {} = '{}' and {}='{}' and {}='{}'".format(table_name, cin_column_name, cin_value,
                                                                               company_name_column_name, company_name,
                                                                               'year', year)
-    # logging.info(query)
+    logging.info(query)
     try:
         db_cursor.execute(query)
     except mysql.connector.Error as err:
@@ -78,9 +78,9 @@ def update_database_single_value_aoc(db_config, table_name, cin_column_name, cin
                                               company_name,
                                               'Year',
                                               year)
-        # logging.info(update_query)
+        logging.info(update_query)
         db_cursor.execute(update_query)
-        # logging.info("Updated")
+        logging.info("Updated")
     # if cin value doesn't exist
     else:
         insert_query = "INSERT INTO {} ({}, {}, {}) VALUES ('{}', '{}', '{}')".format(table_name, cin_column_name,
@@ -89,9 +89,9 @@ def update_database_single_value_aoc(db_config, table_name, cin_column_name, cin
                                                                                       cin_value,
                                                                                       company_name,
                                                                                       column_value)
-        # logging.info(insert_query)
+        logging.info(insert_query)
         db_cursor.execute(insert_query)
-        # logging.info("Inserted")
+        logging.info("Inserted")
     db_connection.commit()
     db_cursor.close()
     db_connection.close()
@@ -269,11 +269,10 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 value_financial_parameter = str(datetime_object.year)
                 # logging.info(value_financial_parameter)
             elif field_name == 'proposed_dividend':
-                if value_financial_parameter != 0 or value_financial_parameter is not None:
-                    value_financial_parameter = 'Yes'
-                else:
+                if value_financial_parameter == 0 or value_financial_parameter == 0.00 or value_financial_parameter == '0' or value_financial_parameter == '0.00':
                     value_financial_parameter = 'No'
-
+                else:
+                    value_financial_parameter = 'Yes'
         financial_parameter_df.at[index, 'Value'] = value_financial_parameter
         results_financial_parameter.append(
             [field_name, value_financial_parameter, sql_table_name, column_name, column_json_node])
@@ -409,7 +408,9 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
     years.append(previous_year)
     logging.info(years)
     logging.info("Saving Single Values to database")
+    logging.info(aoc4_nbfc_cfs_first_file_found)
     if not aoc4_nbfc_cfs_first_file_found:
+        print(aoc4_nbfc_cfs_first_file_found)
         single_df_list.append(current_year_df)
     single_df_list.append(previous_year_df)
     single_df_list.append(financial_parameter_df)
@@ -462,9 +463,9 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         if common_table_name != config_dict['financials_table_name']:
             logging.info("Continuing table")
             continue
-        common_table_df = common_df[common_df[common_df.columns[7]] == common_table_name]
+        common_table_df = common_df[common_df[common_df.columns[6]] == common_table_name]
         logging.info(common_table_df)
-        common_columns_list = common_table_df[common_table_df.columns[8]].unique()
+        common_columns_list = common_table_df[common_table_df.columns[7]].unique()
         logging.info(common_columns_list)
         for common_column_name in common_columns_list:
             logging.info(common_column_name)
@@ -473,10 +474,10 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 continue
             logging.info(common_column_name)
             # filter table df with only column value
-            common_column_df = common_table_df[common_table_df[common_table_df.columns[8]] == common_column_name]
+            common_column_df = common_table_df[common_table_df[common_table_df.columns[7]] == common_column_name]
             logging.info(common_column_df)
             if common_column_name == config_dict['auditor_comments_column_name']:
-                auditor_comments_row_index = common_column_df[common_column_df[common_column_df.columns[8]] ==
+                auditor_comments_row_index = common_column_df[common_column_df[common_column_df.columns[7]] ==
                                                               config_dict['auditor_comments_column_name']].index[0]
                 if auditor_comments_row_index is not None:
                     comment_value = common_column_df.loc[auditor_comments_row_index, 'Value']
@@ -486,11 +487,11 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                                              state of affairs in the case of Balance sheet and, Profit or Loss in the case of Profit & Loss Accounts. Auditors Report is
                                              Unqualified i.e. Clean'''
                         logging.info(report_value)
-                        auditor_report_row_index = common_table_df[common_table_df[common_table_df.columns[8]] ==
+                        auditor_report_row_index = common_table_df[common_table_df[common_table_df.columns[7]] ==
                                                                    config_dict[
                                                                        'disclosures_auditor_report_column_name']].index[
                             0]
-                        director_report_row_index = common_table_df[common_table_df[common_table_df.columns[8]] ==
+                        director_report_row_index = common_table_df[common_table_df[common_table_df.columns[7]] ==
                                                                     config_dict[
                                                                         'disclosures_director_report_column_name']].index[
                             0]
@@ -514,13 +515,13 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         #     common_table_df.loc[director_report_row_index, 'Value'] = report_value
 
     for common_table_name in common_sql_tables_list:
-        common_table_df = common_df[common_df[common_df.columns[7]] == common_table_name]
-        common_columns_list = common_table_df[common_table_df.columns[8]].unique()
+        common_table_df = common_df[common_df[common_df.columns[6]] == common_table_name]
+        common_columns_list = common_table_df[common_table_df.columns[7]].unique()
         logging.info(common_columns_list)
         for common_column_name in common_columns_list:
             logging.info(common_column_name)
             # filter table df with only column value
-            common_column_df = common_table_df[common_table_df[common_table_df.columns[8]] == common_column_name]
+            common_column_df = common_table_df[common_table_df[common_table_df.columns[7]] == common_column_name]
             logging.info(common_column_df)
             common_json_dict = common_column_df.set_index(common_table_df.columns[0])['Value'].to_dict()
             # Convert the dictionary to a JSON string

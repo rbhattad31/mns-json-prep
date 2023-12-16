@@ -518,12 +518,12 @@ WHERE d1.cin = '{}' AND d1.document LIKE '%AOC%';""".format(cin,cin)
             update_query_Change_of_name = "UPDATE documents set form_data_extraction_needed = 'Y' where LOWER(document) LIKE '%%change of name%%' and `cin`=%s and `company`=%s;"
             two_values = (cin,CompanyName)
             cursor.execute(update_query_Change_of_name,two_values)
-            update_query_CHG = "UPDATE documents set form_data_extraction_needed = 'Y' where document LIKE '%%CHG%%' and `cin`=%s and `company`=%s;"
+            update_query_CHG = "UPDATE documents set form_data_extraction_needed = 'Y' where document LIKE '%%CHG-1%%' and `cin`=%s and `company`=%s;"
             cursor.execute(update_query_CHG,two_values)
             connection.commit()
             update_query_DIR = """UPDATE documents 
                 SET form_data_extraction_needed = 'Y' 
-                WHERE LOWER(document) LIKE '%%dir%%' 
+                WHERE LOWER(document) LIKE '%%dir-12%%' 
                 AND LOWER(document) NOT LIKE '%%directors%%' 
                 AND LOWER(document) NOT LIKE '%%director%%' 
                 AND cin = %s 

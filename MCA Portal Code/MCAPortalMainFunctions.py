@@ -290,6 +290,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
         xml_files_to_insert = get_xml_to_insert(Cin, config_dict)
         AOC_4_first_file_found = False
         AOC_XBRL_first_file_found = False
+        AOC_4_NBFC_first_file_found = False
         for xml in xml_files_to_insert:
             try:
                 path = xml[8]
@@ -338,13 +339,14 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                         map_file_path_AOC_CFS = config_dict_AOC_CFS['mapping file path']
                         map_sheet_name_AOC_CFS = config_dict_AOC_CFS['mapping file sheet name']
                         try:
-                            aoc_cfs_db_insertion = aoc_nbfc_cfs_xml_to_db(db_config,config_dict_AOC_CFS,map_file_path_AOC_CFS,map_sheet_name_AOC_CFS,xml_file_path,output_excel_path,Cin,CompanyName,AOC_4_first_file_found)
+                            print(AOC_4_NBFC_first_file_found)
+                            aoc_cfs_db_insertion = aoc_nbfc_cfs_xml_to_db(db_config,config_dict_AOC_CFS,map_file_path_AOC_CFS,map_sheet_name_AOC_CFS,xml_file_path,output_excel_path,Cin,CompanyName,AOC_4_NBFC_first_file_found)
                             if aoc_cfs_db_insertion:
                                 update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                         except Exception as e:
                             print(f"Excpetion occured while processing AOC-4-NBFC-CFS {e}")
                         else:
-                            AOC_4_first_file_found = True
+                            AOC_4_NBFC_first_file_found = True
                     elif 'AOC-4 CSR'.lower() in str(path).lower():
                         continue
                     else:
