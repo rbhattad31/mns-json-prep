@@ -10,7 +10,8 @@ import mysql.connector
 from logging_config import setup_logging
 import logging
 pd.set_option('display.max_columns', None)
-
+from Form11HiddenFields import form11_hidden_fields
+from Config import create_main_config_dictionary
 
 def get_state_from_openai(city,config_dict):
     setup_logging()
@@ -42,6 +43,7 @@ def get_state_from_openai(city,config_dict):
     content = json_response[config_dict['choices_keyword']][0][config_dict['message_keyword']][
         config_dict['content_keyword']]
     logging.info(content)
+    print(content)
     return content
 
 
@@ -503,6 +505,13 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         if field_name == 'state':
             continue
         value = get_single_value_from_xml(xml_root, parent_node, child_nodes)
+        if field_name == config_dict['business_classification_keyword']:
+            if value.lower() == 'buss':
+                value = 'business'
+            elif value.lower() == 'serv':
+                value = 'service'
+            else:
+                pass
         single_df.at[index, 'Value'] = value
         # print(field_name)
         # print(value)
@@ -515,6 +524,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
     state_row_index = single_df[single_df[single_df.columns[0]] == 'state'].index[0]
     if state_row_index is not None:
         single_df.loc[state_row_index, 'Value'] = state
+    financial_year = single_df[single_df['Field_Name'] == 'financial_year']['Value'].values[0]
     all_columns_list = single_df[single_df.columns[column_name_index]].unique()
     for column_name in all_columns_list:
         if column_name == config_dict['year_column_name']:
@@ -601,7 +611,6 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                           f"with data {json_string}")
                 else:
                     print(f'{sql_table_name} Table is updated')
-
         elif sql_table_name == config_dict["individual_partners_table_name"]:
             continue
         elif sql_table_name == config_dict["summary_designated_partners_table_name"]:
@@ -616,6 +625,10 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
     output_dataframes_list.append(single_output_df)
     print("Completed processing single rows")
 
+    din_list = []
+    id_list = []
+    nominee_id_list = []
+    category_list = []
     # extract group values
     for index, row in group_df.iterrows():
         # field_name = str(row.iloc[field_name_index]).strip()
@@ -631,11 +644,15 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         try:
             print(f'{table_node_name=}')
             print(f'{child_nodes=}')
-            table_in_list = extract_table_values_from_xml(xml_root, table_node_name, child_nodes)
+            if table_node_name == config_dict['constant_keyword']:
+                table_in_list = child_nodes.split(',')
+                for category in table_in_list:
+                    category_list.append(category)
+            else:
+                table_in_list = extract_table_values_from_xml(xml_root, table_node_name, child_nodes)
             table_df = pd.DataFrame(table_in_list)
             table_df.columns = column_names_list
             # print(table_df)
-
         except Exception as e:
             print(f'Exception {e} occurred while extracting data from xml for table {table_node_name}')
             continue
@@ -691,12 +708,39 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                     print(nominee_id_type)
                     df_row[config_dict['nominee_id_type_column_name']] = nominee_id_type
                 print(df_row)
+                combined = list(zip(column_names_list, df_row))
+                result_dict = dict(combined)
+                try:
+                    din_column_name = config_dict['din_column_name']
+                    din = result_dict[din_column_name]
+                    din_list.append(din)
+                except:
+                    pass
+                try:
+                    id_column_name = config_dict['signer_id_column_name']
+                    id = result_dict[id_column_name]
+                    id_list.append(id)
+                except:
+                    pass
+                try:
+                    nominee_id_column_name = config_dict['nominee_id_column_name']
+                    nominee_id_to_insert = result_dict[nominee_id_column_name]
+                    nominee_id_list.append(nominee_id_to_insert)
+                except:
+                    pass
                 insert_datatable_with_table(db_config, config_dict, sql_table_name, table_df.columns, df_row,
                                             cin_column_name)
 
             except Exception as e:
                 print(f"Exception '{e}' occurred while inserting below table row in table {sql_table_name}- \n",
                       df_row)
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                # Get the formatted traceback as a string
+                traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+                # Print the traceback details
+                for line in traceback_details:
+                    print(line.strip())
         print(f"DB execution is complete for {sql_table_name}")
         output_dataframes_list.append(table_df)
 
@@ -708,12 +752,14 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             row_index += len(dataframe.index) + 2
 
     output_dataframes_list.clear()
-
+    return din_list,id_list,nominee_id_list,category_list,financial_year
 
 def form_11_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
-                      output_file_path, cin):
+                      output_file_path, cin,hidden_xml_file_path):
     try:
-        xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, output_file_path, cin)
+        din_list,id_list,nominee_id_list,category_list,financial_year = xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, output_file_path, cin)
+        print(category_list)
+        form11_hidden_fields(db_config,hidden_xml_file_path,map_file_path,config_dict,din_list,cin,id_list,nominee_id_list,financial_year,category_list)
     except Exception as e:
         print("Below Exception occurred while processing Form 11 file: \n ", e)
         exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -727,3 +773,21 @@ def form_11_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name
         return False
     else:
         return True
+
+
+# db_config = {
+#         "host": "162.241.123.123",
+#         "user": "classle3_deal_saas",
+#         "password": "o2i=hi,64u*I",
+#         "database": "classle3_mns_credit"
+#     }
+# excel_file_path = r"C:\MCA Portal\Config.xlsx"
+# sheet_name = 'Form_11'
+# config_dict,config_status = create_main_config_dictionary(excel_file_path,sheet_name)
+# map_file_path = r"C:\MCA Portal\FORM-11_nodes_config.xlsx"
+# map_sheet_name = 'Sheet1'
+# xml_file_path = r"C:\Users\BRADSOL123\Desktop\Form 11\LLP Form11-28072021_signed.xml"
+# hidden_xml_file_path = r"C:\Users\BRADSOL123\Desktop\Form 11\LLP Form11-28072021_signed_hidden.xml"
+# output_file_path = str(xml_file_path).replace('.xml','.xlsx')
+# cin = 'AAL-7718'
+# form_11_xml_to_db(db_config,config_dict,map_file_path,map_sheet_name,xml_file_path,output_file_path,cin,hidden_xml_file_path)
