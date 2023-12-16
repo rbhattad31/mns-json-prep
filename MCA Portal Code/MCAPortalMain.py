@@ -33,14 +33,6 @@ def main():
             connection,cursor = connect_to_database(db_config)
             columnnames,CinDBData , CinFetchStatus = fetch_order_data_from_table(connection)
             if CinFetchStatus == "Pass":
-                subject_start = config_dict['subject_start']
-                body_start = config_dict['Body_start']
-                emails = config_dict['to_email']
-                emails = str(emails).split(',')
-                try:
-                    send_email(config_dict,subject_start,body_start,emails,None)
-                except Exception as e:
-                    logging.info(f"Error sending email {e}")
                 cin = None
                 receipt_number = None
                 hidden_attachments = []
@@ -51,8 +43,16 @@ def main():
                         user = CinData[15]
                         workflow_status = fetch_workflow_status(db_config,cin)
                         logging.info(workflow_status)
+                        logging.info(f"Starting to download for {cin}")
+                        subject_start = str(config_dict['subject_start']).format(cin,receipt_number)
+                        body_start = str(config_dict['Body_start']).format(cin,receipt_number)
+                        emails = config_dict['to_email']
+                        emails = str(emails).split(',')
+                        try:
+                            send_email(config_dict,subject_start,body_start,emails,None)
+                        except Exception as e:
+                            logging.info(f"Error sending email {e}")
                         if workflow_status == 'download_pending' or workflow_status == 'download_insertion_success':
-                            logging.info(f"Starting to download for {cin}")
                             Download_Status, driver,exception_message = Login_and_Download(config_dict, CinData)
                             if Download_Status:
                                 logging.info("Downloaded Successfully")

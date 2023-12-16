@@ -319,7 +319,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     if msme_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                 elif 'AOC-4'.lower() in str(path).lower() and 'AOC-4(XBRL)'.lower() not in str(path).lower():
-                    if 'AOC-4-NBFC'.lower() in str(path).lower():
+                    if 'AOC-4 NBFC'.lower() in str(path).lower():
                         Sheet_name = "AOC NBFC"
                         config_dict_AOC_NBFC, config_status = create_main_config_dictionary(excel_file, Sheet_name)
                         map_file_path_AOC_NBFC = config_dict_AOC_NBFC['mapping file path']
@@ -426,7 +426,8 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     config_dict_form11,config_status = create_main_config_dictionary(excel_file,sheet_name_form11)
                     map_file_path_form11 = config_dict_form11['mapping file path']
                     map_sheet_name_form11 = config_dict_form11['mapping file sheet name']
-                    form11_db_insertion = form_11_xml_to_db(db_config,config_dict_form11,map_file_path_form11,map_sheet_name_form11,xml_file_path,output_excel_path,Cin)
+                    xml_hidden_file_path = xml_file_path.replace('.xml', '_hidden.xml')
+                    form11_db_insertion = form_11_xml_to_db(db_config,config_dict_form11,map_file_path_form11,map_sheet_name_form11,xml_file_path,output_excel_path,Cin,xml_hidden_file_path)
                     if form11_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                 elif 'FiLLiP'.lower() in str(path).lower():

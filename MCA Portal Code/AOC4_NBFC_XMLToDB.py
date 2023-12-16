@@ -269,11 +269,17 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 value_financial_parameter = str(datetime_object.year)
                 # logging.info(value_financial_parameter)
             elif field_name == 'proposed_dividend':
-                if value_financial_parameter != 0 or value_financial_parameter is not None:
-                    value_financial_parameter = 'Yes'
-                else:
+                if value_financial_parameter == 0 or value_financial_parameter == 0.00 or value_financial_parameter == '0' or value_financial_parameter == '0.00':
                     value_financial_parameter = 'No'
-
+                else:
+                    value_financial_parameter = 'Yes'
+            elif field_name == 'nature':
+                if value_financial_parameter.lower() == 'no':
+                    value_financial_parameter = 'Standalone'
+                elif value_financial_parameter.lower() == 'yes':
+                    value_financial_parameter = 'Consolidated'
+                else:
+                    pass
         financial_parameter_df.at[index, 'Value'] = value_financial_parameter
         results_financial_parameter.append(
             [field_name, value_financial_parameter, sql_table_name, column_name, column_json_node])
@@ -298,6 +304,13 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                     datetime_object = datetime.strptime(value_previous_year, "%Y-%m-%d")
                 value_previous_year = str(datetime_object.date())
                 logging.info(value_previous_year)
+            elif field_name == 'nature':
+                if value_previous_year.lower() == 'no':
+                    value_previous_year = 'Standalone'
+                elif value_previous_year.lower() == 'yes':
+                    value_previous_year = 'Consolidated'
+                else:
+                    pass
         # logging.info(value)
         try:
             value_previous_year = float(value_previous_year)
@@ -331,7 +344,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 # logging.info(f'{previous_formula=}')
             # Calculate the value using the provided formula and insert it
             previous_year_df.at[previous_year_df[previous_year_df['Field_Name'] == previous_formula_field_name].index[
-                0], 'Value'] = eval(previous_formula)
+                0], 'Value'] = round(eval(previous_formula),2)
         except (NameError, SyntaxError):
             # Handle the case where the formula is invalid or contains a missing field name
             logging.info(f"Exception occurred while processing previous year data - \n"
@@ -357,6 +370,13 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 except ValueError:
                     datetime_object = datetime.strptime(value_current_year, "%Y-%m-%d")
                 value_current_year = str(datetime_object.date())
+            elif field_name == 'nature':
+                if value_current_year.lower() == 'no':
+                    value_current_year = 'Standalone'
+                elif value_current_year.lower() == 'yes':
+                    value_current_year = 'Consolidated'
+                else:
+                    pass
                 # logging.info(value_current_year)
         # logging.info(child_nodes)
         # logging.info(value_current_year)
@@ -391,8 +411,8 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 # logging.info(f'{current_formula=}')
             # Calculate the value using the provided formula and insert it
             current_year_df.at[
-                current_year_df[current_year_df['Field_Name'] == current_formula_field_name].index[0], 'Value'] = eval(
-                current_formula)
+                current_year_df[current_year_df['Field_Name'] == current_formula_field_name].index[0], 'Value'] = round(eval(
+                current_formula),2)
         except (NameError, SyntaxError):
             # Handle the case where the formula is invalid or contains a missing field name
             logging.info(f"Invalid formula for {current_formula_field_name}: {current_formula}")
@@ -462,9 +482,9 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         if common_table_name != config_dict['financials_table_name']:
             logging.info("Continuing table")
             continue
-        common_table_df = common_df[common_df[common_df.columns[7]] == common_table_name]
+        common_table_df = common_df[common_df[common_df.columns[6]] == common_table_name]
         logging.info(common_table_df)
-        common_columns_list = common_table_df[common_table_df.columns[8]].unique()
+        common_columns_list = common_table_df[common_table_df.columns[7]].unique()
         logging.info(common_columns_list)
         for common_column_name in common_columns_list:
             logging.info(common_column_name)
@@ -473,10 +493,10 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 continue
             logging.info(common_column_name)
             # filter table df with only column value
-            common_column_df = common_table_df[common_table_df[common_table_df.columns[8]] == common_column_name]
+            common_column_df = common_table_df[common_table_df[common_table_df.columns[7]] == common_column_name]
             logging.info(common_column_df)
             if common_column_name == config_dict['auditor_comments_column_name']:
-                auditor_comments_row_index = common_column_df[common_column_df[common_column_df.columns[8]] ==
+                auditor_comments_row_index = common_column_df[common_column_df[common_column_df.columns[7]] ==
                                                               config_dict['auditor_comments_column_name']].index[0]
                 if auditor_comments_row_index is not None:
                     comment_value = common_column_df.loc[auditor_comments_row_index, 'Value']
@@ -486,11 +506,11 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                                           state of affairs in the case of Balance sheet and, Profit or Loss in the case of Profit & Loss Accounts. Auditors Report is
                                           Unqualified i.e. Clean'''
                         logging.info(report_value)
-                        auditor_report_row_index = common_table_df[common_table_df[common_table_df.columns[8]] ==
+                        auditor_report_row_index = common_table_df[common_table_df[common_table_df.columns[7]] ==
                                                                    config_dict[
                                                                        'disclosures_auditor_report_column_name']].index[
                             0]
-                        director_report_row_index = common_table_df[common_table_df[common_table_df.columns[8]] ==
+                        director_report_row_index = common_table_df[common_table_df[common_table_df.columns[7]] ==
                                                                     config_dict[
                                                                         'disclosures_director_report_column_name']].index[
                             0]
@@ -514,13 +534,13 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         #     common_table_df.loc[director_report_row_index, 'Value'] = report_value
 
     for common_table_name in common_sql_tables_list:
-        common_table_df = common_df[common_df[common_df.columns[7]] == common_table_name]
-        common_columns_list = common_table_df[common_table_df.columns[8]].unique()
+        common_table_df = common_df[common_df[common_df.columns[6]] == common_table_name]
+        common_columns_list = common_table_df[common_table_df.columns[7]].unique()
         logging.info(common_columns_list)
         for common_column_name in common_columns_list:
             logging.info(common_column_name)
             # filter table df with only column value
-            common_column_df = common_table_df[common_table_df[common_table_df.columns[8]] == common_column_name]
+            common_column_df = common_table_df[common_table_df[common_table_df.columns[7]] == common_column_name]
             logging.info(common_column_df)
             common_json_dict = common_column_df.set_index(common_table_df.columns[0])['Value'].to_dict()
             # Convert the dictionary to a JSON string
