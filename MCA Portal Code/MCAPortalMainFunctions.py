@@ -42,6 +42,9 @@ from AddressSplitUsingOpenAI import split_address
 from EPFO_order import order_epfo
 import sys
 import traceback
+from DBFunctions import check_files_and_update
+
+
 def sign_out(driver,config_dict,CinData):
     try:
         sign_out_button = driver.find_element(By.XPATH, '//a[@id="loginAnchor" and text()="Signout"]')
@@ -150,6 +153,7 @@ def Login_and_Download(config_dict,CinData):
         download_files = cursor.fetchall()
         cursor.close()
         connection.close()
+        check_files_and_update(Cin,db_config)
         if len(download_files) < 10:
             return True,driver,None
         else:
@@ -197,10 +201,32 @@ def XMLGeneration(db_config,CinData,config_dict):
                         continue
                     folder_path = os.path.dirname(pdf_path)
                     xml_file_path, PDF_to_XML = PDFtoXML(pdf_path, file_name)
+                    if 'AOC-4(XBRL)'.lower() in str(pdf_path).lower():
+                        try:
+                            connection = mysql.connector.connect(**db_config)
+                            cursor = connection.cursor()
+                            update_query_xbrl = "update documents set form_data_extraction_needed = 'N' where cin=%s and (document like '%%XBRL document in respect Consolidated%%'  or document like '%%XBRL financial statements%%') and Category = 'Other Attachments'"
+                            values = (Cin,)
+                            print(update_query_xbrl % values)
+                            cursor.execute(update_query_xbrl, values)
+                            connection.commit()
+                            cursor.close()
+                            connection.close()
+                            XBRL_db_update = aoc_xbrl_db_update(db_config, config_dict, Cin, CompanyName, xml_file_path,
+                                                                file_date)
+                            connection = mysql.connector.connect(**db_config)
+                            cursor = connection.cursor()
+                            update_query_aoc_xbrl = "update documents set form_data_extraction_needed = 'N' where cin=%s and document like '%%AOC-4(XBRL)%%' and Category = 'Annual Returns and Balance Sheet eForms'"
+                            values = (Cin,)
+                            print(update_query_aoc_xbrl % values)
+                            cursor.execute(update_query_aoc_xbrl, values)
+                            connection.commit()
+                            cursor.close()
+                            connection.close()
+                        except Exception as e:
+                            logging.info(f"Error in XBRL DB Update {e}")
                     if PDF_to_XML:
                         update_xml_extraction_status(Cin, file_name, config_dict, 'Success')
-                        if 'AOC-4(XBRL)'.lower() in str(pdf_path).lower():
-                            XBRL_db_update = aoc_xbrl_db_update(db_config,config_dict,Cin,CompanyName,xml_file_path,file_date)
                         hidden_attachments = CheckHiddenAttachemnts(xml_file_path, folder_path, pdf_path, file_name)
                         for element in hidden_attachments:
                             hidden_attachments_list.append(element)

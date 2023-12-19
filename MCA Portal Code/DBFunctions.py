@@ -272,3 +272,44 @@ def update_json_loader_db(cindata,config_dict):
     connection.commit()
     cursor.close()
     connection.close()
+
+
+def check_files_and_update(cin,db_config):
+    try:
+        non_llp_files_type = ['AOC-4','AOC-4 NBFC','AOC-4 CFS NBFC','XBRL','CHG-1','DIR-12','MSME','MGT-7','CHANGE OF NAME']
+        llp_file_types = ['Form8','Form11','CHANGE OF NAME','FiLLiP']
+        connection = mysql.connector.connect(**db_config)
+        cursor = connection.cursor()
+        python_comments = ''
+        connection.autocommit = True
+        if len(cin) == 21:
+            for file_type in non_llp_files_type:
+                check_query = "select * from documents where form_data_extraction_needed = 'Y' and cin = '{}' and document like '%{}%'".format(cin,file_type)
+                print(check_query)
+                cursor.execute(check_query)
+                result = cursor.fetchall()
+                if len(result) == 0:
+                    comment = "{} file not found".format(file_type)
+                    python_comments += comment
+                    python_comments = python_comments + " "
+
+        elif len(cin) == 8:
+            for file_type in llp_file_types:
+                check_query = "select * from documents where form_data_extraction_needed = 'Y' and cin = '{}' and document like '%{}%'".format(cin,file_type)
+                print(check_query)
+                cursor.execute(check_query)
+                result = cursor.fetchall()
+                if len(result) == 0:
+                    comment = "{} file not found".format(file_type)
+                    python_comments += comment
+                    python_comments = python_comments + " "
+
+        update_query = 'update orders set python_comments = %s where cin = %s'
+        update_query_values = (python_comments,cin)
+        print(update_query % update_query_values)
+        cursor.execute(update_query,update_query_values)
+        cursor.close()
+        connection.close()
+
+    except Exception as e:
+        print(f"Error in updating missing file status {e}")

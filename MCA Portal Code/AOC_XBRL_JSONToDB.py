@@ -222,6 +222,7 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header):
 # target_header = "Turnover of highest contributing product or service"
 #  JSONtoDB_AOC_XBRL_straight(None,None,json_file_path,target_header)
 
+
 def JSON_Fields_for_breaks(json_file_path,input_header):
     setup_logging()
     with open(json_file_path, 'r') as json_file:
@@ -353,9 +354,12 @@ def update_database_single_value_AOC(db_config, table_name, cin_column_name, cin
     #     json_string = json.dumps(first_value_json_list)
     #     column_value = json_string
     if num_elements == 1:
-        first_key = next(iter(json_dict))
-        first_value = json_dict[first_key]
-        column_value = first_value
+        if column_name == 'financials_pnl_revenue_breakup' and nature == 'IND_AS_Taxanomy':
+            column_value = json.dumps(json_dict)
+        else:
+            first_key = next(iter(json_dict))
+            first_value = json_dict[first_key]
+            column_value = first_value
     else:
         column_value = json.dumps(json_dict)
 
@@ -474,17 +478,58 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
             if parent_node == config_dict['Straight_Keyword']:
                 values = JSONtoDB_AOC_XBRL_straight(cin_column_value,company_name,json_file_path,child_nodes)
                 logging.info(f"{child_nodes}:{values}")
+                million_keyword = 'Millions of INR'
+                crores_keyword = 'Crores of INR'
+                lakh_keyword = 'Lakhs of INR'
+                billion_keyword = 'Billions of INR'
+                trillion_keyword = 'Trillions of INR'
                 if len(values) != 0:
                     if year_category == 'Previous':
                         try:
                             values[1]=values[1].replace(',','')
-                            single_df.at[index, 'Value'] = float(values[1])
+                            if million_keyword in filing_standard_check:
+                                num_value = (float(values[1]))*1000000
+                                logging.info("In Millions")
+                            elif crores_keyword in filing_standard_check:
+                                logging.info("In Crores")
+                                num_value = (float(values[1]))*10000000
+                            elif lakh_keyword in filing_standard_check:
+                                logging.info("In lakhs")
+                                num_value = (float(values[1]))*100000
+                            elif billion_keyword in filing_standard_check:
+                                logging.info("In Billion")
+                                num_value = (float(values[1]))*1000000000
+                            elif trillion_keyword in filing_standard_check:
+                                logging.info("In trillion")
+                                num_value = (float(values[1]))*1000000000000
+                            else:
+                                logging.info("Normal Value")
+                                num_value = float(values[1])
+                            single_df.at[index, 'Value'] = num_value
                         except Exception as e:
                             single_df.at[index, 'Value'] = values[1]
                     elif year_category == 'Current':
                         try:
                             values[0]=values[0].replace(',','')
-                            single_df.at[index, 'Value'] = float(values[0])
+                            if million_keyword in filing_standard_check:
+                                logging.info("In Millions")
+                                num_value = (float(values[0]))*1000000
+                            elif crores_keyword in filing_standard_check:
+                                logging.info("In Crores")
+                                num_value = (float(values[0]))*10000000
+                            elif lakh_keyword in filing_standard_check:
+                                logging.info("In lakhs")
+                                num_value = (float(values[0]))*100000
+                            elif billion_keyword in filing_standard_check:
+                                logging.info("In Billion")
+                                num_value = (float(values[0]))*1000000000
+                            elif trillion_keyword in filing_standard_check:
+                                logging.info("In trillion")
+                                num_value = (float(values[0]))*1000000000000
+                            else:
+                                logging.info("Normal Value")
+                                num_value = float(values[0])
+                            single_df.at[index, 'Value'] = num_value
                         except Exception as e:
                             single_df.at[index,'Value'] = values[0]
                     elif year_category == config_dict['Financial_Parameter_Keyword']:
@@ -499,8 +544,26 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                             single_df.at[index, 'Value'] = companies_value
                         else:
                             try:
+                                if million_keyword in filing_standard_check:
+                                    logging.info("In Millions")
+                                    num_value = (float(values[0])) * 1000000
+                                elif crores_keyword in filing_standard_check:
+                                    logging.info("In Crores")
+                                    num_value = (float(values[0])) * 10000000
+                                elif lakh_keyword in filing_standard_check:
+                                    logging.info("In lakhs")
+                                    num_value = (float(values[0])) * 100000
+                                elif billion_keyword in filing_standard_check:
+                                    logging.info("In Billion")
+                                    num_value = (float(values[0])) * 1000000000
+                                elif trillion_keyword in filing_standard_check:
+                                    logging.info("In trillion")
+                                    num_value = (float(values[0])) * 1000000000000
+                                else:
+                                    logging.info("Normal Value")
+                                    num_value = float(values[0])
                                 values[0]=values[0].replace(',','')
-                                single_df.at[index, 'Value'] = float(values[0])
+                                single_df.at[index, 'Value'] = num_value
                             except Exception as e:
                                 single_df.at[index,'Value'] = values[0]
                     else:
@@ -730,29 +793,41 @@ def aoc_xbrl_db_update(db_config,config_dict,cin,company_name,xml_file_path,file
             # xml_str = Et.tostring(xml_root, encoding='unicode')
         except Exception as e:
             raise Exception("Below exception occurred while reading xml file " + '\n' + str(e))
-        nodes_list = str(config_dict['Consolidated_nodes']).split()
+        nodes_list = str(config_dict['Consolidated_nodes']).split(',')
         parent_node = nodes_list[0]
         child_node = nodes_list[1]
-        values_xbrl = (file_date, cin, company_name)
-        values = (cin, company_name)
+        # values_xbrl = (file_date, cin, company_name)
+        # values = (cin, company_name)
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor()
-        update_query_xbrl_no = """UPDATE documents SET form_data_extraction_needed = 'N'
-                                                        WHERE category = 'Other Attachments' AND
-                                                              document LIKE '%%XBRL financial statements%%' AND
-                                                              cin = %s AND company = %s"""
-        logging.info(update_query_xbrl_no % values)
-        cursor.execute(update_query_xbrl_no,values)
-        connection.commit()
-        update_query_xbrl = """UPDATE documents
-                                                SET form_data_extraction_needed = 'Y'
-                                                WHERE document_date_year = %s AND
-                                                      category = 'Other Attachments' AND
-                                                      document LIKE '%%XBRL financial statements%%' AND
-                                                      cin = %s AND company = %s"""
-        logging.info(update_query_xbrl % values_xbrl)
-        cursor.execute(update_query_xbrl,values_xbrl)
-        connection.commit()
+        query = "select * from documents where cin=%s and document like '%%XBRL financial statements%%'  and Category = 'Other Attachments' and document_date_year=%s"
+        values = (cin, file_date)
+        print(query % values)
+        cursor.execute(query, values)
+        result = cursor.fetchall()
+        print(result)
+        if len(result) != 0:
+            update_query_xbrl = "update documents set form_data_extraction_needed = 'Y' where cin=%s and document_date_year = %s and document like '%%XBRL financial statements%%'  and Category = 'Other Attachments'"
+            values = (cin, file_date)
+            print(update_query_xbrl % values)
+            cursor.execute(update_query_xbrl, values)
+            connection.commit()
+        # update_query_xbrl_no = """UPDATE documents SET form_data_extraction_needed = 'N'
+        #                                                 WHERE category = 'Other Attachments' AND
+        #                                                       document LIKE '%%XBRL financial statements%%' AND
+        #                                                       cin = %s AND company = %s"""
+        # logging.info(update_query_xbrl_no % values)
+        # cursor.execute(update_query_xbrl_no,values)
+        # connection.commit()
+        # update_query_xbrl = """UPDATE documents
+        #                                         SET form_data_extraction_needed = 'Y'
+        #                                         WHERE document_date_year = %s AND
+        #                                               category = 'Other Attachments' AND
+        #                                               document LIKE '%%XBRL financial statements%%' AND
+        #                                               cin = %s AND company = %s"""
+        # logging.info(update_query_xbrl % values_xbrl)
+        # cursor.execute(update_query_xbrl,values_xbrl)
+        # connection.commit()
         consolidated_status = get_single_value_from_xml(xml_root,parent_node,child_node)
         if consolidated_status == 'Yes':
             update_query_consolidated = """UPDATE documents

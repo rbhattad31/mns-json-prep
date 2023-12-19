@@ -228,7 +228,7 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath,options
         except Exception as e:
             logging.info("No first button")
             pass
-        folder_path = os.path.join(rootpath, Cin, CompanyName, Category)
+        folder_path = os.path.join(rootpath, Cin, Category)
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
         page_number = 1
