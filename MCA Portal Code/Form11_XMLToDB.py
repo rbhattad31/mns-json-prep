@@ -253,16 +253,19 @@ def insert_datatable_with_table(db_config, config_dict, sql_table_name, column_n
 
         pan_column_name = config_dict['pan_column_name']
         pan = result_dict[pan_column_name]
+        
+        designation_column_name = config_dict['designation_column_name']
+        designation = result_dict[designation_column_name]
 
         if din is None and pan is not None:
             select_query = (f"SELECT * FROM {sql_table_name} WHERE {cin_column_name} = '{cin}' AND {pan_column_name}"
-                            f" = '{pan}'")
+                            f" = '{pan}' AND {designation_column_name} = '{designation}'")
         elif pan is None and din is not None:
             select_query = (f"SELECT * FROM {sql_table_name} WHERE {cin_column_name} = '{cin}' AND {din_column_name}"
-                            f" = '{din}'")
+                            f" = '{din}' AND {designation_column_name} = '{designation}'")
         elif pan is not None and din is not None:
             select_query = (f"SELECT * FROM {sql_table_name} WHERE {cin_column_name} = '{cin}' AND {din_column_name}"
-                            f" = '{din}' AND {pan_column_name} = '{pan}'")
+                            f" = '{din}' AND {pan_column_name} = '{pan}' AND {designation_column_name} = '{designation}'")
         else:
             raise Exception(f"Both DIN and PAN values are empty for director's data in table {sql_table_name} "
                             f"with below data \n {list(df_row)} ")
@@ -316,28 +319,33 @@ def insert_datatable_with_table(db_config, config_dict, sql_table_name, column_n
 
             pan_column_name = config_dict['pan_column_name']
             pan = result_dict[pan_column_name]
+            
+            designation_column_name = config_dict['designation_column_name']
+            designation = result_dict[designation_column_name]
 
             result_dict.pop(cin_column_name)
             result_dict.pop(din_column_name)
             result_dict.pop(pan_column_name)
+            result_dict.pop(designation_column_name)
 
             column_names_list = list(column_names_list)
             column_names_list.remove(cin_column_name)
             column_names_list.remove(din_column_name)
             column_names_list.remove(pan_column_name)
+            column_names_list.remove(designation_column_name)
             if din is None and pan is not None:
                 update_query = f'''UPDATE {sql_table_name}
                                 SET {', '.join([f"{col} = '{str(result_dict[col])}'" for col in column_names_list])} 
-                                WHERE {cin_column_name} = '{cin}' AND {pan_column_name} = '{pan}' '''
+                                WHERE {cin_column_name} = '{cin}' AND {pan_column_name} = '{pan}' AND {designation_column_name} = '{designation}' '''
             elif pan is None and din is not None:
                 update_query = f'''UPDATE {sql_table_name}
                                 SET {', '.join([f"{col} = '{str(result_dict[col])}'" for col in column_names_list])} 
-                                WHERE {cin_column_name} = '{cin}' AND {din_column_name} = '{din}' '''
+                                WHERE {cin_column_name} = '{cin}' AND {din_column_name} = '{din}' AND {designation_column_name} = '{designation}' '''
             elif pan is not None and din is not None:
                 update_query = f'''UPDATE {sql_table_name}
                         SET {', '.join([f"{col} = '{str(result_dict[col])}'" for col in column_names_list])} 
                         WHERE {cin_column_name} = '{cin}' AND {din_column_name} = '{din}' AND {pan_column_name} = 
-                        '{pan}' 
+                        '{pan}' AND {designation_column_name} = '{designation}'
                     '''
             else:
                 raise Exception(f"Both DIN and PAN values are empty for director's data in table {sql_table_name} "

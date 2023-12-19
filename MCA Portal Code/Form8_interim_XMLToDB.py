@@ -4,6 +4,7 @@ import pandas as pd
 import xml.etree.ElementTree as Et
 import json
 import os
+import mysql.connector
 
 pd.set_option('display.max_columns', None)
 
@@ -29,7 +30,7 @@ def get_single_value_from_xml(xml_root, parent_node, child_node):
         return None
 
 
-def update_form8_interim_datatable_single_value(db_cursor, table_name,
+def update_form8_interim_datatable_single_value(db_config, table_name,
                                                 cin_column_name, cin_value,
                                                 charge_id_column_name, charge_id,
                                                 status_column_name, status,
@@ -39,6 +40,9 @@ def update_form8_interim_datatable_single_value(db_cursor, table_name,
     # determine value to be updated
     # if only one key value pair - update value
     # otherwise complete json dictionary
+    db_connection = mysql.connector.connect(**db_config)
+    db_cursor = db_connection.cursor()
+    db_connection.autocommit = True
     json_dict = json.loads(column_value)
     num_elements = len(json_dict)
     print(column_name)
@@ -65,9 +69,11 @@ def update_form8_interim_datatable_single_value(db_cursor, table_name,
         raise e
     else:
         print("Updated entry")
+    db_cursor.close()
+    db_connection.close()
+    
 
-
-def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
+def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
               output_file_path, cin_column_value, filing_date):
     config_dict_keys = ['single_type_indicator',
                         'cin_column_name_in_db',
@@ -297,7 +303,9 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
             print(f'Exception {e} occurred while finding charge id, status and date values. please check mapping file '
                   f'and datatable structure. \ncontinuing with next table processing...')
             continue
-
+        db_connection = mysql.connector.connect(**db_config)
+        db_cursor = db_connection.cursor()
+        db_connection.autocommit = True
         charge_id_year_check_query = (('SELECT * FROM {} WHERE {} = "{}" AND {} = "{}" AND {} = "{}" '
                                        'AND {} = "{}"').
                                       format(sql_table_name,
@@ -380,13 +388,20 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
             if column_name == config_dict['property_type_column_name']:
                 json_dict = {key: property_type_dict.get(value, value) for key, value in json_dict.items() if value !=
                              'NONE'}
-
+                print(json_dict)
+                for key,value in json_dict.items():
+                    if key == 'property_type_OTHER':
+                        if value is None:
+                            json_dict.pop(key)
+                            break
             # Convert the dictionary to a JSON string
             json_string = json.dumps(json_dict)
             print(json_string)
+            db_cursor.close()
+            db_connection.close()
 
             try:
-                update_form8_interim_datatable_single_value(db_cursor, sql_table_name,
+                update_form8_interim_datatable_single_value(db_config, sql_table_name,
                                                             cin_column_name_in_db, cin_column_value,
                                                             charge_id_column_name, charge_id,
                                                             status_column_name, status,
@@ -403,7 +418,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
     # print(single_output_df)
     output_dataframes_list.append(single_output_df)
     print("Completed processing single rows")
-
+    
     with pd.ExcelWriter(output_file_path, engine='xlsxwriter') as writer:
         row_index = 0
         for dataframe in output_dataframes_list:
@@ -414,10 +429,10 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
     output_dataframes_list.clear()
 
 
-def form8_interim_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
+def form8_interim_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
                             output_file_path, cin_column_value, filing_date):
     try:
-        xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
+        xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
                   output_file_path, cin_column_value, filing_date)
     except Exception as e:
         print("Below Exception occurred while processing form 8 interim file: \n ", e)

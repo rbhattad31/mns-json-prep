@@ -233,7 +233,7 @@ def Convert_HiddenDOBFormat(DOB):
     original_date = datetime.strptime(original_date_string, "%Y-%m-%dT%H:%M:%S%z")
 
     # Format the date in the desired format
-    formatted_date_string = original_date.strftime("%d/%m/%Y")
+    formatted_date_string = original_date.strftime("%d/%m/%y")
 
     return formatted_date_string
 
@@ -284,7 +284,6 @@ def form11_hidden_fields(db_config,xml_file_path,map_file_path,config_dict,din_l
         din_column_name = config_dict['din_column_name']
         # Read Config File
         df_map = pd.read_excel(map_file_path, engine='openpyxl', sheet_name='Sheet1')
-
         df_map['Value'] = None
         single_df = df_map[df_map[df_map.columns[2]] == 'Hidden']
         for index, row in single_df.iterrows():
@@ -305,6 +304,13 @@ def form11_hidden_fields(db_config,xml_file_path,map_file_path,config_dict,din_l
                             category_value_list.append(value)
                     print(category_value_list)
                     single_df.at[index, 'Value'] = category_value_list
+                elif Field == 'date_of_appointment' or Field == 'date_of_cessation':
+                    temp_date_list = []
+                    value = Get_MultipleDateFields(soup, parent_node)
+                    for date in value:
+                        date_value = Convert_HiddenDOBFormat(date)
+                        temp_date_list.append(date_value)
+                    single_df.at[index, 'Value'] = temp_date_list
                 else:
                     value = Get_MultipleFields(soup, parent_node)
                     print(value)

@@ -102,7 +102,7 @@ def update_database_single_value(db_config, table_name, cin_column_name, cin_val
 
 
 def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, output_file_path,
-              cin_column_value):
+              cin_column_value,form8_first_file_found):
     config_dict_keys = ['single_type_indicator', 'cin_column_name_in_db',
                         'Type_of_file_field_name', 'annual_keyword_in_xml',
                         'field_name_index', 'type_index',
@@ -354,8 +354,9 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
     years.append(previous_year)
     # print(years)
     print("Saving Single Values to database")
-
-    single_df_list.append(current_year_df)
+    
+    if not form8_first_file_found:
+        single_df_list.append(current_year_df)
     single_df_list.append(previous_year_df)
     current_year_output_df = pd.DataFrame(current_year_df, columns=['Field_Name', 'Value', 'Table_Name', 'Column_Name',
                                                                     'Column_JSON_Node'])
@@ -423,13 +424,13 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                     auditor_type_value = common_column_df.loc[auditor_type_row_index, 'Value']
                     print(f'{auditor_type_value=}')
                     auditor_type_value_to_check = config_dict['auditor_type_value_to_check']
-                    if auditor_type_value != auditor_type_value_to_check:
-                        print(f"Auditor type is not equal to {auditor_type_value_to_check}, hence skipping updating"
-                              f" auditor details into datatable {common_table_name}")
-                        continue
+                    #if auditor_type_value != auditor_type_value_to_check:
+                        #print(f"Auditor type is not equal to {auditor_type_value_to_check}, hence skipping updating"
+                              #f" auditor details into datatable {common_table_name}")
+                        #continue
                     if auditor_type_value == 'AUDR':
                         auditor_type_value = 'auditor'
-                    elif auditor_type_value == 'D':
+                    elif auditor_type_value == 'DPTN':
                         auditor_type_value = 'designated partner'
                     elif auditor_type_value == 'A':
                         auditor_type_value = 'authorized representative'
@@ -447,7 +448,9 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             # Convert the dictionary to a JSON string
             common_json_string = json.dumps(common_json_dict)
             # print(common_json_string)
-
+            
+            if form8_first_file_found:
+                years = years[1:]
             for year in years:
                 if year is None or year == '':
                     continue
@@ -470,11 +473,11 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
 
 def form8_annual_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, output_file_path,
-                           cin_column_value):
+                           cin_column_value,form8_first_file_found):
     try:
         print("Started Executing Form 8 annual Program")
         xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, output_file_path,
-                  cin_column_value)
+                  cin_column_value,form8_first_file_found)
     except Exception as e:
         print(f"Exception '{e}' occurred while processing Form 8 Annual program \n ")
         # Get the current exception information

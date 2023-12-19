@@ -5,6 +5,7 @@ from PIL import Image
 import re
 
 def image_to_text(image_path):
+    pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
     return pytesseract.image_to_string(Image.open(image_path), lang='eng')
 
 def find_pan(text):

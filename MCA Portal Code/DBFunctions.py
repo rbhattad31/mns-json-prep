@@ -29,8 +29,8 @@ def fetch_order_data_from_table(connection):
             # Construct the SQL query
             query = "SELECT * FROM orders where process_status=%s and payment_by_user!=''"
             #value1 = ("Download_Pending")
-            cursor.execute(query, ('InProgress',))
-            logging.info(query, ('InProgress',))
+            cursor.execute(query, ('InProgress(non-llp)',))
+            logging.info(query, ('InProgress(non-llp)',))
             # Get the column names from the cursor description
             column_names = [desc[0] for desc in cursor.description]
 

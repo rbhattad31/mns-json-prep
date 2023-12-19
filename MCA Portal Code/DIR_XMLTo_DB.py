@@ -1,7 +1,6 @@
 import sys
 import traceback
 from datetime import datetime
-
 import pandas as pd
 import xml.etree.ElementTree as Et
 import os
@@ -114,6 +113,8 @@ def insert_datatable_with_table(config_dict, db_config, sql_table_name, column_n
     designation_after_event_column_name = config_dict['designation_after_event_column_name_in_db']
     designation_column_name = config_dict['designation_column_name']
     designation_after_event = result_dict[designation_column_name]
+    date_of_appointment_column_name = config_dict['date_of_appointment_column_name']
+    date_of_appointment = result_dict[date_of_appointment_column_name]
     logging.info(f'{designation_after_event=}')
 
     if cin is None or din is None or designation_after_event is None:
@@ -122,7 +123,7 @@ def insert_datatable_with_table(config_dict, db_config, sql_table_name, column_n
                         f"with below data \n {list(df_row)} ")
     else:
         select_query = (f"SELECT * FROM {sql_table_name} WHERE {cin_column_name} = '{cin}' AND {din_column_name}"
-                        f" = '{din}' AND {designation_column_name} = '{designation_after_event}'")
+                        f" = '{din}' AND {designation_column_name} = '{designation_after_event}' AND {date_of_appointment_column_name} = '{date_of_appointment}'")
 
     logging.info(select_query)
     db_cursor.execute(select_query)
@@ -142,16 +143,18 @@ def insert_datatable_with_table(config_dict, db_config, sql_table_name, column_n
         result_dict.pop(cin_column_name)
         result_dict.pop(din_column_name)
         result_dict.pop(designation_column_name)
+        result_dict.pop(date_of_appointment_column_name)
 
         column_names_list = list(column_names_list)
         column_names_list.remove(cin_column_name)
         column_names_list.remove(din_column_name)
         column_names_list.remove(designation_column_name)
+        column_names_list.remove(date_of_appointment_column_name)
 
-        update_query = f'''UPDATE {sql_table_name}
+        update_query = f"""UPDATE {sql_table_name}
                         SET {', '.join([f"{col} = '{str(result_dict[col])}'" for col in column_names_list])} 
                         WHERE {cin_column_name} = '{cin}' AND {din_column_name} = '{din}' AND
-                        {designation_column_name} = '{designation_after_event}' '''
+                        {designation_column_name} = '{designation_after_event}' AND {date_of_appointment_column_name} = '{date_of_appointment}'"""
 
         logging.info(update_query)
         db_cursor.execute(update_query)
@@ -477,7 +480,13 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         # logging.info(table_df)
 
         table_df[cin_column_name_in_db] = cin_column_value
-
+        try:
+            table_df[config_dict['date_of_appointment_column_name']] = table_df[config_dict['date_of_appointment_column_name']].apply(
+    lambda x: datetime.strptime(x, '%Y-%m-%d').strftime('%d/%m/%Y') if x is not None else None
+)
+        except Exception as e:
+            print(f"Exception in converting date of appointment{e}")
+            pass
         column_names_list.append(cin_column_name_in_db)
         logging.info(column_names_list)
         table_df.columns = column_names_list
@@ -498,13 +507,14 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             table_df.loc[i, config_dict['designation_column_name']] = designation_dict.get(designation_value,
                                                                                            designation_value)
         # logging.info(table_df)
-        table_df.loc[table_df[config_dict['event_column_name']] ==
-                     config_dict['appointment_keyword'], config_dict['date_of_appointment_column_name']] = \
-            table_df[config_dict['event_date_column_name']]
+        print(table_df)
+        #table_df.loc[table_df[config_dict['event_column_name']] ==
+                     #config_dict['appointment_keyword'], config_dict['date_of_appointment_column_name']] = \
+            #table_df[config_dict['event_date_column_name']]
 
-        table_df.loc[table_df[config_dict['event_column_name']] ==
-                     config_dict['resignation_keyword'], config_dict['date_of_cessation_column_name']] = \
-            table_df[config_dict['event_date_column_name']]
+        #table_df.loc[table_df[config_dict['event_column_name']] ==
+                     #config_dict['resignation_keyword'], config_dict['date_of_cessation_column_name']] = \
+            #table_df[config_dict['event_date_column_name']]
         logging.info(table_df)
 
         for _, df_row in table_df.iterrows():

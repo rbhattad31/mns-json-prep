@@ -617,10 +617,6 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 remaining_row_df = table_df.iloc[1:]
                 rows_dicts_remaining = remaining_row_df.to_dict(orient='records')
                 for row_dict_remaining in rows_dicts_remaining:
-                    row_dict_remaining["ADDRESS"] = row_dict_remaining.pop(
-                        "ADDRESS_LINE_I") + ", " + row_dict_remaining.pop(
-                        "ADDRESS_LINE_II") + ", " + row_dict_remaining.pop("CITY") + ", " + row_dict_remaining.pop(
-                        "STATE") + ", " + row_dict_remaining.pop("COUNTRY") + ", " + row_dict_remaining.pop("PIN_CODE")
                     # row_dict_remaining["ADDRESS"] = {
                     #     "ADDRESS_LINE_I": row_dict_remaining.pop("ADDRESS_LINE_I"),
                     #     "ADDRESS_LINE_II": row_dict_remaining.pop("ADDRESS_LINE_II"),
@@ -634,6 +630,10 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                     row_dict_remaining["pan"] = row_dict_remaining.pop("IT_PAN")
                     row_dict_remaining["membership_number"] = row_dict_remaining.pop("MEMBERSHIP_NUMBR")
                     row_dict_remaining["firm_registration_number"] = row_dict_remaining.pop("MEMBERSHIP_NUM_A")
+                    row_dict_remaining["ADDRESS"] = row_dict_remaining.pop(
+                        "ADDRESS_LINE_I") + ", " + row_dict_remaining.pop(
+                        "ADDRESS_LINE_II") + ", " + row_dict_remaining.pop("CITY") + ", " + row_dict_remaining.pop(
+                        "STATE") + ", " + row_dict_remaining.pop("COUNTRY") + ", " + row_dict_remaining.pop("PIN_CODE")
                 remaining_row_df_new = pd.DataFrame(rows_dicts_remaining)
                 remaining_row_df_new.columns = column_json_node_list
                 remaining_row_df_new["address"] = remaining_row_df_new["address"].apply(lambda x: json.dumps(x))

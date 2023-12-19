@@ -7,6 +7,9 @@ import sys
 import traceback
 import logging
 from logging_config import setup_logging
+import datetime
+
+
 def get_json_node_names(data, parent_name=''):
     node_names = []
     if isinstance(data, dict):
@@ -31,7 +34,10 @@ def JSON_loader(db_config,config_json_file_path,cin,root_path,excel_path,sheet_n
         json_folder_path = os.path.join(root_path,cin)
         if not os.path.exists(json_folder_path):
             os.makedirs(json_folder_path)
-        json_file_path = os.path.join(json_folder_path,cin)
+        current_date = datetime.date.today()
+        today_date = current_date.strftime("%d-%m-%Y")
+        file_name = cin + "_" + today_date
+        json_file_path = os.path.join(json_folder_path,file_name)
         json_file_path = json_file_path + '.json'
         if not os.path.exists(json_file_path):
             shutil.copy(config_json_file_path,json_file_path)

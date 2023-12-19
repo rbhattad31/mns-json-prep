@@ -95,18 +95,6 @@ def login_to_website(url, chrome_driver_path,username,password,db_config):
                 logging.info("Clicked on Sign in")
                 time.sleep(5)
                 try:
-                    no_captcha = driver.find_element(By.XPATH,'//li[text()="Please enter letters shown."]')
-                    if no_captcha.is_displayed():
-                        logging.info("No Captcha Entered")
-                        time.sleep(2)
-                        no_captcha_close_button = driver.find_element((By.XPATH,'//a[@class="boxclose" and @id="alertboxclose"]'))
-                        time.sleep(2)
-                        no_captcha_close_button.click()
-                        time.sleep(1)
-                        continue
-                except:
-                    break
-                try:
                     incorrect_captcha = driver.find_element(By.XPATH, '//li[text()="Enter valid Letters shown."]')
                     if incorrect_captcha.is_displayed():
                         logging.info("Incorrect Captcha entered")
@@ -118,6 +106,19 @@ def login_to_website(url, chrome_driver_path,username,password,db_config):
                         continue
                 except:
                     break
+                try:
+                    no_captcha = driver.find_element(By.XPATH,'//li[text()="Please enter letters shown."]')
+                    if no_captcha.is_displayed():
+                        logging.info("No Captcha Entered")
+                        time.sleep(2)
+                        no_captcha_close_button = driver.find_element((By.XPATH,'//a[@class="boxclose" and @id="alertboxclose"]'))
+                        time.sleep(2)
+                        no_captcha_close_button.click()
+                        time.sleep(1)
+                        continue
+                except:
+                    break
+                
 
                 # Click on the Sign In button
 

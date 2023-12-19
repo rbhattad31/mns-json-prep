@@ -235,19 +235,20 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             logging.info(table_df)
             charge_id = table_df.loc[table_df['Column_Name'] == config_dict['charge_id_column_name'], 'Value'].values[0]
             date = table_df.loc[table_df['Column_Name'] == config_dict['date_column_name'], 'Value'].values[0]
+            status = table_df.loc[table_df['Column_Name'] == config_dict['status_column_name'],'Value'].values[0]
             logging.info(f'{charge_id=}')
-            if charge_id is None:
-                continue
             # check if there is already entry with cin
             charge_id_year_check_query = (("SELECT * FROM {} WHERE {} = '{}' AND {} = '{}' AND {}"
-                                           " = '{}' AND {} = '{}'").
+                                           " = '{}' AND {} = '{}' AND LOWER({}) = '{}'").
                                           format(sql_table_name, cin_column_name_in_db, cin_column_value,
                                                  company_name_column_name_in_db,
                                                  company_name,
                                                  config_dict['charge_id_column_name'],
                                                  charge_id,
                                                  config_dict['date_column_name'],
-                                                 date
+                                                 date,
+                                                 config_dict['status_column_name'],
+                                                 str(status).lower()
                                                  ))
             logging.info(f'{charge_id_year_check_query=}')
             try:

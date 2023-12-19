@@ -251,46 +251,13 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
         connection.autocommit = True
 
         Cin, CompanyName, User = CinData[2], CinData[3], CinData[15]
-        if len(hiddenattachmentslist) != 0:
-            for hiddenattachment in hiddenattachmentslist:
-                if "Subsidiaries" in hiddenattachment or "Holding" in hiddenattachment or "Associate" in hiddenattachment or "Joint Venture" in hiddenattachment:
-                    Sheet_name = "MGT"
-                    config_dict_Subs, config_status = create_main_config_dictionary(excel_file, Sheet_name)
-                    Subsidiary_Config = config_dict_Subs['Subsidiary_Config']
-                    Subsidiary_Config_Sheet_Name = config_dict_Subs['Subsidiary_Config_Sheet_Name']
-                    map_file_path = Subsidiary_Config
-                    map_file_sheet_name = Subsidiary_Config_Sheet_Name
-                    output_excel_name = str(hiddenattachment).replace('.xml', '.xlsx')
-                    folder_path = os.path.dirname(hiddenattachment)
-                    output_excel_path = os.path.join(folder_path, output_excel_name)
-                    mgt7_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, hiddenattachment,
-                             output_excel_path, Cin, CompanyName)
-                elif "Business Activity" in hiddenattachment:
-                    Sheet_name = "MGT"
-                    config_dict_Business, config_status = create_main_config_dictionary(excel_file, Sheet_name)
-                    Business_Activity_Config = config_dict_Business['Business_Activity_Config']
-                    Business_Activity_Config_Sheet_Name = config_dict_Business['Business_Activity_Config_Sheet_Name']
-                    map_file_path = Business_Activity_Config
-                    map_file_sheet_name = Business_Activity_Config_Sheet_Name
-                    output_excel_name = str(hiddenattachment).replace('.xml', '.xlsx')
-                    folder_path = os.path.dirname(hiddenattachment)
-                    output_excel_path = os.path.join(folder_path, output_excel_name)
-                    mgt7_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, hiddenattachment,
-                             output_excel_path, Cin, CompanyName)
-                elif 'DIR_2'.lower() in hiddenattachment.lower() or 'DIR-2'.lower() in hiddenattachment.lower() or 'DIR 2'.lower() in hiddenattachment.lower() or 'DIR-2-'.lower() in hiddenattachment.lower():
-                    Sheet_name = "DIR"
-                    config_dict_dir, config_status = create_main_config_dictionary(excel_file, Sheet_name)
-                    map_file_path_dir2 = config_dict_dir['DIR2_map_file_path']
-                    map_file_sheet_name = config_dict_dir['mapping file sheet name']
-                    output_excel_path = str(hiddenattachment).replace('.xml', '.xlsx')
-                    dir_hidden_xml = dir_attachment_xml_to_db(db_config,config_dict_dir,map_file_path_dir2,map_file_sheet_name,hiddenattachment,output_excel_path,Cin)
-                else:
-                    pass
+        
 
         xml_files_to_insert = get_xml_to_insert(Cin, config_dict)
         AOC_4_first_file_found = False
         AOC_XBRL_first_file_found = False
         AOC_4_NBFC_first_file_found = False
+        Form8_first_file_found = False
         for xml in xml_files_to_insert:
             try:
                 path = xml[8]
@@ -411,14 +378,15 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     config_dict_form8,config_status = create_main_config_dictionary(excel_file,Sheet_name)
                     map_file_path_form8 = config_dict_form8['mapping file path']
                     map_sheet_name_form8 = config_dict_form8['mapping file sheet name']
-                    form8_db_insertion = form8_annual_xml_to_db(db_config,config_dict_form8,map_file_path_form8,map_sheet_name_form8,xml_file_path,output_excel_path,Cin)
+                    form8_db_insertion = form8_annual_xml_to_db(db_config,config_dict_form8,map_file_path_form8,map_sheet_name_form8,xml_file_path,output_excel_path,Cin,Form8_first_file_found)
                     if form8_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
+                        Form8_first_file_found = True
                     Sheet_name_interim = 'Form_8_Interim'
                     config_dict_form8_interim,config_status = create_main_config_dictionary(excel_file,Sheet_name_interim)
                     map_file_path_form8_interim = config_dict_form8_interim['mapping file path']
                     map_sheet_name_form8_interim = config_dict_form8_interim['mapping file sheet name']
-                    form8_interim_db_insertion = form8_interim_xml_to_db(db_cursor,config_dict_form8_interim,map_file_path_form8_interim,map_sheet_name_form8_interim,xml_file_path,output_excel_path,Cin,date)
+                    form8_interim_db_insertion = form8_interim_xml_to_db(db_config,config_dict_form8_interim,map_file_path_form8_interim,map_sheet_name_form8_interim,xml_file_path,output_excel_path,Cin,date)
                     if form8_interim_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                 elif 'Form11'.lower() in str(path).lower():
@@ -441,7 +409,44 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
             except Exception as e:
                 print(f"Exception occured while inserting into DB {e}")
                 continue
-
+        try:
+            if len(hiddenattachmentslist) != 0:
+                for hiddenattachment in hiddenattachmentslist:
+                    if "Subsidiaries" in hiddenattachment or "Holding" in hiddenattachment or "Associate" in hiddenattachment or "Joint Venture" in hiddenattachment:
+                        Sheet_name = "MGT"
+                        config_dict_Subs, config_status = create_main_config_dictionary(excel_file, Sheet_name)
+                        Subsidiary_Config = config_dict_Subs['Subsidiary_Config']
+                        Subsidiary_Config_Sheet_Name = config_dict_Subs['Subsidiary_Config_Sheet_Name']
+                        map_file_path = Subsidiary_Config
+                        map_file_sheet_name = Subsidiary_Config_Sheet_Name
+                        output_excel_name = str(hiddenattachment).replace('.xml', '.xlsx')
+                        folder_path = os.path.dirname(hiddenattachment)
+                        output_excel_path = os.path.join(folder_path, output_excel_name)
+                        mgt7_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, hiddenattachment,
+                                 output_excel_path, Cin, CompanyName)
+                    elif "Business Activity" in hiddenattachment:
+                        Sheet_name = "MGT"
+                        config_dict_Business, config_status = create_main_config_dictionary(excel_file, Sheet_name)
+                        Business_Activity_Config = config_dict_Business['Business_Activity_Config']
+                        Business_Activity_Config_Sheet_Name = config_dict_Business['Business_Activity_Config_Sheet_Name']
+                        map_file_path = Business_Activity_Config
+                        map_file_sheet_name = Business_Activity_Config_Sheet_Name
+                        output_excel_name = str(hiddenattachment).replace('.xml', '.xlsx')
+                        folder_path = os.path.dirname(hiddenattachment)
+                        output_excel_path = os.path.join(folder_path, output_excel_name)
+                        mgt7_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, hiddenattachment,
+                                 output_excel_path, Cin, CompanyName)
+                    elif 'DIR_2'.lower() in hiddenattachment.lower() or 'DIR-2'.lower() in hiddenattachment.lower() or 'DIR 2'.lower() in hiddenattachment.lower() or 'DIR-2-'.lower() in hiddenattachment.lower():
+                        Sheet_name = "DIR"
+                        config_dict_dir, config_status = create_main_config_dictionary(excel_file, Sheet_name)
+                        map_file_path_dir2 = config_dict_dir['DIR2_map_file_path']
+                        map_file_sheet_name = config_dict_dir['mapping file sheet name']
+                        output_excel_path = str(hiddenattachment).replace('.xml', '.xlsx')
+                        dir_hidden_xml = dir_attachment_xml_to_db(db_config,config_dict_dir,map_file_path_dir2,map_file_sheet_name,hiddenattachment,output_excel_path,Cin)
+                    else:
+                        pass
+        except Exception as e:
+            logging.info(f"Exception Occured {e}")
         try:
             gst_connection = mysql.connector.connect(**db_config)
             gst_cursor = gst_connection.cursor()
