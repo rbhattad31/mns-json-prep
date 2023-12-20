@@ -505,7 +505,7 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                             else:
                                 logging.info("Normal Value")
                                 num_value = float(values[1])
-                            single_df.at[index, 'Value'] = num_value
+                            single_df.at[index, 'Value'] = round(num_value,2)
                         except Exception as e:
                             single_df.at[index, 'Value'] = values[1]
                     elif year_category == 'Current':
@@ -529,7 +529,7 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                             else:
                                 logging.info("Normal Value")
                                 num_value = float(values[0])
-                            single_df.at[index, 'Value'] = num_value
+                            single_df.at[index, 'Value'] = round(num_value,2)
                         except Exception as e:
                             single_df.at[index,'Value'] = values[0]
                     elif year_category == config_dict['Financial_Parameter_Keyword']:
@@ -563,7 +563,7 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                                     logging.info("Normal Value")
                                     num_value = float(values[0])
                                 values[0]=values[0].replace(',','')
-                                single_df.at[index, 'Value'] = num_value
+                                single_df.at[index, 'Value'] = round(num_value,2)
                             except Exception as e:
                                 single_df.at[index,'Value'] = values[0]
                     else:

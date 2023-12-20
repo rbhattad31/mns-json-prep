@@ -465,13 +465,13 @@ def update_form_extraction_status(db_config, cin,CompanyName):
                                 JOIN (
                                     SELECT id
                                     FROM documents
-                                    WHERE document LIKE '%%MGT%%' AND `cin` = %s AND `company` = %s
+                                    WHERE document LIKE '%%MGT%%' AND `cin` = %s AND `company` = %s AND Category = 'Annual Returns and Balance Sheet eForms'
                                     ORDER BY STR_TO_DATE(document_date_year, '%%d-%%m-%%Y') DESC
                                     LIMIT 1
                                     FOR UPDATE
                                 ) AS t2 ON t1.id = t2.id
                                 SET t1.form_data_extraction_needed = 'Y'
-                                WHERE t1.document LIKE '%%MGT%%' AND `cin` = %s AND `company` = %s;
+                                WHERE t1.document LIKE '%%MGT%%' AND `cin` = %s AND `company` = %s AND Category = 'Annual Returns and Balance Sheet eForms';
                                 
                                 COMMIT;"""
             cursor.execute(update_query_MGT,values)
@@ -533,14 +533,33 @@ WHERE d1.cin = '{}' AND d1.document LIKE '%AOC%';""".format(cin,cin)
         except Exception as e:
             logging.info(f"Exception occured for change of name{e}")
         try:
-            update_query_Xbrl_consolidated = "UPDATE documents set form_data_extraction_needed = 'Y' where document like '%%XBRL document in respect Consolidated%%' and `cin`=%s and `company`=%s;"
-            date_values = (cin, CompanyName)
-            logging.info(update_query_Xbrl_consolidated % date_values)
-            cursor.execute(update_query_Xbrl_consolidated,date_values)
+            update_query_Xbrl_consolidated = """UPDATE documents AS d1
+JOIN (
+    SELECT MAX(STR_TO_DATE(document_date_year, '%d-%m-%Y')) AS latest_date
+    FROM documents
+    WHERE cin = '{}' AND document LIKE '%XBRL document in respect Consolidated%'
+    GROUP BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y'))
+    ORDER BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y')) DESC
+    LIMIT 4
+) AS d2 ON STR_TO_DATE(d1.document_date_year, '%d-%m-%Y') = d2.latest_date
+SET d1.form_data_extraction_needed = 'Y'
+WHERE d1.cin = '{}' AND d1.document LIKE '%XBRL document in respect Consolidated%';""".format(cin,cin)
+            logging.info(update_query_Xbrl_consolidated)
+            cursor.execute(update_query_Xbrl_consolidated)
             connection.commit()
-            update_query_Xbrl = "UPDATE documents set form_data_extraction_needed = 'Y' where document like '%%XBRL financial statements%%' and `cin`=%s and `company`=%s;"
-            logging.info(update_query_Xbrl % date_values)
-            cursor.execute(update_query_Xbrl,date_values)
+            update_query_Xbrl = """UPDATE documents AS d1
+JOIN (
+    SELECT MAX(STR_TO_DATE(document_date_year, '%d-%m-%Y')) AS latest_date
+    FROM documents
+    WHERE cin = '{}' AND document LIKE '%XBRL financial statements%'
+    GROUP BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y'))
+    ORDER BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y')) DESC
+    LIMIT 4
+) AS d2 ON STR_TO_DATE(d1.document_date_year, '%d-%m-%Y') = d2.latest_date
+SET d1.form_data_extraction_needed = 'Y'
+WHERE d1.cin = '{}' AND d1.document LIKE '%XBRL financial statements%';""".format(cin,cin)
+            logging.info(update_query_Xbrl)
+            cursor.execute(update_query_Xbrl)
             connection.commit()
         except Exception as e:
             logging.info(f"Exception occured for XBRL{e}")
