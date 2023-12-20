@@ -193,7 +193,7 @@ def update_xml_extraction_status(Cin,Filename,config_dict,Status):
 def get_xml_to_insert(Cin,config_dict):
     db_config = get_db_credentials(config_dict)
     connection, cursor = connect_to_database(db_config)
-    query = "SELECT * FROM documents where cin=%s and Download_Status='Downloaded' and form_data_extraction_status='Success' and DB_insertion_status='Pending'"
+    query = "SELECT * FROM documents where cin=%s and Download_Status='Downloaded' and form_data_extraction_status='Success' and DB_insertion_status='Pending' and form_data_extraction_needed = 'Y'"
     value = (Cin,)
     print(query % value)
     cursor.execute(query,value)
