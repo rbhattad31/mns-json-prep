@@ -286,7 +286,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 single_df.at[index, 'Value'] = year
             except:
                 single_df.at[index, 'Value'] = value
-        elif field_name == 'phoneNumber':
+        elif field_name == 'phoneNumber' or field_name == 'cin_registrar' or field_name == 'name_registrar' or field_name == 'registrar_address' or field_name == 'pan' or field_name == 'website':
             single_df.at[index, 'Value'] = value
         else:
             if value is not None:
