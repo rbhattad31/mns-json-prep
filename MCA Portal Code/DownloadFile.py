@@ -502,13 +502,13 @@ WHERE d1.cin = '{}' AND d1.document LIKE '%MSME%';""".format(cin,cin)
 JOIN (
     SELECT MAX(STR_TO_DATE(document_date_year, '%d-%m-%Y')) AS latest_date
     FROM documents
-    WHERE cin = '{}' AND document LIKE '%AOC%'
+    WHERE cin = '{}' AND document LIKE '%AOC%' AND document not like '%AOC-4 CSR%'
     GROUP BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y'))
     ORDER BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y')) DESC
     LIMIT 4
 ) AS d2 ON STR_TO_DATE(d1.document_date_year, '%d-%m-%Y') = d2.latest_date
 SET d1.form_data_extraction_needed = 'Y'
-WHERE d1.cin = '{}' AND d1.document LIKE '%AOC%';""".format(cin,cin)
+WHERE d1.cin = '{}' AND d1.document LIKE '%AOC%' AND d1.document not LIKE '%AOC-4 CSR%';""".format(cin,cin)
             logging.info(update_query_AOC)
             cursor.execute(update_query_AOC)
             connection.commit()
