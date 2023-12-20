@@ -342,7 +342,7 @@ def Auditor_information(sentence, keyword):
     else:
         return None
 
-def update_database_single_value_AOC(db_config, table_name, cin_column_name, cin_value,company_name_column_name,company_name, column_name, column_value,year,nature):
+def update_database_single_value_AOC(db_config, table_name, cin_column_name, cin_value,company_name_column_name,company_name, column_name, column_value,year,nature,filing_standard):
     setup_logging()
     db_connection = mysql.connector.connect(**db_config)
     db_cursor = db_connection.cursor()
@@ -354,7 +354,7 @@ def update_database_single_value_AOC(db_config, table_name, cin_column_name, cin
     #     json_string = json.dumps(first_value_json_list)
     #     column_value = json_string
     if num_elements == 1:
-        if column_name == 'financials_pnl_revenue_breakup' and nature == 'IND_AS_Taxanomy':
+        if column_name == 'financials_pnl_revenue_breakup' and filing_standard == 'IND_AS_Taxanomy':
             column_value = json.dumps(json_dict)
         else:
             first_key = next(iter(json_dict))
@@ -685,7 +685,7 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                     try:
                         update_database_single_value_AOC(db_config, table_name, cin_column_name, cin_column_value,
                                                          company_column_name, company_name, column_name, json_string,
-                                                         year_value,nature_value)
+                                                         year_value,nature_value,filing_standard)
                     except Exception as e:
                         logging.info(f"Exception {e} occurred while updating data in dataframe for {table_name} "
                               f"with data {json_string}")
@@ -761,7 +761,7 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                                                          cin_column_value,
                                                          company_column_name, company_name, common_column_name,
                                                          common_json_string,
-                                                         year,nature)
+                                                         year,nature,filing_standard)
                     except Exception as e:
                         logging.info(f"Exception {e} occurred while updating data in dataframe for {common_table_name} "
                               f"with data {common_json_string}")
