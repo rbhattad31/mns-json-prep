@@ -3,6 +3,7 @@ import xml.etree.ElementTree as Et
 import os
 import logging
 from logging_config import setup_logging
+import mysql.connector
 
 pd.set_option('display.max_columns', None)
 
@@ -51,8 +52,10 @@ def extract_table_values_from_xml(xml_root, table_node_name, child_nodes):
     return data_list
 
 
-def insert_datatable_with_table(db_cursor, sql_table_name, column_names_list, df_row):
+def insert_datatable_with_table(db_config, sql_table_name, column_names_list, df_row):
     setup_logging()
+    db_connection = mysql.connector.connect(**db_config)
+    db_cursor = db_connection.cursor()
     combined = list(zip(column_names_list, df_row))
     # Create a dictionary from the list of tuples
     result_dict = dict(combined)
@@ -80,9 +83,12 @@ def insert_datatable_with_table(db_cursor, sql_table_name, column_names_list, df
         # logging.info(f"Data row values are saved in table {sql_table_name} with \n {df_row}")
     else:
         logging.info(f"Entry with values already exists in table {sql_table_name}")
+    db_connection.commit()
+    db_cursor.close()
+    db_connection.close()
 
 
-def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
+def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
               output_file_path, cin_column_value, company_name):
     setup_logging()
     config_dict_keys = [
@@ -191,7 +197,7 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
         for _, df_row in table_df.iterrows():
             try:
-                insert_datatable_with_table(db_cursor, sql_table_name, table_df.columns, df_row)
+                insert_datatable_with_table(db_config, sql_table_name, table_df.columns, df_row)
             except Exception as e:
                 logging.info(f'Exception {e} occurred while inserting below table row in table {sql_table_name}- \n',
                       df_row)
@@ -208,11 +214,11 @@ def xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_fi
     output_dataframes_list.clear()
 
 
-def msme_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
+def msme_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
                    output_file_path, cin_column_value, company_name):
     try:
         setup_logging()
-        xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
+        xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
                   output_file_path, cin_column_value, company_name)
     except Exception as e:
         logging.error("Below Exception occurred while processing msme file: \n ", e)

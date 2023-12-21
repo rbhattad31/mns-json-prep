@@ -308,7 +308,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     map_file_path_MSME = config_dict_MSME['mapping_file_path']
                     map_sheet_name_MSME = config_dict_MSME['mapping _file_sheet_name']
                     print("Inserting MSME to DB")
-                    msme_db_insertion = msme_xml_to_db(db_cursor,config_dict_MSME,map_file_path_MSME,map_sheet_name_MSME,xml_file_path,output_excel_path,Cin,CompanyName)
+                    msme_db_insertion = msme_xml_to_db(db_config,config_dict_MSME,map_file_path_MSME,map_sheet_name_MSME,xml_file_path,output_excel_path,Cin,CompanyName)
                     if msme_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                 elif 'AOC-4'.lower() in str(path).lower() and 'AOC-4(XBRL)'.lower() not in str(path).lower():
