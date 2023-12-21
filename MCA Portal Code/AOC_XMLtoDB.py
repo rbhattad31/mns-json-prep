@@ -524,8 +524,8 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                 logging.info(f'Exception {e} occurred while extracting data from xml for table {table_node_name}')
                 continue
             table_df = pd.DataFrame(table_in_list)
-            table_df.dropna(inplace=True)
-            # logging.info(table_df)
+            #table_df.dropna(inplace=True)
+            logging.info(table_df)
             if field_name == 'financials_auditor':
                 column_json_node_list = [x.strip() for x in column_json_node.split(',')]
                 column_child_node_list = [x.strip() for x in child_nodes.split(',')]
