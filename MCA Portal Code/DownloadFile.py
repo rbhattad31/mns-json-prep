@@ -607,6 +607,42 @@ WHERE d1.cin = '{}' AND d1.document LIKE '%Form8%' AND Category = 'Annual Return
             connection.commit()
         except Exception as e:
             logging.info(f"Exception occured for form8 interim status updating {e}")
+
+        try:
+            update_query_AOC_CFS = """UPDATE documents AS d1
+        JOIN (
+            SELECT MAX(STR_TO_DATE(document_date_year, '%d-%m-%Y')) AS latest_date
+            FROM documents
+            WHERE cin = '{}' AND document LIKE '%AOC-4 CFS NBFC%' AND document not like '%AOC-4 CSR%'
+            GROUP BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y'))
+            ORDER BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y')) DESC
+            LIMIT 4
+        ) AS d2 ON STR_TO_DATE(d1.document_date_year, '%d-%m-%Y') = d2.latest_date
+        SET d1.form_data_extraction_needed = 'Y'
+        WHERE d1.cin = '{}' AND d1.document LIKE '%AOC-4 CFS NBFC%' AND d1.document not LIKE '%AOC-4 CSR%';""".format(cin, cin)
+            logging.info(update_query_AOC_CFS)
+            cursor.execute(update_query_AOC_CFS)
+            connection.commit()
+        except Exception as e:
+            logging.info(f"Exception occured for AOC CFS{e}")
+
+        try:
+            update_query_AOC_nbfc = """UPDATE documents AS d1
+        JOIN (
+            SELECT MAX(STR_TO_DATE(document_date_year, '%d-%m-%Y')) AS latest_date
+            FROM documents
+            WHERE cin = '{}' AND document LIKE '%AOC-4 NBFC%' AND document not like '%AOC-4 CSR%'
+            GROUP BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y'))
+            ORDER BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y')) DESC
+            LIMIT 4
+        ) AS d2 ON STR_TO_DATE(d1.document_date_year, '%d-%m-%Y') = d2.latest_date
+        SET d1.form_data_extraction_needed = 'Y'
+        WHERE d1.cin = '{}' AND d1.document LIKE '%AOC-4 NBFC%' AND d1.document not LIKE '%AOC-4 CSR%';""".format(cin, cin)
+            logging.info(update_query_AOC_nbfc)
+            cursor.execute(update_query_AOC_nbfc)
+            connection.commit()
+        except Exception as e:
+            logging.info(f"Exception occured for AOC NBFC{e}")
     except Exception as e:
         logging.info(f"Error updating login status in the database: {str(e)}")
         return False

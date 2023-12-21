@@ -35,7 +35,7 @@ def get_single_value_from_xml(xml_root, parent_node, child_node):
 
 
 def update_database_single_value_aoc(db_config, table_name, cin_column_name, cin_value, company_name_column_name,
-                                     company_name, column_name, column_value, year):
+                                     company_name, column_name, column_value, year,filing_standard):
     setup_logging()
     db_connection = mysql.connector.connect(**db_config)
     db_cursor = db_connection.cursor()
@@ -55,9 +55,9 @@ def update_database_single_value_aoc(db_config, table_name, cin_column_name, cin
         column_value = json.dumps(json_dict)
     # logging.info(column_value)
     # check if there is already entry with cin
-    query = "SELECT * FROM {} WHERE {} = '{}' and {}='{}' and {}='{}'".format(table_name, cin_column_name, cin_value,
+    query = "SELECT * FROM {} WHERE {} = '{}' and {}='{}' and {}='{}' and {}='{}'".format(table_name, cin_column_name, cin_value,
                                                                               company_name_column_name, company_name,
-                                                                              'year', year)
+                                                                              'year', year,'filing_standard',filing_standard)
     logging.info(query)
     try:
         db_cursor.execute(query)
@@ -67,9 +67,9 @@ def update_database_single_value_aoc(db_config, table_name, cin_column_name, cin
     # logging.info(result)
 
     # if cin value already exists
-    if len(result) > 0:
+    if len(result) > 0 and column_name != 'filing_standard':
         update_query = ("UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}' "
-                        "AND {}='{}'").format(table_name,
+                        "AND {}='{}' AND {}='{}'").format(table_name,
                                               column_name,
                                               column_value,
                                               cin_column_name,
@@ -77,11 +77,25 @@ def update_database_single_value_aoc(db_config, table_name, cin_column_name, cin
                                               company_name_column_name,
                                               company_name,
                                               'Year',
-                                              year)
+                                              year,
+                                              'filing_standard',
+                                              filing_standard)
         logging.info(update_query)
         db_cursor.execute(update_query)
         logging.info("Updated")
     # if cin value doesn't exist
+    elif column_name == 'filing_standard':
+        update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}' AND {}='{}' AND filing_standard is null".format(
+            table_name, column_name,
+            column_value, cin_column_name,
+            cin_value,
+            company_name_column_name,
+            company_name,
+            'Year',
+            year)
+        logging.info(update_query)
+        db_cursor.execute(update_query)
+        logging.info("Updating filing standard")
     else:
         insert_query = "INSERT INTO {} ({}, {}, {}) VALUES ('{}', '{}', '{}')".format(table_name, cin_column_name,
                                                                                       company_name_column_name,
@@ -355,7 +369,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                     datetime_object = datetime.fromisoformat(value_current_year)
                 except ValueError:
                     datetime_object = datetime.strptime(value_current_year, "%Y-%m-%d")
-                value_current_year = str(datetime_object.year)
+                value_current_year = str(datetime_object.date())
                 # logging.info(value_current_year)
         # logging.info(child_nodes)
         # logging.info(value_current_year)
@@ -407,6 +421,11 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         raise Exception(f"Exception occurred while extracting year value {previous_year} from previous year data")
     years.append(previous_year)
     logging.info(years)
+    filing_standards = []
+    current_year_filing_standard = current_year_df[current_year_df['Field_Name'] == 'filing_standard']['Value'].values[0]
+    previous_year_filing_standard = previous_year_df[previous_year_df['Field_Name'] == 'filing_standard']['Value'].values[0]
+    filing_standards.append(current_year_filing_standard)
+    filing_standards.append(previous_year_filing_standard)
     logging.info("Saving Single Values to database")
     logging.info(aoc4_nbfc_cfs_first_file_found)
     if not aoc4_nbfc_cfs_first_file_found:
@@ -433,6 +452,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         # logging.info(sql_tables_list)
         year_value = df[df['Field_Name'] == 'year']['Value'].values[0]
         # logging.info(year_value)
+        filing_standard_value = df[df['Field_Name'] == 'filing_standard']['Value'].values[0]
         for table_name in sql_tables_list:
             table_df = df[df[df.columns[sql_table_name_index]] == table_name]
             columns_list = table_df[table_df.columns[column_name_index]].unique()
@@ -450,7 +470,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 try:
                     update_database_single_value_aoc(db_config, table_name, cin_column_name, cin_column_value,
                                                      company_column_name, company_name, column_name, json_string,
-                                                     year_value)
+                                                     year_value,filing_standard_value)
                 except Exception as e:
                     logging.info(f"Exception {e} occurred while updating data in dataframe for {table_name} "
                           f"with data {json_string}")
@@ -458,6 +478,8 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
     # logging.info(common_sql_tables_list)
     if aoc4_nbfc_cfs_first_file_found:
         years = years[1:]
+    if aoc4_nbfc_cfs_first_file_found:
+        filing_standards = filing_standards[1:]
     for common_table_name in common_sql_tables_list:
         logging.info(common_table_name)
         if common_table_name != config_dict['financials_table_name']:
@@ -528,7 +550,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             common_json_string = json.dumps(common_json_dict)
             logging.info(common_json_string)
             logging.info(years)
-            for year in years:
+            for year,filing_standard in zip(years,filing_standards):
                 if year is None or year == '':
                     continue
                 try:
@@ -536,7 +558,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                                                      cin_column_value,
                                                      company_column_name, company_name, common_column_name,
                                                      common_json_string,
-                                                     year)
+                                                     year,filing_standard)
                 except Exception as e:
                     logging.info(f"Exception {e} occurred while updating data in dataframe for {common_table_name} "
                           f"with data {common_json_string}")
@@ -591,17 +613,13 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 row_dict["firm_registration_number"] = row_dict.pop("MEMBERSHIP_NUM_A")
                 auditor_json = json.dumps(row_dict)
             group_df.at[index, 'Value'] = auditor_json
-            for year in years:
+            for year,filing_standard in zip(years,filing_standards):
                 update_database_single_value_aoc(db_config, sql_table_name, cin_column_name, cin_column_value,
-                                                 company_column_name, company_name, column_names, auditor_json, year)
+                                                 company_column_name, company_name, column_names, auditor_json, year,filing_standard)
             if len(table_df.index) > 1:
                 remaining_row_df = table_df.iloc[1:]
                 rows_dicts_remaining = remaining_row_df.to_dict(orient='records')
                 for row_dict_remaining in rows_dicts_remaining:
-                    row_dict_remaining["ADDRESS"] = row_dict_remaining.pop(
-                        "ADDRESS_LINE_I") + ", " + row_dict_remaining.pop(
-                        "ADDRESS_LINE_II") + ", " + row_dict_remaining.pop("CITY") + ", " + row_dict_remaining.pop(
-                        "STATE") + ", " + row_dict_remaining.pop("COUNTRY") + ", " + row_dict_remaining.pop("PIN_CODE")
                     # row_dict_remaining["ADDRESS"] = {
                     #     "ADDRESS_LINE_I": row_dict_remaining.pop("ADDRESS_LINE_I"),
                     #     "ADDRESS_LINE_II": row_dict_remaining.pop("ADDRESS_LINE_II"),
@@ -615,6 +633,10 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                     row_dict_remaining["pan"] = row_dict_remaining.pop("IT_PAN")
                     row_dict_remaining["membership_number"] = row_dict_remaining.pop("MEMBERSHIP_NUMBR")
                     row_dict_remaining["firm_registration_number"] = row_dict_remaining.pop("MEMBERSHIP_NUM_A")
+                    row_dict_remaining["ADDRESS"] = row_dict_remaining.pop(
+                        "ADDRESS_LINE_I") + ", " + row_dict_remaining.pop(
+                        "ADDRESS_LINE_II") + ", " + row_dict_remaining.pop("CITY") + ", " + row_dict_remaining.pop(
+                        "STATE") + ", " + row_dict_remaining.pop("COUNTRY") + ", " + row_dict_remaining.pop("PIN_CODE")
                 remaining_row_df_new = pd.DataFrame(rows_dicts_remaining)
                 remaining_row_df_new.columns = column_json_node_list
                 remaining_row_df_new["address"] = remaining_row_df_new["address"].apply(lambda x: json.dumps(x))
