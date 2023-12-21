@@ -560,39 +560,42 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                 for year in years:
                     update_database_single_value_AOC(db_config,sql_table_name, Cin_Column_Name, cin_column_value,Company_column_name, company_name, column_names,auditor_json, year)
                 if len(table_df.index) > 1:
-                    remaining_row_df = table_df.iloc[1:]
-                    rows_dicts_remaining = remaining_row_df.to_dict(orient='records')
-                    for row_dict_remaining in rows_dicts_remaining:
-                        # row_dict_remaining["ADDRESS"] = {
-                        #     "ADDRESS_LINE_I": row_dict_remaining.pop("ADDRESS_LINE_I"),
-                        #     "ADDRESS_LINE_II": row_dict_remaining.pop("ADDRESS_LINE_II"),
-                        #     "CITY": row_dict_remaining.pop("CITY"),
-                        #     "STATE": row_dict_remaining.pop("STATE"),
-                        #     "COUNTRY": row_dict_remaining.pop("COUNTRY"),
-                        #     "PIN_CODE": row_dict_remaining.pop("PIN_CODE")
-                        # }
+                    try:
+                        remaining_row_df = table_df.iloc[1:]
+                        rows_dicts_remaining = remaining_row_df.to_dict(orient='records')
+                        for row_dict_remaining in rows_dicts_remaining:
+                            # row_dict_remaining["ADDRESS"] = {
+                            #     "ADDRESS_LINE_I": row_dict_remaining.pop("ADDRESS_LINE_I"),
+                            #     "ADDRESS_LINE_II": row_dict_remaining.pop("ADDRESS_LINE_II"),
+                            #     "CITY": row_dict_remaining.pop("CITY"),
+                            #     "STATE": row_dict_remaining.pop("STATE"),
+                            #     "COUNTRY": row_dict_remaining.pop("COUNTRY"),
+                            #     "PIN_CODE": row_dict_remaining.pop("PIN_CODE")
+                            # }
 
-                        row_dict_remaining["auditor_name"] = row_dict_remaining.pop("NAME_OF_MEMBER")
-                        row_dict_remaining["auditor_firm_name"] = row_dict_remaining.pop("NAME_AUDT_AUDTRF")
-                        row_dict_remaining["pan"] = row_dict_remaining.pop("IT_PAN")
-                        row_dict_remaining["membership_number"] = row_dict_remaining.pop("MEMBERSHIP_NUMBR")
-                        row_dict_remaining["firm_registration_number"] = row_dict_remaining.pop("MEMBERSHIP_NUM_A")
-                        row_dict_remaining["address"] = row_dict_remaining.pop("ADDRESS_LINE_I") + ", " + row_dict_remaining.pop(
-                            "ADDRESS_LINE_II") + ", " + row_dict_remaining.pop("CITY") + ", " + row_dict_remaining.pop(
-                            "STATE") + ", " + row_dict_remaining.pop("COUNTRY") + ", " + row_dict_remaining.pop("PIN_CODE")
-                    remaining_row_df_new = pd.DataFrame(rows_dicts_remaining)
-                    remaining_row_df_new.columns = column_json_node_list
-                    remaining_row_df_new["address"] = remaining_row_df_new["address"].apply(lambda x: json.dumps(x))
-                    for year in years:
-                        for _, df_row in remaining_row_df_new.iterrows():
-                            # logging.info(df_row)
-                            # logging.info(table_df.columns)
-                            try:
-                                insert_datatable_with_table(db_config, config_dict['Additional_Auditor_Table_Name'], remaining_row_df_new.columns, df_row,Cin_Column_Name,cin_column_value,Company_column_name,company_name,year)
-                            except Exception as e:
-                                logging.info(
-                                    f'Exception {e} occurred while inserting below table row in table {sql_table_name}- \n',
-                                    df_row)
+                            row_dict_remaining["auditor_name"] = row_dict_remaining.pop("NAME_OF_MEMBER")
+                            row_dict_remaining["auditor_firm_name"] = row_dict_remaining.pop("NAME_AUDT_AUDTRF")
+                            row_dict_remaining["pan"] = row_dict_remaining.pop("IT_PAN")
+                            row_dict_remaining["membership_number"] = row_dict_remaining.pop("MEMBERSHIP_NUMBR")
+                            row_dict_remaining["firm_registration_number"] = row_dict_remaining.pop("MEMBERSHIP_NUM_A")
+                            row_dict_remaining["address"] = row_dict_remaining.pop("ADDRESS_LINE_I") + ", " + row_dict_remaining.pop(
+                                "ADDRESS_LINE_II") + ", " + row_dict_remaining.pop("CITY") + ", " + row_dict_remaining.pop(
+                                "STATE") + ", " + row_dict_remaining.pop("COUNTRY") + ", " + row_dict_remaining.pop("PIN_CODE")
+                        remaining_row_df_new = pd.DataFrame(rows_dicts_remaining)
+                        remaining_row_df_new.columns = column_json_node_list
+                        remaining_row_df_new["address"] = remaining_row_df_new["address"].apply(lambda x: json.dumps(x))
+                        for year in years:
+                            for _, df_row in remaining_row_df_new.iterrows():
+                                # logging.info(df_row)
+                                # logging.info(table_df.columns)
+                                try:
+                                    insert_datatable_with_table(db_config, config_dict['Additional_Auditor_Table_Name'], remaining_row_df_new.columns, df_row,Cin_Column_Name,cin_column_value,Company_column_name,company_name,year)
+                                except Exception as e:
+                                    logging.info(
+                                        f'Exception {e} occurred while inserting below table row in table {sql_table_name}- \n',
+                                        df_row)
+                    except Exception as e:
+                        pass
 
         logging.info(group_df)
         output_dataframes_list.append(group_df)
