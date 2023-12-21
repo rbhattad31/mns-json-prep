@@ -750,7 +750,7 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                 logging.info(common_column_df)
                 common_json_dict = common_column_df.set_index(common_table_df.columns[0])['Value'].to_dict()
                 common_json_string = json.dumps(common_json_dict)
-                common_json_string = common_json_string.replace('\n', ' ')
+                common_json_string = common_json_string.replace('\\n', ' ')
                 logging.info(common_json_string)
                 logging.info(years)
                 for year,nature in zip(years,natures):
