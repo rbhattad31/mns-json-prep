@@ -273,17 +273,32 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
     try:
         setup_logging()
         db_config = get_db_credentials(config_dict)
-        connection, db_cursor = connect_to_database(db_config)
+        connection = mysql.connector.connect(**db_config)
+        db_cursor = connection.cursor()
         connection.autocommit = True
 
         Cin, CompanyName, User = CinData[2], CinData[3], CinData[15]
-        
+        try:
+            company_update_query = "Update Company set legal_name = %s where cin = %s"
+            company_values = (CompanyName,Cin)
+            print(company_update_query % company_values)
+            db_cursor.execute(company_update_query,company_values)
+        except Exception as e:
+            print(f"Exception occurred in updating company name {e}")
 
+        try:
+            company_update_query = "Update charge_sequence set company_name = %s where cin = %s"
+            company_values = (CompanyName, Cin)
+            print(company_update_query % company_values)
+            db_cursor.execute(company_update_query, company_values)
+        except Exception as e:
+            print(f"Exception occurred in updating company name {e}")
         xml_files_to_insert = get_xml_to_insert(Cin, config_dict)
         AOC_4_first_file_found = False
         AOC_XBRL_first_file_found = False
         AOC_4_NBFC_first_file_found = False
         Form8_first_file_found = False
+
         for xml in xml_files_to_insert:
             try:
                 path = xml[8]
