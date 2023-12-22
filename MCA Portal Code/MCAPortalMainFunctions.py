@@ -278,13 +278,6 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
         connection.autocommit = True
 
         Cin, CompanyName, User = CinData[2], CinData[3], CinData[15]
-        try:
-            company_update_query = "Update Company set legal_name = %s where cin = %s"
-            company_values = (CompanyName,Cin)
-            print(company_update_query % company_values)
-            db_cursor.execute(company_update_query,company_values)
-        except Exception as e:
-            print(f"Exception occurred in updating company name {e}")
 
         try:
             company_update_query = "Update charge_sequence set company_name = %s where cin = %s"
