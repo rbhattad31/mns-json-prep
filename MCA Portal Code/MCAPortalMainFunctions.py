@@ -385,13 +385,14 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                 elif 'CHG'.lower() in str(path).lower():
                     Sheet_name = "CHG1"
                     config_dict_CHG,config_status = create_main_config_dictionary(excel_file,Sheet_name)
-                    pattern = re.compile(r'^.*-(\d{6})_[^_]+$')
-                    if pattern.match(file_name):
+                    digit_count = sum(c.isdigit() for c in file_name)
+                    print(digit_count)
+                    if digit_count == 7:
                         map_file_path_CHG = config_dict_CHG['old_file_config']
-                        print("Old file")
+                        print("old file")
                     else:
                         map_file_path_CHG = config_dict_CHG['mapping_file_path']
-                        print("New file")
+                        print("new file")
                     map_sheet_name_CHG = config_dict_CHG['mapping_file_sheet_name']
                     chg_db_insertion = chg1_xml_to_db(db_config,config_dict_CHG,map_file_path_CHG,map_sheet_name_CHG,xml_file_path,output_excel_path,Cin,CompanyName,date)
                     if chg_db_insertion:
