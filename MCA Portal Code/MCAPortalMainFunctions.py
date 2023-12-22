@@ -43,7 +43,7 @@ from EPFO_order import order_epfo
 import sys
 import traceback
 from DBFunctions import check_files_and_update
-
+import re
 
 def sign_out(driver,config_dict,CinData):
     try:
@@ -293,6 +293,14 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
             db_cursor.execute(company_update_query, company_values)
         except Exception as e:
             print(f"Exception occurred in updating company name {e}")
+
+        try:
+            company_update_query = "Update open_charges_latest_event set company_name = %s where cin = %s"
+            company_values = (CompanyName, Cin)
+            print(company_update_query % company_values)
+            db_cursor.execute(company_update_query, company_values)
+        except Exception as e:
+            print(f"Exception occurred in updating company name {e}")
         xml_files_to_insert = get_xml_to_insert(Cin, config_dict)
         AOC_4_first_file_found = False
         AOC_XBRL_first_file_found = False
@@ -384,7 +392,14 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                 elif 'CHG'.lower() in str(path).lower():
                     Sheet_name = "CHG1"
                     config_dict_CHG,config_status = create_main_config_dictionary(excel_file,Sheet_name)
-                    map_file_path_CHG = config_dict_CHG['mapping_file_path']
+                    date_pattern1 = r'\d{6}'
+                    match_date_pattern1 = re.search(date_pattern1, file_name)
+                    if match_date_pattern1:
+                        map_file_path_CHG = config_dict_CHG['old_file_config']
+                        print("Old file")
+                    else:
+                        map_file_path_CHG = config_dict_CHG['mapping_file_path']
+                        print("New file")
                     map_sheet_name_CHG = config_dict_CHG['mapping_file_sheet_name']
                     chg_db_insertion = chg1_xml_to_db(db_config,config_dict_CHG,map_file_path_CHG,map_sheet_name_CHG,xml_file_path,output_excel_path,Cin,CompanyName,date)
                     if chg_db_insertion:

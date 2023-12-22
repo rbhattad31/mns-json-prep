@@ -9,7 +9,6 @@ import json
 import os
 import mysql.connector
 from logging_config import setup_logging
-
 # import datetime
 pd.set_option('display.max_columns', None)
 
@@ -17,10 +16,13 @@ pd.set_option('display.max_columns', None)
 def get_single_value_from_xml(xml_root, parent_node, child_node):
     try:
         setup_logging()
+        namespaces = {'xfa': 'http://www.xfa.org/schema/xfa-data/1.0/',
+                      'frm': 'http://www.mit.gov.in/eGov/BackOffice/schema/Form',
+                      'cdt':'http://www.mit.gov.in/eGov/BackOffice/schema/ComplexDataTypes'}
         if child_node == 'nan':
             elements = xml_root.findall(f'.//{parent_node}')
         else:
-            elements = xml_root.findall(f'.//{parent_node}//{child_node}')
+            elements = xml_root.findall(f'.//{parent_node}//{child_node}',namespaces)
 
         for element in elements:
             if element.text is None:
@@ -160,8 +162,12 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                     value = datetime.strptime(value, '%Y-%m-%d').strftime('%d/%m/%Y')
                 except Exception as e:
                     logging.info(f"Excpetion occured for date conversion to dd/mm/yyyy \n {e}")
-        single_df.at[index, 'Value'] = value
         # logging.info(field_name)
+        if field_name == 'holder_name':
+            if value is None:
+                name_child_node = 'NAME_CHARGE_HOLD'
+                value = get_single_value_from_xml(xml_root,parent_node,name_child_node)
+        single_df.at[index, 'Value'] = value
         logging.info(value)
         results.append([field_name, value, sql_table_name, column_name, column_json_node])
     # logging.info(single_df)

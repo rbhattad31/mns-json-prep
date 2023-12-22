@@ -9,8 +9,6 @@ import mysql.connector
 import logging
 from logging_config import setup_logging
 pd.set_option('display.max_columns', None)
-
-
 def get_single_value_from_xml(xml_root, parent_node, child_node):
     try:
         setup_logging()
@@ -71,7 +69,7 @@ def update_datatable_single_value(config_dict, db_config, table_name, cin_column
     logging.info(column_name)
 
     if column_name == config_dict['total_equity_shares_column_name'] or column_name == \
-            config_dict['total_preference_shares_column_name']:
+            config_dict['total_preference_shares_column_name'] or column_name == 'nominal_value_per_share':
         temp_column_value = 0
         for key, value in json_dict.items():
             if value is None:
@@ -132,11 +130,9 @@ def update_datatable_single_value(config_dict, db_config, table_name, cin_column
     logging.info(column_value)
     # if cin value already exists
     if len(result) > 0:
-        update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}'".format(table_name, column_name,
+        update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}'".format(table_name, column_name,
                                                                                       column_value, cin_column_name,
-                                                                                      cin_value,
-                                                                                      company_name_column_name,
-                                                                                      company_name
+                                                                                      cin_value
                                                                                       )
         logging.info(update_query)
         db_cursor.execute(update_query)
@@ -277,6 +273,8 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         column_name = str(row.iloc[6]).strip()
         column_json_node = str(row.iloc[7]).strip()
 
+        if parent_node == 'Formula':
+            continue
         value = get_single_value_from_xml(xml_root, parent_node, child_nodes)
         if field_name == 'year' and value is not None:
             logging.info(value)
@@ -324,7 +322,30 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             single_df.at[index, 'Value'] = value
         results.append([field_name, value, sql_table_name, column_name, column_json_node])
     logging.info(single_df)
-
+    single_formula_df = single_df[
+        single_df[single_df.columns[3]] == 'Formula']
+    for _, row in single_formula_df.iterrows():
+        current_formula = row['Child_Nodes']
+        print(current_formula)
+        current_formula_field_name = row['Field_Name']
+        print(current_formula_field_name)
+        for field_name in single_df['Field_Name']:
+            pattern = r'\b' + re.escape(field_name) + r'\b'
+            print(field_name)
+            # current_formula = current_formula.replace(field_name, str(current_year_df[current_year_df['Field_Name'] == field_name]['Value'].values[0]))
+            current_formula = re.sub(pattern, str(
+                single_df[single_df['Field_Name'] == field_name]['Value'].values[0]), current_formula)
+        logging.info(current_formula_field_name + ":" + current_formula)
+        try:
+            # Calculate the value using the provided formula and insert it
+            if 'None' in current_formula:
+                current_formula = current_formula.replace('None', '0')
+            single_df.at[
+                single_df[single_df['Field_Name'] == current_formula_field_name].index[0], 'Value'] = round(
+                eval(current_formula), 2)
+        except (NameError, SyntaxError):
+            # Handle the case where the formula is invalid or contains a missing field name
+            logging.info(f"Invalid formula for {current_formula_field_name}: {current_formula}")
     # update single values in datatable
     # get all the tables names for all single values df
     sql_tables_list = single_df[single_df.columns[5]].unique()
