@@ -385,9 +385,8 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                 elif 'CHG'.lower() in str(path).lower():
                     Sheet_name = "CHG1"
                     config_dict_CHG,config_status = create_main_config_dictionary(excel_file,Sheet_name)
-                    date_pattern1 = r'\d{6}'
-                    match_date_pattern1 = re.search(date_pattern1, file_name)
-                    if match_date_pattern1:
+                    pattern = re.compile(r'^.*-(\d{6})_[^_]+$')
+                    if pattern.match(file_name):
                         map_file_path_CHG = config_dict_CHG['old_file_config']
                         print("Old file")
                     else:
