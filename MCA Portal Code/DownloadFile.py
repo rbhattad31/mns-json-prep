@@ -643,6 +643,15 @@ WHERE d1.cin = '{}' AND d1.document LIKE '%Form8%' AND Category = 'Annual Return
             connection.commit()
         except Exception as e:
             logging.info(f"Exception occured for AOC NBFC{e}")
+
+        try:
+            form_8_charge_query = "UPDATE documents set form_data_extraction_needed = 'Y' where document LIKE '%%Form 8%%' and `cin`=%s"
+            value_form_8_charge_query = (cin,)
+            logging.info(form_8_charge_query % value_form_8_charge_query)
+            cursor.execute(form_8_charge_query,value_form_8_charge_query)
+            connection.commit()
+        except Exception as e:
+            logging.info(f"Exception occured for formfillip status updating {e}")
     except Exception as e:
         logging.info(f"Error updating login status in the database: {str(e)}")
         return False

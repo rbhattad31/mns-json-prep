@@ -62,7 +62,7 @@ def extract_xfa_data(pdf_path,filename):
     xfa = findInDict('/XFA', pdf.resolved_objects)
     logging.info(xfa)
     if xfa is not None:
-        if 'MSME' in filename or 'AOC-4' in filename or 'CHG' in filename or 'Form8' in filename or 'FiLLiP' in filename:
+        if 'MSME' in filename or 'AOC-4' in filename or 'CHG' in filename or 'Form8' in filename or 'FiLLiP' in filename or 'Form 8' in filename:
             xml = xfa[7].get_object().get_data()
             return xml
         elif 'DIR' in filename or 'Form11' in filename:

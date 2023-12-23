@@ -455,6 +455,16 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     fillip_db_insertion = form_fillip_xml_to_db(db_config,config_dict_fillip,map_file_path_fillip,map_sheet_name_fillip,xml_file_path,output_excel_path,Cin)
                     if fillip_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
+
+                elif 'Form 8'.lower() in str(path).lower():
+                    Sheet_name = "CHG1"
+                    config_dict_form8_charge, config_status = create_main_config_dictionary(excel_file, Sheet_name)
+                    map_file_path_Form8 = config_dict_form8_charge['Form8_Config']
+                    map_sheet_name_Form8 = config_dict_form8_charge['mapping_file_sheet_name']
+                    form8_charge_db_insertion = chg1_xml_to_db(db_config, config_dict_form8_charge, map_file_path_Form8, map_sheet_name_Form8,
+                                                      xml_file_path, output_excel_path, Cin, CompanyName, date)
+                    if form8_charge_db_insertion:
+                        update_db_insertion_status(Cin, file_name, config_dict, 'Success')
             except Exception as e:
                 print(f"Exception occured while inserting into DB {e}")
                 continue
