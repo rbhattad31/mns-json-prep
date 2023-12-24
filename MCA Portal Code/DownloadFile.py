@@ -651,7 +651,16 @@ WHERE d1.cin = '{}' AND d1.document LIKE '%Form8%' AND Category = 'Annual Return
             cursor.execute(form_8_charge_query,value_form_8_charge_query)
             connection.commit()
         except Exception as e:
-            logging.info(f"Exception occured for formfillip status updating {e}")
+            logging.info(f"Exception occured for form 8 charge status updating {e}")
+
+        try:
+            form_32_query = "UPDATE documents set form_data_extraction_needed = 'Y' where document LIKE '%%Form 32%%' and `cin`=%s"
+            value_form_32_query = (cin,)
+            logging.info(form_32_query % value_form_32_query)
+            cursor.execute(form_32_query,value_form_32_query)
+            connection.commit()
+        except Exception as e:
+            logging.info(f"Exception occured for form 32  status updating {e}")
     except Exception as e:
         logging.info(f"Error updating login status in the database: {str(e)}")
         return False

@@ -44,6 +44,9 @@ import sys
 import traceback
 from DBFunctions import check_files_and_update
 import re
+from DIRAddressHiddenAttachment import mgt_address_main
+from DirectorShareholdingsHiddenAttachment import mgt_director_shareholdings_main
+
 
 def sign_out(driver,config_dict,CinData):
     try:
@@ -318,6 +321,34 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     mgt_7_db_insertion = mgt7_xml_to_db(db_config, config_dict_MGT, map_file_path, map_file_sheet_name, xml_file_path,output_excel_path, Cin, CompanyName)
                     if mgt_7_db_insertion:
                         update_db_insertion_status(Cin,file_name,config_dict,'Success')
+                    db_connection = mysql.connector.connect(**db_config)
+                    db_cursor = db_connection.cursor()
+                    dir_check_query = "select * from documents where cin = %s and form_data_extraction_needed = 'Y' and LOWER(document) like '%%dir-12%%'"
+                    dir_values = (Cin,)
+                    print(dir_check_query % dir_values)
+                    db_cursor.execute(dir_check_query,dir_values)
+                    dir_result = db_cursor.fetchall()
+                    db_cursor.close()
+                    db_connection.close()
+                    if len(dir_result) == 0:
+                        Sheet_name_MGT_address = "OpenAI"
+                        config_dict_MGT_address, config_status = create_main_config_dictionary(excel_file, Sheet_name_MGT_address)
+                        output_directory = os.path.dirname(path)
+                        mgt_address = mgt_address_main(db_config,config_dict_MGT_address,output_directory,path,Cin)
+                    db_connection = mysql.connector.connect(**db_config)
+                    db_cursor = db_connection.cursor()
+                    director_shareholdings_query = "select * from director_shareholdings where cin = %s"
+                    director_shareholdings_values = (Cin,)
+                    print(director_shareholdings_query % director_shareholdings_values)
+                    db_cursor.execute(director_shareholdings_query,director_shareholdings_values)
+                    director_shareholdings_result = db_cursor.fetchall()
+                    if len(director_shareholdings_result) == 0:
+                        Sheet_name_MGT_address = "OpenAI"
+                        config_dict_shareholdings, config_status = create_main_config_dictionary(excel_file,Sheet_name_MGT_address)
+                        output_directory = os.path.dirname(path)
+                        shareholdings = mgt_director_shareholdings_main(db_config,config_dict_shareholdings,output_directory,path,Cin)
+                    db_cursor.close()
+                    db_connection.close()
                 elif 'MSME'.lower() in str(path).lower():
                     Sheet_name = "MSME"
                     config_dict_MSME, config_status = create_main_config_dictionary(excel_file, Sheet_name)
@@ -413,10 +444,15 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                         print(f"Exception occured while inserting into db for XBRL")
                     else:
                         AOC_XBRL_first_file_found = True
-                elif 'DIR'.lower() in str(path).lower():
+                elif 'DIR'.lower() in str(path).lower() or 'Form 32'.lower() in str(path).lower():
                     Sheet_name = "DIR"
                     config_dict_DIR,config_status = create_main_config_dictionary(excel_file,Sheet_name)
-                    map_file_path_DIR = config_dict_DIR['mapping file path']
+                    if 'DIR'.lower() in str(path).lower():
+                        map_file_path_DIR = config_dict_DIR['mapping file path']
+                    elif 'Form 32'.lower() in str(path).lower():
+                        map_file_path_DIR = config_dict_DIR['Form32_config']
+                    else:
+                        map_file_path_DIR = None
                     map_sheet_name_dir = config_dict_DIR['mapping file sheet name']
                     xml_hidden_file_path = xml_file_path.replace('.xml', '_hidden.xml')
                     dir_db_insertion = dir_xml_to_db(db_config,config_dict_DIR,map_file_path_DIR,map_sheet_name_dir,xml_file_path,xml_hidden_file_path,output_excel_path,Cin,date)

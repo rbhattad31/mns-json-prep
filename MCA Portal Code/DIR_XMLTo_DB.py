@@ -11,13 +11,17 @@ pd.set_option('display.max_columns', None)
 from logging_config import setup_logging
 import logging
 
+
 def get_single_value_from_xml(xml_root, parent_node, child_node):
     try:
         setup_logging()
+        namespaces = {'xfa': 'http://www.xfa.org/schema/xfa-data/1.0/',
+                      'frm': 'http://www.mit.gov.in/eGov/BackOffice/schema/Form',
+                      'cdt':'http://www.mit.gov.in/eGov/BackOffice/schema/ComplexDataTypes'}
         if child_node == 'nan':
             elements = xml_root.findall(f'.//{parent_node}')
         else:
-            elements = xml_root.findall(f'.//{parent_node}//{child_node}')
+            elements = xml_root.findall(f'.//{parent_node}//{child_node}',namespaces)
 
         for element in elements:
             if element.text is None:
@@ -29,8 +33,7 @@ def get_single_value_from_xml(xml_root, parent_node, child_node):
                     return str(element.text)
         return None
     except Exception as e:
-        logging.info(f"Below error occurred for processing parent node: {parent_node} and child node: {child_node}"
-              f"\n {e}")
+        logging.info(f"An error occurred: {e}")
         return None
 
 
@@ -820,7 +823,9 @@ def dir_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
         din_list = xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, hidden_xml_file_path,
                   output_file_path, cin_column_value, filing_date)
         logging.info(din_list)
-        dir_hidden_fields(db_config,hidden_xml_file_path,map_file_path,config_dict,din_list,cin_column_value)
+        if 'DIR'.lower() in str(xml_file_path).lower():
+            logging.info("Going for hidden fields extraction")
+            dir_hidden_fields(db_config,hidden_xml_file_path,map_file_path,config_dict,din_list,cin_column_value)
     except Exception as e:
         logging.info("Below Exception occurred while processing DIR file:", e)
         exc_type, exc_value, exc_traceback = sys.exc_info()
