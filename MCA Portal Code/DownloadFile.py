@@ -661,6 +661,33 @@ WHERE d1.cin = '{}' AND d1.document LIKE '%Form8%' AND Category = 'Annual Return
             connection.commit()
         except Exception as e:
             logging.info(f"Exception occured for form 32  status updating {e}")
+
+        try:
+            form_18_query = "UPDATE documents set form_data_extraction_needed = 'Y' where document LIKE '%%Form 18%%' and `cin`=%s"
+            value_form_18_query = (cin,)
+            logging.info(form_18_query % value_form_18_query)
+            cursor.execute(form_18_query,value_form_18_query)
+            connection.commit()
+        except Exception as e:
+            logging.info(f"Exception occured for form 18  status updating {e}")
+
+        try:
+            Certificate_of_Incorporation_Consequent_query = "UPDATE documents set form_data_extraction_needed = 'Y' where LOWER(document) LIKE '%%certificate of incorporation consequent%%' and `cin`=%s"
+            value_Certificate_of_Incorporation = (cin,)
+            logging.info(Certificate_of_Incorporation_Consequent_query % value_Certificate_of_Incorporation)
+            cursor.execute(Certificate_of_Incorporation_Consequent_query,value_Certificate_of_Incorporation)
+            connection.commit()
+        except Exception as e:
+            logging.info(f"Exception occured for form 18  status updating {e}")
+
+        try:
+            INC22_query = "UPDATE documents set form_data_extraction_needed = 'Y' where document LIKE '%%INC 22%%' and `cin`=%s"
+            value_INC22_query = (cin,)
+            logging.info(INC22_query % value_INC22_query)
+            cursor.execute(INC22_query,value_INC22_query)
+            connection.commit()
+        except Exception as e:
+            logging.info(f"Exception occured for form 18  status updating {e}")
     except Exception as e:
         logging.info(f"Error updating login status in the database: {str(e)}")
         return False

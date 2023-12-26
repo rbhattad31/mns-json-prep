@@ -11,7 +11,7 @@ import mysql.connector
 from logging_config import setup_logging
 # import datetime
 pd.set_option('display.max_columns', None)
-
+from Config import create_main_config_dictionary
 
 def get_single_value_from_xml(xml_root, parent_node, child_node):
     try:
@@ -38,11 +38,14 @@ def get_single_value_from_xml(xml_root, parent_node, child_node):
         return None
 
 
-def update_datatable_single_value(db_cursor, table_name, cin_column_name, cin_value,
+def update_datatable_single_value(db_config, table_name, cin_column_name, cin_value,
                                   company_name_column_name,
                                   company_name, column_name, column_value, charge_id, date, charge_id_column_name,
-                                  date_column_name):
+                                  date_column_name,amount_column_name,amount):
     setup_logging()
+    db_connection = mysql.connector.connect(**db_config)
+    db_cursor = db_connection.cursor()
+    db_connection.autocommit = True
     # determine value to be updated
     # if only one key value pair - update value
     # otherwise complete json dictionary
@@ -57,10 +60,10 @@ def update_datatable_single_value(db_cursor, table_name, cin_column_name, cin_va
     else:
         column_value = json.dumps(json_dict)
     # check if there is already entry with cin
-    query = 'SELECT * FROM {} WHERE {} = "{}" and {} = "{}" and {} = "{}"'.format(table_name, cin_column_name,
+    query = 'SELECT * FROM {} WHERE {} = "{}" and {} = "{}" and {} = "{}" and REPLACE({},",","") = "{}"'.format(table_name, cin_column_name,
                                                                                   cin_value, charge_id_column_name,
-                                                                                  charge_id, date_column_name, date)
-    # logging.info(query)
+                                                                                  charge_id, date_column_name, date,amount_column_name,amount)
+    logging.info(query)
     try:
         db_cursor.execute(query)
     except mysql.connector.Error as err:
@@ -71,35 +74,59 @@ def update_datatable_single_value(db_cursor, table_name, cin_column_name, cin_va
     # if cin value already exists
     logging.info(len(result))
     if len(result) > 0:
-        update_query = 'UPDATE {} SET {} = "{}" WHERE {} = "{}" AND {} = "{}" AND {} = "{}" and {} = "{}"'.format(
+        update_query = 'UPDATE {} SET {} = "{}" WHERE {} = "{}" AND {} = "{}" AND {} = "{}" and {} = "{}" and REPLACE({},",","") = "{}"'.format(
             table_name, column_name,
             column_value, cin_column_name,
             cin_value,
             company_name_column_name,
-            company_name, charge_id_column_name, charge_id, date_column_name, date
+            company_name, charge_id_column_name, charge_id, date_column_name, date,amount_column_name,amount
             )
         logging.info(update_query)
         db_cursor.execute(update_query)
         logging.info("Updated entry")
     # if cin value doesn't exist
     else:
-        insert_query = 'INSERT INTO {} ({}, {}, {},{},{}) VALUES ("{}", "{}", "{}","{}","{}")'.format(table_name,
+        insert_query = 'INSERT INTO {} ({}, {}, {},{},{},{}) VALUES ("{}", "{}", "{}","{}","{}","{}")'.format(table_name,
                                                                                                       cin_column_name,
                                                                                                       company_name_column_name,
                                                                                                       column_name,
                                                                                                       charge_id_column_name,
                                                                                                       date_column_name,
+                                                                                                     amount_column_name,
                                                                                                       cin_value,
                                                                                                       company_name,
                                                                                                       column_value,
-                                                                                                      charge_id, date)
+                                                                                                      charge_id, date,amount)
         logging.info(insert_query)
         db_cursor.execute(insert_query)
         logging.info("inserted entry")
+    db_cursor.close()
+    db_connection.close()
 
 
 def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
               output_file_path, cin_column_value, company_name, filing_date):
+
+    db_connection = mysql.connector.connect(**db_config)
+    db_cursor = db_connection.cursor()
+    db_connection.autocommit = True
+    try:
+        company_update_query = "Update charge_sequence set company_name = %s where cin = %s"
+        company_values = (company_name, cin_column_value)
+        print(company_update_query % company_values)
+        db_cursor.execute(company_update_query, company_values)
+    except Exception as e:
+        print(f"Exception occurred in updating company name {e}")
+
+    try:
+        company_update_query = "Update open_charges_latest_event set company_name = %s where cin = %s"
+        company_values = (company_name, cin_column_value)
+        print(company_update_query % company_values)
+        db_cursor.execute(company_update_query, company_values)
+    except Exception as e:
+        print(f"Exception occurred in updating company name {e}")
+    db_cursor.close()
+    db_connection.close()
     setup_logging()
     config_dict_keys = ['single_type_indicator']
 
@@ -174,6 +201,46 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
     # update single values in datatable
     # get all the tables names for all single values df
+    try:
+        charge_id = single_df.loc[single_df['Field_Name'] == 'id', 'Value'].values[0]
+        status_abbreviation_list = [x.strip() for x in config_dict['status_abbreviation_list'].split(',')]
+        status_list = [x.strip() for x in config_dict['status_list'].split(',')]
+        status_dict = dict(zip(status_abbreviation_list, status_list))
+        logging.info(f'{status_dict=}')
+        try:
+            status_row_index = single_df[single_df['Column_Name'] == config_dict['status_column_name']].index[0]
+        except IndexError as index_error:
+            raise (f"Below Exception occurred while getting status row details of charge sequence table - "
+                   f"\n {index_error}")
+        logging.info(f'{status_row_index=}')
+        if status_row_index is not None:
+            status_value = single_df.loc[status_row_index, 'Value']
+            logging.info(f'{status_value=}')
+            single_df.loc[status_row_index, 'Value'] = status_dict.get(status_value, "Status Not Found")
+        status = single_df.loc[single_df['Field_Name'] == 'status', 'Value'].values[0]
+        logging.info(status)
+        date = single_df.loc[single_df['Field_Name'] == 'date', 'Value'].values[0]
+        if str(status).lower() == 'creation':
+            date_column = 'date_of_creation'
+        elif str(status).lower() == 'modification':
+            date_column = 'date_of_modification'
+        elif str(status).lower() == 'satisfaction':
+            date_column = 'date_of_satisfaction'
+        else:
+            date_column = 'date'
+        type_column = config_dict['type_column_name']
+        if charge_id is None or charge_id == '' or charge_id == '-' or charge_id == 0:
+            db_connection = mysql.connector.connect(**db_config)
+            db_cursor = db_connection.cursor()
+            db_connection.autocommit = True
+            charge_id_check_query = "select id from open_charges where {} = '{}' and {} = '{}' and {}='{}'".format(cin_column_name_in_db,cin_column_value,type_column,status,date_column,date)
+            logging.info(charge_id_check_query)
+            db_cursor.execute(charge_id_check_query)
+            charge_id = db_cursor.fetchone()[0]
+            logging.info(charge_id)
+            single_df.loc[single_df['Field_Name'] == 'id', 'Value'] = charge_id
+    except Exception as e:
+        logging.info(f"Exception occured in updating charge id {e}")
     sql_tables_list = single_df[single_df.columns[5]].unique()
     # for each distinct table value, filter the df with table value and find columns
     for sql_table_name in sql_tables_list:
@@ -187,23 +254,32 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         else:
             charge_id = None
         date = table_df.loc[table_df['Column_Name'] == config_dict['date_column_name'], 'Value'].values[0]
+        amount = table_df.loc[table_df['Column_Name'] == config_dict['amount_column_name'], 'Value'].values[0]
         logging.info(table_df)
         if sql_table_name == config_dict['open_charges_latest_event_table_name']:
             logging.info(f'{sql_table_name=}')
             charges_latest_id = \
                 table_df.loc[table_df['Column_Name'] == config_dict['charges_latest_id_column_name'], 'Value'].values[0]
             date = table_df.loc[table_df['Column_Name'] == config_dict['date_column_name'], 'Value'].values[0]
+            amount = table_df.loc[table_df['Column_Name'] == config_dict['amount_column_name'], 'Value'].values[0]
+            try:
+                amount = float(amount)
+                amount = int(amount)
+            except Exception as e:
+                logging.info(f"Exception in converting to integer {e}")
             logging.info(f'{charges_latest_id=}')
             # check if there is already entry with cin
             charge_id_year_check_query = (("SELECT * FROM {} WHERE {} = '{}' AND {} = '{}' AND {}"
-                                           " = '{}' AND {} = '{}'").
+                                           " = '{}' AND {} = '{}' AND REPLACE({},',','') = '{}'").
                                           format(sql_table_name, cin_column_name_in_db, cin_column_value,
                                                  company_name_column_name_in_db,
                                                  company_name,
                                                  config_dict['charges_latest_id_column_name'],
                                                  charges_latest_id,
                                                  config_dict['date_column_name'],
-                                                 date
+                                                 date,
+                                                 config_dict['amount_column_name'],
+                                                 amount
                                                  ))
             logging.info(f'{charge_id_year_check_query=}')
             try:
@@ -220,32 +296,39 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             else:
                 table_df = table_df[table_df['Column_Name'] != config_dict['charges_latest_id_column_name']]
                 table_df = table_df[table_df['Column_Name'] != config_dict['date_column_name']]
+                table_df = table_df[table_df['Column_Name'] != config_dict['amount_column_name']]
 
         if sql_table_name == config_dict['charge_sequence_table_name']:
             logging.info(table_df)
             logging.info(f'{sql_table_name=}')
-            status_abbreviation_list = [x.strip() for x in config_dict['status_abbreviation_list'].split(',')]
-            status_list = [x.strip() for x in config_dict['status_list'].split(',')]
-            status_dict = dict(zip(status_abbreviation_list, status_list))
-            logging.info(f'{status_dict=}')
-            try:
-                status_row_index = table_df[table_df['Column_Name'] == config_dict['status_column_name']].index[0]
-            except IndexError as index_error:
-                raise (f"Below Exception occurred while getting status row details of charge sequence table - "
-                       f"\n {index_error}")
-            logging.info(f'{status_row_index=}')
-            if status_row_index is not None:
-                status_value = table_df.loc[status_row_index, 'Value']
-                logging.info(f'{status_value=}')
-                table_df.loc[status_row_index, 'Value'] = status_dict.get(status_value, "Status Not Found")
+            # status_abbreviation_list = [x.strip() for x in config_dict['status_abbreviation_list'].split(',')]
+            # status_list = [x.strip() for x in config_dict['status_list'].split(',')]
+            # status_dict = dict(zip(status_abbreviation_list, status_list))
+            # logging.info(f'{status_dict=}')
+            # try:
+            #     status_row_index = table_df[table_df['Column_Name'] == config_dict['status_column_name']].index[0]
+            # except IndexError as index_error:
+            #     raise (f"Below Exception occurred while getting status row details of charge sequence table - "
+            #            f"\n {index_error}")
+            # logging.info(f'{status_row_index=}')
+            # if status_row_index is not None:
+            #     status_value = table_df.loc[status_row_index, 'Value']
+            #     logging.info(f'{status_value=}')
+            #     table_df.loc[status_row_index, 'Value'] = status_dict.get(status_value, "Status Not Found")
             logging.info(table_df)
             charge_id = table_df.loc[table_df['Column_Name'] == config_dict['charge_id_column_name'], 'Value'].values[0]
             date = table_df.loc[table_df['Column_Name'] == config_dict['date_column_name'], 'Value'].values[0]
             status = table_df.loc[table_df['Column_Name'] == config_dict['status_column_name'],'Value'].values[0]
+            amount = table_df.loc[table_df['Column_Name'] == config_dict['amount_column_name'],'Value'].values[0]
+            try:
+                amount = float(amount)
+                amount = int(amount)
+            except Exception as e:
+                logging.info(f"Exception in converting to integer {e}")
             logging.info(f'{charge_id=}')
             # check if there is already entry with cin
             charge_id_year_check_query = (("SELECT * FROM {} WHERE {} = '{}' AND {} = '{}' AND {}"
-                                           " = '{}' AND {} = '{}' AND LOWER({}) = '{}'").
+                                           " = '{}' AND {} = '{}' AND LOWER({}) = '{}' AND REPLACE({},',','') = '{}'").
                                           format(sql_table_name, cin_column_name_in_db, cin_column_value,
                                                  company_name_column_name_in_db,
                                                  company_name,
@@ -254,7 +337,9 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                                                  config_dict['date_column_name'],
                                                  date,
                                                  config_dict['status_column_name'],
-                                                 str(status).lower()
+                                                 str(status).lower(),
+                                                 config_dict['amount_column_name'],
+                                                 amount
                                                  ))
             logging.info(f'{charge_id_year_check_query=}')
             try:
@@ -269,6 +354,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             else:
                 charge_id_column_name = None
             date_column_name = config_dict['date_column_name']
+            amount_column_name = config_dict['amount_column_name']
             # if charge details are exist then need not update status column values
             if len(result) > 0:
                 logging.info(f"Entry is found for cin {cin_column_value} and company name {company_name} in {sql_table_name} "
@@ -277,20 +363,23 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 table_df = table_df[table_df['Column_Name'] != config_dict['status_column_name']]
                 table_df = table_df[table_df['Column_Name'] != config_dict['charge_id_column_name']]
                 table_df = table_df[table_df['Column_Name'] != config_dict['date_column_name']]
+                table_df = table_df[table_df['Column_Name'] != config_dict['amount_column_name']]
                 logging.info(table_df)
             else:
-                insert_query = 'INSERT INTO {} ({}, {}, {},{}) VALUES ("{}", "{}", "{}","{}")'.format(
+                insert_query = 'INSERT INTO {} ({}, {}, {},{},{}) VALUES ("{}", "{}", "{}","{}","{}")'.format(
                     sql_table_name,
                     cin_column_name_in_db,
                     company_name_column_name_in_db,
                     charge_id_column_name,
                     date_column_name,
+                    amount_column_name,
                     cin_column_value,
                     company_name,
-                    charge_id, date)
+                    charge_id, date,amount)
                 db_cursor.execute(insert_query)
                 table_df = table_df[table_df['Column_Name'] != config_dict['charge_id_column_name']]
                 table_df = table_df[table_df['Column_Name'] != config_dict['date_column_name']]
+                table_df = table_df[table_df['Column_Name'] != config_dict['amount_column_name']]
         columns_list = table_df[table_df.columns[6]].unique()
 
         # logging.info(columns_list)
@@ -306,6 +395,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             json_string = json.dumps(json_dict)
             # logging.info(json_string)
             date_column_name = config_dict['date_column_name']
+            amount_column_name = config_dict['amount_column_name']
             if sql_table_name == config_dict['charge_sequence_table_name']:
                 charge_id_column_name = config_dict['charge_id_column_name']
             elif sql_table_name == config_dict['open_charges_latest_event_table_name']:
@@ -313,15 +403,23 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             else:
                 charge_id_column_name = None
             try:
-                update_datatable_single_value(db_cursor, sql_table_name,
+                update_datatable_single_value(db_config, sql_table_name,
                                               cin_column_name_in_db,
                                               cin_column_value,
                                               company_name_column_name_in_db,
                                               company_name, column_name,
-                                              json_string,charge_id,date,charge_id_column_name,date_column_name)
+                                              json_string,charge_id,date,charge_id_column_name,date_column_name,amount_column_name,amount)
             except Exception as e:
                 logging.info(f"Exception {e} occurred while updating data in dataframe for {sql_table_name} "
                       f"with data {json_string}")
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+
+                # Get the formatted traceback as a string
+                traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+                # logging.info the traceback details
+                for line in traceback_details:
+                    logging.info(line.strip())
 
     single_output_df = pd.DataFrame(results, columns=['Field Name', 'Value',
                                                       'Table Name', 'Column Name',
