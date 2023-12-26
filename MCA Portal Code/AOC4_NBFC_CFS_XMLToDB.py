@@ -415,23 +415,43 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
     current_year = current_year_df[current_year_df['Field_Name'] == 'year']['Value'].values[0]
     if current_year is None:
         raise Exception(f"Exception occurred while extracting year value {current_year} from current year data")
-    years.append(current_year)
     previous_year = previous_year_df[previous_year_df['Field_Name'] == 'year']['Value'].values[0]
     if previous_year is None:
         raise Exception(f"Exception occurred while extracting year value {previous_year} from previous year data")
-    years.append(previous_year)
-    logging.info(years)
+
     filing_standards = []
     current_year_filing_standard = current_year_df[current_year_df['Field_Name'] == 'filing_standard']['Value'].values[0]
     previous_year_filing_standard = previous_year_df[previous_year_df['Field_Name'] == 'filing_standard']['Value'].values[0]
-    filing_standards.append(current_year_filing_standard)
-    filing_standards.append(previous_year_filing_standard)
+
     logging.info("Saving Single Values to database")
     logging.info(aoc4_nbfc_cfs_first_file_found)
-    if not aoc4_nbfc_cfs_first_file_found:
-        print(aoc4_nbfc_cfs_first_file_found)
+    # if not aoc4_nbfc_cfs_first_file_found:
+    #     print(aoc4_nbfc_cfs_first_file_found)
+    #     single_df_list.append(current_year_df)
+    db_connection = mysql.connector.connect(**db_config)
+    db_cursor = db_connection.cursor()
+    previous_year_check_query = "select * from nbfc_financials where year = %s and Cin =%s and filing_standard = %s"
+    previous_year_values = (previous_year, cin_column_value,previous_year_filing_standard)
+    logging.info(previous_year_check_query % previous_year_values)
+    db_cursor.execute(previous_year_check_query, previous_year_values)
+    previous_year_result = db_cursor.fetchall()
+    current_year_check_query = "select * from nbfc_financials where year = %s and Cin =%s and filing_standard =%s"
+    current_year_values = (current_year, cin_column_value,current_year_filing_standard)
+    logging.info(current_year_check_query, current_year_values)
+    db_cursor.execute(current_year_check_query, current_year_values)
+    current_year_result = db_cursor.fetchall()
+    if len(current_year_result) == 0:
         single_df_list.append(current_year_df)
-    single_df_list.append(previous_year_df)
+        years.append(current_year)
+        filing_standards.append(current_year_filing_standard)
+        logging.info("Current year not found so inserting")
+    if len(previous_year_result) == 0:
+        single_df_list.append(previous_year_df)
+        years.append(previous_year)
+        filing_standards.append(previous_year_filing_standard)
+        logging.info("Previous year not found so inserting")
+    db_cursor.close()
+    db_connection.close()
     single_df_list.append(financial_parameter_df)
     current_year_output_df = pd.DataFrame(current_year_df, columns=['Field_Name', 'Value', 'Table_Name', 'Column_Name',
                                                                     'Column_JSON_Node'])
