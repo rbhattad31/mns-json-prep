@@ -229,7 +229,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         else:
             date_column = 'date'
         type_column = config_dict['type_column_name']
-        if charge_id is None or charge_id == '' or charge_id == '-' or charge_id == 0:
+        if charge_id is None or charge_id == '' or charge_id == '-' or charge_id == 0 or charge_id == '0':
             db_connection = mysql.connector.connect(**db_config)
             db_cursor = db_connection.cursor()
             db_connection.autocommit = True
