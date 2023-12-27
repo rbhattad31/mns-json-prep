@@ -392,7 +392,8 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         hidden_xml_root = hidden_xml_tree.getroot()
         # xml_str = Et.tostring(xml_root, encoding='unicode')
     except Exception as e:
-        raise Exception("Below exception occurred while reading xml file " + '\n' + str(e))
+        # raise Exception("Below exception occurred while reading xml file " + '\n' + str(e))
+        logging.info(f"Error or no xml hidden path{e}")
 
     cin_column_name_in_db = config_dict['cin_column_name_in_db']
 
