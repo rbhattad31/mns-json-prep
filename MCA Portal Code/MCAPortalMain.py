@@ -35,12 +35,15 @@ def main():
             if CinFetchStatus == "Pass":
                 cin = None
                 receipt_number = None
+                company_name = None
                 hidden_attachments = []
+                emails = []
                 for CinData in CinDBData:
                     try:
                         cin = CinData[2]
                         receipt_number = CinData[1]
                         user = CinData[15]
+                        company_name = CinData[3]
                         workflow_status = fetch_workflow_status(db_config,cin)
                         logging.info(workflow_status)
                         emails = config_dict['to_email']
@@ -48,7 +51,7 @@ def main():
                         if workflow_status == 'download_pending' or workflow_status == 'download_insertion_success':
                             logging.info(f"Starting to download for {cin}")
                             subject_start = str(config_dict['subject_start']).format(cin, receipt_number)
-                            body_start = str(config_dict['Body_start']).format(cin, receipt_number)
+                            body_start = str(config_dict['Body_start']).format(cin, receipt_number,company_name)
                             try:
                                 send_email(config_dict, subject_start, body_start, emails, None)
                             except Exception as e:
@@ -87,7 +90,7 @@ def main():
                                 logging.info("JSON Loader generated succesfully")
                                 update_json_loader_db(CinData, config_dict)
                                 cin_complete_subject = str(config_dict['cin_Completed_subject']).format(cin,receipt_number)
-                                cin_completed_body = str(config_dict['cin_Completed_body']).format(cin,receipt_number)
+                                cin_completed_body = str(config_dict['cin_Completed_body']).format(cin,receipt_number,company_name)
                                 update_process_status('Completed',db_config,cin)
                                 update_locked_by_empty(db_config,cin)
                                 try:
@@ -112,7 +115,7 @@ def main():
                         for line in traceback_details:
                             logging.error(line.strip())
                         exception_subject = str(config_dict['Exception_subject']).format(cin,receipt_number)
-                        exception_body = str(config_dict['Exception_message']).format(cin,receipt_number,e)
+                        exception_body = str(config_dict['Exception_message']).format(cin,receipt_number,company_name,e)
                         try:
                             if 'driver' in locals():
                                 sign_out(driver, config_dict, CinData)
