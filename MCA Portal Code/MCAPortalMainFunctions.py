@@ -47,7 +47,7 @@ import re
 from DIRAddressHiddenAttachment import mgt_address_main
 from DirectorShareholdingsHiddenAttachment import mgt_director_shareholdings_main
 from Form18_xml_to_db import form_18_xml_to_db
-
+from FreshCertificateOpenAI import fresh_name_main
 def sign_out(driver,config_dict,CinData):
     try:
         sign_out_button = driver.find_element(By.XPATH, '//a[@id="loginAnchor" and text()="Signout"]')
@@ -405,17 +405,24 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                 elif 'CHANGE OF NAME'.lower() in str(path).lower():
                     Sheet_name = "Change of name"
                     config_dict_Change_of_name,config_status = create_main_config_dictionary(excel_file,Sheet_name)
-                    if len(Cin) == 21:
-                        if 'Certificate of Incorporation Consequent'.lower() in str(path).lower() and 'Fresh'.lower() not in str(path).lower():
-                            map_file_path_Change_of_name = config_dict_Change_of_name['certificate_incorporation_config']
-                        else:
-                            map_file_path_Change_of_name = config_dict_Change_of_name['mapping_file_path']
+                    if 'Fresh Certificate of Incorporation'.lower() in str(path).lower():
+                        sheet_name = 'OpenAI'
+                        config_dict_fresh_name, status = create_main_config_dictionary(excel_file, sheet_name)
+                        fresh_name = fresh_name_main(db_config,config_dict_fresh_name,path,Cin)
+                        if fresh_name:
+                            update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                     else:
-                        map_file_path_Change_of_name = config_dict_Change_of_name['mapping_file_path_llp']
-                    map_sheet_name_Change_of_name = config_dict_Change_of_name['mapping _file_sheet_name']
-                    change_of_name_db_insertion = ChangeOfName_xml_to_db(db_config,config_dict_Change_of_name,map_file_path_Change_of_name,map_sheet_name_Change_of_name,xml_file_path,output_excel_path,Cin,CompanyName)
-                    if change_of_name_db_insertion:
-                        update_db_insertion_status(Cin, file_name, config_dict, 'Success')
+                        if len(Cin) == 21:
+                            if 'Certificate of Incorporation Consequent'.lower() in str(path).lower() and 'Fresh'.lower() not in str(path).lower():
+                                map_file_path_Change_of_name = config_dict_Change_of_name['certificate_incorporation_config']
+                            else:
+                                map_file_path_Change_of_name = config_dict_Change_of_name['mapping_file_path']
+                        else:
+                            map_file_path_Change_of_name = config_dict_Change_of_name['mapping_file_path_llp']
+                        map_sheet_name_Change_of_name = config_dict_Change_of_name['mapping _file_sheet_name']
+                        change_of_name_db_insertion = ChangeOfName_xml_to_db(db_config,config_dict_Change_of_name,map_file_path_Change_of_name,map_sheet_name_Change_of_name,xml_file_path,output_excel_path,Cin,CompanyName)
+                        if change_of_name_db_insertion:
+                            update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                 elif 'CHG'.lower() in str(path).lower():
                     Sheet_name = "CHG1"
                     config_dict_CHG,config_status = create_main_config_dictionary(excel_file,Sheet_name)
