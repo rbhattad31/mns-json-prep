@@ -377,6 +377,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                     company_name,
                     charge_id, date,amount)
                 db_cursor.execute(insert_query)
+                logging.info(insert_query)
                 table_df = table_df[table_df['Column_Name'] != config_dict['charge_id_column_name']]
                 table_df = table_df[table_df['Column_Name'] != config_dict['date_column_name']]
                 table_df = table_df[table_df['Column_Name'] != config_dict['amount_column_name']]
