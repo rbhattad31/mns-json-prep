@@ -354,7 +354,7 @@ def update_database_single_value_AOC(db_config, table_name, cin_column_name, cin
     #     json_string = json.dumps(first_value_json_list)
     #     column_value = json_string
     if num_elements == 1:
-        if column_name == 'financials_pnl_revenue_breakup' and filing_standard == 'IND_AS_Taxanomy':
+        if column_name == 'financials_pnl_revenue_breakup' and filing_standard == 'IND_AS_Taxonomy':
             column_value = json.dumps(json_dict)
         else:
             first_key = next(iter(json_dict))
