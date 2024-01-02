@@ -274,7 +274,7 @@ def update_attachment_table(db_config, config_dict, sql_table_name, column_names
         if len(result) > 0:
             if pan is not None:
                 try:
-                    update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}' ".format(sql_table_name,
+                    update_query = 'UPDATE {} SET {} = "{}" WHERE {} = "{}" AND {} = "{}" '.format(sql_table_name,
                                                                                                    pan_column_name,
                                                                                                    pan, din_column_name,
                                                                                                    din, cin_column_name,
@@ -289,7 +289,7 @@ def update_attachment_table(db_config, config_dict, sql_table_name, column_names
                 logging.info(f"Pan number is none for din {din} with {cin} to update in table {sql_table_name}")
             if phone_number is not None:
                 try:
-                    update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}'".format(
+                    update_query = 'UPDATE {} SET {} = "{}" WHERE {} = "{}" AND {} = "{}"'.format(
                         sql_table_name,
                         phone_number_column_name,
                         phone_number,
@@ -304,7 +304,7 @@ def update_attachment_table(db_config, config_dict, sql_table_name, column_names
                 logging.info(f"Phone number is none for din {din} with {cin} to update in table {sql_table_name}")
             if email is not None:
                 try:
-                    update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}'".format(sql_table_name,
+                    update_query = 'UPDATE {} SET {} = "{}" WHERE {} = "{}" AND {} = "{}"'.format(sql_table_name,
                                                                                                   email_column_name,
                                                                                                   email,
                                                                                                   din_column_name,
