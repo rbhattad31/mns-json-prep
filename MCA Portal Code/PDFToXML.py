@@ -168,8 +168,8 @@ def PDFtoXML(pdf_path,file_name):
                 if '.xml' not in xml_file_path:
                     xml_file_path = xml_file_path + '.xml'
                 write_xml_data(xfa_data, xml_file_path)
-                logging.info("Extracted XFA data for ", file_name)
-                logging.info("Saved to", xml_file_path)
+                logging.info(f"Extracted XFA data for {file_name}")
+                logging.info(f"Saved to {xml_file_path}")
                 return xml_file_path, True
         else:
             # If XFA data is not found, extract table data and save it as XML

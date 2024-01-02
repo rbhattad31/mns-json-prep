@@ -824,7 +824,7 @@ def dir_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
         din_list = xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, hidden_xml_file_path,
                   output_file_path, cin_column_value, filing_date)
         logging.info(din_list)
-        if 'DIR'.lower() in str(xml_file_path).lower():
+        if 'Form 32'.lower() not in str(xml_file_path).lower():
             logging.info("Going for hidden fields extraction")
             dir_hidden_fields(db_config,hidden_xml_file_path,map_file_path,config_dict,din_list,cin_column_value)
     except Exception as e:
