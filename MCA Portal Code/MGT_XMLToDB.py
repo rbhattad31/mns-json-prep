@@ -324,6 +324,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
     logging.info(single_df)
     single_formula_df = single_df[
         single_df[single_df.columns[3]] == 'Formula']
+    total_equity_shares = single_df[single_df['Field_Name'] == 'paidup_capital']['Value'].values[0]
     for _, row in single_formula_df.iterrows():
         current_formula = row['Child_Nodes']
         print(current_formula)
@@ -471,9 +472,9 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
             table_df = table_df[table_df[column_names_list[0]].notna()]
             # logging.info(table_df)
-            total_shares = pd.to_numeric(table_df['no_of_shares']).sum()
+            # total_shares = pd.to_numeric(table_df['no_of_shares']).sum()
             # logging.info(total_shares)
-            table_df['percentage_holding'] = (pd.to_numeric(table_df['no_of_shares']) / total_shares) * 100
+            table_df['percentage_holding'] = (pd.to_numeric(table_df['no_of_shares']) / total_equity_shares) * 100
             # logging.info(table_df)
 
             # Define the mapping of values to be replaced

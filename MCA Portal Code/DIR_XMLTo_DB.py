@@ -5,12 +5,11 @@ import pandas as pd
 import xml.etree.ElementTree as Et
 import os
 import mysql.connector
-from Config import create_main_config_dictionary
 from HiddenFields import dir_hidden_fields
 pd.set_option('display.max_columns', None)
 from logging_config import setup_logging
 import logging
-
+import json
 
 def get_single_value_from_xml(xml_root, parent_node, child_node):
     try:
@@ -35,6 +34,59 @@ def get_single_value_from_xml(xml_root, parent_node, child_node):
     except Exception as e:
         logging.info(f"An error occurred: {e}")
         return None
+
+
+def update_database_single_value(db_config, table_name, cin_column_name, cin_value, column_name, column_value,din):
+    setup_logging()
+    db_connection = mysql.connector.connect(**db_config)
+    db_cursor = db_connection.cursor()
+    json_dict = json.loads(column_value)
+    num_elements = len(json_dict)
+    # if column_name == "financials_auditor" and num_elements == 1:
+    #     first_key = next(iter(json_dict))
+    #     first_value_json_list = json_dict[first_key]
+    #     json_string = json.dumps(first_value_json_list)
+    #     column_value = json_string
+    if num_elements == 1:
+        first_key = next(iter(json_dict))
+        first_value = json_dict[first_key]
+        column_value = first_value
+    else:
+        column_value = json.dumps(json_dict)
+
+    # check if there is already entry with cin
+    query = "SELECT * FROM {} WHERE {} = '{}' and {}='{}'".format(table_name, cin_column_name, cin_value,'din',din)
+    logging.info(query)
+    try:
+        db_cursor.execute(query)
+    except mysql.connector.Error as err:
+        logging.info(err)
+    result = db_cursor.fetchall()
+    # logging.info(result)
+
+    # if cin value already exists
+    if len(result) > 0:
+        update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}'".format(table_name, column_name,
+                                                                                      column_value, cin_column_name,
+                                                                                      cin_value,
+                                                                                      'din',
+                                                                                      din)
+        logging.info(update_query)
+        db_cursor.execute(update_query)
+        logging.info("Updating")
+
+    # if cin value doesn't exist
+    else:
+        insert_query = "INSERT INTO {} ({}, {}) VALUES ('{}', '{}')".format(table_name, cin_column_name,
+                                                                                      column_name,
+                                                                                      cin_value,
+                                                                                      column_value)
+        logging.info(insert_query)
+        db_cursor.execute(insert_query)
+        logging.info("Inserting")
+    db_connection.commit()
+    db_cursor.close()
+    db_connection.close()
 
 
 def extract_table_values_from_xml(xml_root, table_node_name, child_nodes):
@@ -440,6 +492,31 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
     # extract group values
     din_list = []
+    sql_tables_list = single_df[single_df.columns[table_name_index]].unique()
+    logging.info(sql_tables_list)
+    din_value = single_df[single_df['Field_Name'] == 'din']['Value'].values[0]
+    logging.info(din_value)
+    for table_name in sql_tables_list:
+        table_df = single_df[single_df[single_df.columns[table_name_index]] == table_name]
+        columns_list = table_df[table_df.columns[column_name_index]].unique()
+        logging.info(columns_list)
+        for column_name in columns_list:
+            logging.info(column_name)
+            # filter table df with only column value
+            column_df = table_df[table_df[table_df.columns[column_name_index]] == column_name]
+            logging.info(column_df)
+            # create json dict with keys of field name and values for the same column name entries
+            json_dict = column_df.set_index(table_df.columns[0])['Value'].to_dict()
+            # Convert the dictionary to a JSON string
+            json_string = json.dumps(json_dict)
+            logging.info(json_string)
+            try:
+                update_database_single_value(db_config, table_name, cin_column_name_in_db, cin_column_value
+                                                 , column_name, json_string,
+                                                 din_value)
+            except Exception as e:
+                logging.info(f"Exception {e} occurred while updating data in dataframe for {table_name} "
+                             f"with data {json_string}")
     for index, row in group_df.iterrows():
         xml_type = str(row.iloc[xml_type_index])
         parent_node = str(row.iloc[parent_node_index]).strip()
