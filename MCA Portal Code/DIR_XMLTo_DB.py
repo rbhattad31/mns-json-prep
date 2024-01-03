@@ -12,6 +12,26 @@ import logging
 import json
 
 
+def Get_Age(DOB):
+    # Given date in the "dd/mm/yyyy" format
+    try:
+        given_date_string = DOB
+
+        # Parse the given date string
+        given_date = datetime.strptime(given_date_string, "%Y-%m-%d")
+
+        # Get the current date
+        current_date = datetime.now()
+
+        # Calculate the age
+        age = current_date.year - given_date.year - (
+                (current_date.month, current_date.day) < (given_date.month, given_date.day))
+        return age
+    except Exception as e:
+        logging.info(f"Error in calculating age {e}")
+        return None
+
+
 def get_single_value_from_xml(xml_root, parent_node, child_node):
     try:
         setup_logging()
@@ -37,7 +57,7 @@ def get_single_value_from_xml(xml_root, parent_node, child_node):
         return None
 
 
-def update_database_single_value(db_config, table_name, cin_column_name, cin_value, column_name, column_value,din):
+def update_database_single_value(db_config, table_name, cin_column_name, cin_value, column_name, column_value,din,designation):
     setup_logging()
     db_connection = mysql.connector.connect(**db_config)
     db_cursor = db_connection.cursor()
@@ -56,7 +76,7 @@ def update_database_single_value(db_config, table_name, cin_column_name, cin_val
         column_value = json.dumps(json_dict)
 
     # check if there is already entry with cin
-    query = "SELECT * FROM {} WHERE {} = '{}' and {}='{}'".format(table_name, cin_column_name, cin_value,'din',din)
+    query = "SELECT * FROM {} WHERE {} = '{}' and {}='{}' and {}='{}'".format(table_name, cin_column_name, cin_value,'din',din,'designation',designation)
     logging.info(query)
     try:
         db_cursor.execute(query)
@@ -66,25 +86,29 @@ def update_database_single_value(db_config, table_name, cin_column_name, cin_val
     # logging.info(result)
 
     # if cin value already exists
-    if len(result) > 0:
-        update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}'".format(table_name, column_name,
+    if len(result) == 0:
+        insert_query = "INSERT INTO {} ({}, {},{}) VALUES ('{}', '{}','{}')".format(table_name, cin_column_name,
+                                                                            'din',
+                                                                            'designation',
+                                                                            cin_value,
+                                                                            din,
+                                                                            designation)
+        logging.info(insert_query)
+        db_cursor.execute(insert_query)
+        logging.info("Inserting")
+    # if cin value doesn't exist
+    else:
+        update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}' AND {} = '{}'".format(table_name, column_name,
                                                                                       column_value, cin_column_name,
                                                                                       cin_value,
                                                                                       'din',
-                                                                                      din)
+                                                                                      din,
+                                                                                      'designation',
+                                                                                      designation)
         logging.info(update_query)
         db_cursor.execute(update_query)
         logging.info("Updating")
 
-    # if cin value doesn't exist
-    else:
-        insert_query = "INSERT INTO {} ({}, {}) VALUES ('{}', '{}')".format(table_name, cin_column_name,
-                                                                                      column_name,
-                                                                                      cin_value,
-                                                                                      column_value)
-        logging.info(insert_query)
-        db_cursor.execute(insert_query)
-        logging.info("Inserting")
     db_connection.commit()
     db_cursor.close()
     db_connection.close()
@@ -398,7 +422,7 @@ def update_attachment_table(db_config, config_dict, sql_table_name, column_names
 
 
 def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, hidden_xml_file_path,
-              output_file_path, cin_column_value, filing_date):
+              output_file_path, cin_column_value, filing_date,file_name):
     setup_logging()
     field_name_index = config_dict['field_name_index']
     xml_type_index = config_dict['xml_type_index']
@@ -463,7 +487,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
     logging.info(designation_dict)
 
     for index, row in single_df.iterrows():
-        # field_name = str(row.iloc[field_name_index]).strip()
+        field_name = str(row.iloc[field_name_index]).strip()
         parent_node = str(row.iloc[parent_node_index]).strip()
         child_nodes = str(row.iloc[child_nodes_index]).strip()
         # sql_table_name = str(row.iloc[table_name_index]).strip()
@@ -472,9 +496,20 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         xml_type = str(row.iloc[xml_type_index]).strip()
         if xml_type == 'Hidden':
             continue
+        if field_name == 'age':
+            continue
         value = get_single_value_from_xml(xml_root, parent_node, child_nodes)
+        if field_name == 'designation':
+            value = designation_dict.get(value,value)
         single_df.at[index, 'Value'] = value
     # logging.info(single_df)
+    designation = single_df[single_df['Field_Name'] == 'designation']['Value'].values[0]
+    age_index = single_df[single_df[single_df.columns[field_name_index]] ==
+                                          'age'].index[0]
+    if age_index is not None:
+        date_of_birth = single_df[single_df['Field_Name'] == 'date_of_birth']['Value'].values[0]
+        age = Get_Age(date_of_birth)
+        single_df.loc[age_index,'Value'] = age
     no_of_directors_row_index = single_df[single_df[single_df.columns[field_name_index]] ==
                                           config_dict['no_of_directors_field_name']].index[0]
     if no_of_directors_row_index is not None:
@@ -484,8 +519,17 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             if int(no_of_directors_value) > 0:
                 pass
             else:
-                raise Exception(f"Number of Directors = '{no_of_directors_value}' found in xml is not greater than zero."
-                                f"Hence skipping processing directors program")
+                logging.info("Found Null directors so going to other directors program")
+                if 'Form 32'.lower() in str(file_name).lower():
+                    logging.info("Going to Form 32 other director program")
+                    other_director_map_file_path = config_dict['Form32_other_directors_config']
+                else:
+                    logging.info("Going to DIR other director program")
+                    other_director_map_file_path = config_dict['DIR12_other_directors_config']
+                other_than_dir_xml_to_db(db_config,config_dict,other_director_map_file_path,map_file_sheet_name,xml_file_path,output_file_path,cin_column_value,filing_date,file_name)
+                # raise Exception(f"Number of Directors = '{no_of_directors_value}' found in xml is not greater than zero."
+                #                 f"Hence skipping processing directors program")
+                return []
         except Exception as e:
             pass
     else:
@@ -514,7 +558,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             try:
                 update_database_single_value(db_config, table_name, cin_column_name_in_db, cin_column_value
                                                  , column_name, json_string,
-                                                 din_value)
+                                                 din_value,designation)
             except Exception as e:
                 logging.info(f"Exception {e} occurred while updating data in dataframe for {table_name} "
                              f"with data {json_string}")
@@ -627,7 +671,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
 
 def other_than_dir_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
-                             output_file_path, cin_column_value, filing_date):
+                             output_file_path, cin_column_value, filing_date,file_name):
     setup_logging()
     field_name_index = config_dict['field_name_index']
     # xml_type_index = config_dict['xml_type_index']
@@ -897,13 +941,13 @@ def attachment_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_n
 
 
 def dir_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, hidden_xml_file_path,
-                  output_file_path, cin_column_value, filing_date):
+                  output_file_path, cin_column_value, filing_date,file_name):
     try:
         setup_logging()
         din_list = xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, hidden_xml_file_path,
-                  output_file_path, cin_column_value, filing_date)
+                  output_file_path, cin_column_value, filing_date,file_name)
         logging.info(din_list)
-        if 'Form 32'.lower() not in str(xml_file_path).lower():
+        if 'dir' in str(file_name).lower():
             logging.info("Going for hidden fields extraction")
             dir_hidden_fields(db_config,hidden_xml_file_path,map_file_path,config_dict,din_list,cin_column_value)
     except Exception as e:
@@ -922,11 +966,11 @@ def dir_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
 
 
 def other_than_director_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
-                                  output_file_path, cin_column_value, filing_date):
+                                  output_file_path, cin_column_value, filing_date,file_name):
     try:
         setup_logging()
         other_than_dir_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
-                                 output_file_path, cin_column_value, filing_date)
+                                 output_file_path, cin_column_value, filing_date,file_name)
     except Exception as e:
         logging.info("Below Exception occurred while processing DIR file: \n ", e)
         exc_type, exc_value, exc_traceback = sys.exc_info()

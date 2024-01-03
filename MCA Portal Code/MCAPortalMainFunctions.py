@@ -460,7 +460,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     map_file_path_DIR = config_dict_DIR['mapping file path']
                     map_sheet_name_dir = config_dict_DIR['mapping file sheet name']
                     xml_hidden_file_path = xml_file_path.replace('.xml', '_hidden.xml')
-                    dir_db_insertion = dir_xml_to_db(db_config,config_dict_DIR,map_file_path_DIR,map_sheet_name_dir,xml_file_path,xml_hidden_file_path,output_excel_path,Cin,date)
+                    dir_db_insertion = dir_xml_to_db(db_config,config_dict_DIR,map_file_path_DIR,map_sheet_name_dir,xml_file_path,xml_hidden_file_path,output_excel_path,Cin,date,file_name)
                     if dir_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                 elif 'Form8'.lower() in str(file_name).lower():
@@ -531,7 +531,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     logging.info(map_sheet_name_form32)
                     xml_hidden_file_path = xml_file_path.replace('.xml', '_hidden.xml')
                     form32_db_insertion = dir_xml_to_db(db_config, config_dict_form32, map_file_path_form32, map_sheet_name_form32,
-                                                     xml_file_path, xml_hidden_file_path, output_excel_path, Cin, date)
+                                                     xml_file_path, xml_hidden_file_path, output_excel_path, Cin, date,file_name)
                     if form32_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
             except Exception as e:
