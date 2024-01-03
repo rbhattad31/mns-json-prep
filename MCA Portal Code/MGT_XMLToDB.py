@@ -533,7 +533,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                         (str(hold_sub_assoc_value).lower() in str(config_dict['associate_keyword_in_xml']).lower()) or
                         (str(config_dict['associate_keyword_in_xml']).lower() in str(hold_sub_assoc_value).lower())):
                     associate_tables_list = [item for item in sql_tables_list if
-                                             str(hold_sub_assoc_value).lower() in
+                                             config_dict['associate_table_keyword'] in
                                              item.lower()]
                     logging.info(associate_tables_list)
                     # cin_length = 21  # These values are for testing, uncomment for all the tables testing
@@ -584,7 +584,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 if ((str(hold_sub_assoc_value).lower() == str(config_dict['holding_keyword_in_xml']).lower()) or
                         (str(hold_sub_assoc_value).lower() in str(config_dict['holding_keyword_in_xml']).lower()) or
                         (str(config_dict['holding_keyword_in_xml']).lower() in str(hold_sub_assoc_value).lower())):
-                    holding_tables_list = [item for item in sql_tables_list if str(hold_sub_assoc_value).lower() in
+                    holding_tables_list = [item for item in sql_tables_list if config_dict['holding_table_keyword'] in
                                            item.lower()]
                     # logging.info(holding_tables_list)
                     # cin_length = 21
@@ -634,7 +634,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 if ((str(hold_sub_assoc_value).lower() == str(config_dict['joint_venture_keyword_in_xml']).lower()) or
                         (str(hold_sub_assoc_value).lower() in str(config_dict['joint_venture_keyword_in_xml']).lower()) or
                         (str(config_dict['joint_venture_keyword_in_xml']).lower() in str(hold_sub_assoc_value).lower())):
-                    joint_tables_list = [item for item in sql_tables_list if str(hold_sub_assoc_value).lower() in
+                    joint_tables_list = [item for item in sql_tables_list if config_dict['joint_table_keyword'] in
                                          item.lower()]
                     # logging.info(joint_tables_list)
                     # cin_length = 21
@@ -684,7 +684,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                         (str(hold_sub_assoc_value).lower() in str(config_dict['subsidiary_keyword_in_xml']).lower()) or
                         (str(config_dict['subsidiary_keyword_in_xml']).lower() in str(hold_sub_assoc_value).lower())):
                     subsidiary_tables_list = [item for item in sql_tables_list if
-                                              str(hold_sub_assoc_value).lower() in
+                                              config_dict['subsidiary_table_keyword'] in
                                               item.lower()]
                     # logging.info(subsidiary_tables_list)
                     # cin_length = 21
