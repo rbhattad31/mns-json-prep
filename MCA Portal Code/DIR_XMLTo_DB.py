@@ -501,6 +501,8 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         value = get_single_value_from_xml(xml_root, parent_node, child_nodes)
         if field_name == 'designation':
             value = designation_dict.get(value,value)
+        if field_name == 'event':
+            value = event_dict.get(value,value)
         single_df.at[index, 'Value'] = value
     logging.info(single_df)
     if 'Form 32'.lower() in str(file_name).lower():
