@@ -203,7 +203,7 @@ def insert_datatable_with_table(config_dict, db_config, sql_table_name, column_n
                         f"with below data \n {list(df_row)} ")
     else:
         select_query = (f"SELECT * FROM {sql_table_name} WHERE {cin_column_name} = '{cin}' AND {din_column_name}"
-                        f" = '{din}' AND LOWER({designation_column_name}) = '{str(designation_after_event).lower()}' AND {date_of_appointment_column_name} = '{date_of_appointment}'")
+                        f" = '{din}' AND LOWER({designation_column_name}) = '{str(designation_after_event).lower()}'")
 
     logging.info(select_query)
     db_cursor.execute(select_query)
@@ -223,18 +223,16 @@ def insert_datatable_with_table(config_dict, db_config, sql_table_name, column_n
         result_dict.pop(cin_column_name)
         result_dict.pop(din_column_name)
         result_dict.pop(designation_column_name)
-        result_dict.pop(date_of_appointment_column_name)
 
         column_names_list = list(column_names_list)
         column_names_list.remove(cin_column_name)
         column_names_list.remove(din_column_name)
         column_names_list.remove(designation_column_name)
-        column_names_list.remove(date_of_appointment_column_name)
 
         update_query = f"""UPDATE {sql_table_name}
                         SET {', '.join([f"{col} = '{str(result_dict[col])}'" for col in column_names_list])} 
                         WHERE {cin_column_name} = '{cin}' AND {din_column_name} = '{din}' AND
-                        LOWER({designation_column_name}) = '{str(designation_after_event).lower()}' AND {date_of_appointment_column_name} = '{date_of_appointment}'"""
+                        LOWER({designation_column_name}) = '{str(designation_after_event).lower()}'"""
 
         logging.info(update_query)
         db_cursor.execute(update_query)
@@ -264,14 +262,16 @@ def insert_datatable_with_other_dir_table(config_dict, db_config, sql_table_name
     event_date_column_name = config_dict['event_date_column_name']
     event_date = result_dict[event_date_column_name]
     logging.info(f'{event_date=}')
+    designation_column_name = config_dict['designation_column_name']
+    designation = result_dict[designation_column_name]
 
-    if cin is None or pan is None or event_date is None:
+    if cin is None or pan is None:
         raise Exception(f"One of the Value of CIN, PAN and 'Event Date' values are empty for record"
                         f"to update in table {sql_table_name} "
                         f"with below data \n {list(df_row)} ")
     else:
         select_query = (f"SELECT * FROM {sql_table_name} WHERE {cin_column_name} = '{cin}' AND {pan_column_name}"
-                        f" = '{pan}' AND {event_date_column_name} = '{event_date}'")
+                        f" = '{pan}' AND {designation_column_name} = '{designation}'")
 
     logging.info(select_query)
     db_cursor.execute(select_query)
@@ -290,17 +290,17 @@ def insert_datatable_with_other_dir_table(config_dict, db_config, sql_table_name
     else:
         result_dict.pop(cin_column_name)
         result_dict.pop(pan_column_name)
-        result_dict.pop(event_date_column_name)
+        result_dict.pop(designation_column_name)
 
         column_names_list = list(column_names_list)
         column_names_list.remove(cin_column_name)
         column_names_list.remove(pan_column_name)
-        column_names_list.remove(event_date_column_name)
+        column_names_list.remove(designation_column_name)
 
         update_query = f'''UPDATE {sql_table_name}
                         SET {', '.join([f"{col} = '{str(result_dict[col])}'" for col in column_names_list])} 
                         WHERE {cin_column_name} = '{cin}' AND {pan_column_name} = '{pan}' AND
-                        {event_date_column_name} = '{event_date}' '''
+                        {designation_column_name} = '{designation}' '''
 
         logging.info(update_query)
         db_cursor.execute(update_query)
@@ -513,32 +513,53 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             date_of_birth = single_df[single_df['Field_Name'] == 'date_of_birth']['Value'].values[0]
             age = Get_Age(date_of_birth)
             single_df.loc[age_index,'Value'] = age
+
     no_of_directors_row_index = single_df[single_df[single_df.columns[field_name_index]] ==
                                           config_dict['no_of_directors_field_name']].index[0]
-    if no_of_directors_row_index is not None:
-        no_of_directors_value = single_df.loc[no_of_directors_row_index, 'Value']
-        logging.info(f'{no_of_directors_value=}')
-        try:
-            if int(no_of_directors_value) == 0 or no_of_directors_value is None or no_of_directors_value == '' or no_of_directors_value == 'None':
-                logging.info("Found Null directors so going to other directors program")
-                if 'Form 32'.lower() in str(file_name).lower():
-                    logging.info("Going to Form 32 other director program")
-                    other_director_map_file_path = config_dict['Form32_other_directors_config']
-                else:
-                    logging.info("Going to DIR other director program")
-                    other_director_map_file_path = config_dict['DIR12_other_directors_config']
-                other_than_director_xml_to_db(db_config, config_dict, other_director_map_file_path, map_file_sheet_name,
-                                              xml_file_path, output_file_path, cin_column_value, filing_date, file_name)
-                # raise Exception(f"Number of Directors = '{no_of_directors_value}' found in xml is not greater than zero."
-                #                 f"Hence skipping processing directors program")
-                return []
+    try:
+        no_of_directors_value = single_df[single_df['Field_Name'] == 'No_of_directors']['Value'].values[0]
+        if int(no_of_directors_value) == 0 or no_of_directors_value is None or no_of_directors_value == '' or no_of_directors_value == 'None':
+            logging.info("Found Null directors so going to other directors program")
+            if 'Form 32'.lower() in str(file_name).lower():
+                logging.info("Going to Form 32 other director program")
+                other_director_map_file_path = config_dict['Form32_other_directors_config']
             else:
-                logging.info("Going with same dir program")
-                pass
-        except Exception as e:
+                logging.info("Going to DIR other director program")
+                other_director_map_file_path = config_dict['DIR12_other_directors_config']
+            other_than_director_xml_to_db(db_config, config_dict, other_director_map_file_path, map_file_sheet_name,
+                                          xml_file_path, output_file_path, cin_column_value, filing_date, file_name)
+            # raise Exception(f"Number of Directors = '{no_of_directors_value}' found in xml is not greater than zero."
+            #                 f"Hence skipping processing directors program")
+            return []
+        else:
+            logging.info("Going with same dir program")
             pass
-    else:
-        raise Exception("Number of Directors field is not found in director mapping file.")
+    except Exception as e:
+        logging.info(f"Exception occured while going for other directors {e}")
+    # if no_of_directors_row_index is not None:
+    #     no_of_directors_value = single_df.loc[no_of_directors_row_index, 'Value']
+    #     logging.info(f'{no_of_directors_value=}')
+    #     try:
+    #         if int(no_of_directors_value) == 0 or no_of_directors_value is None or no_of_directors_value == '' or no_of_directors_value == 'None':
+    #             logging.info("Found Null directors so going to other directors program")
+    #             if 'Form 32'.lower() in str(file_name).lower():
+    #                 logging.info("Going to Form 32 other director program")
+    #                 other_director_map_file_path = config_dict['Form32_other_directors_config']
+    #             else:
+    #                 logging.info("Going to DIR other director program")
+    #                 other_director_map_file_path = config_dict['DIR12_other_directors_config']
+    #             other_than_director_xml_to_db(db_config, config_dict, other_director_map_file_path, map_file_sheet_name,
+    #                                           xml_file_path, output_file_path, cin_column_value, filing_date, file_name)
+    #             # raise Exception(f"Number of Directors = '{no_of_directors_value}' found in xml is not greater than zero."
+    #             #                 f"Hence skipping processing directors program")
+    #             return []
+    #         else:
+    #             logging.info("Going with same dir program")
+    #             pass
+    #     except Exception as e:
+    #         pass
+    # else:
+    #     raise Exception("Number of Directors field is not found in director mapping file.")
 
     # extract group values
     din_list = []
