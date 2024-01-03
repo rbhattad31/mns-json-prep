@@ -76,7 +76,7 @@ def update_database_single_value(db_config, table_name, cin_column_name, cin_val
         column_value = json.dumps(json_dict)
 
     # check if there is already entry with cin
-    query = "SELECT * FROM {} WHERE {} = '{}' and {}='{}' and {}='{}'".format(table_name, cin_column_name, cin_value,'din',din,'designation',designation)
+    query = "SELECT * FROM {} WHERE {} = '{}' and {}='{}' and LOWER({})='{}'".format(table_name, cin_column_name, cin_value,'din',din,'designation',str(designation).lower())
     logging.info(query)
     try:
         db_cursor.execute(query)
@@ -98,13 +98,13 @@ def update_database_single_value(db_config, table_name, cin_column_name, cin_val
         logging.info("Inserting")
     # if cin value doesn't exist
     else:
-        update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}' AND {} = '{}'".format(table_name, column_name,
+        update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}' AND LOWER({}) = '{}'".format(table_name, column_name,
                                                                                       column_value, cin_column_name,
                                                                                       cin_value,
                                                                                       'din',
                                                                                       din,
                                                                                       'designation',
-                                                                                      designation)
+                                                                                      str(designation).lower())
         logging.info(update_query)
         db_cursor.execute(update_query)
         logging.info("Updating")
@@ -203,7 +203,7 @@ def insert_datatable_with_table(config_dict, db_config, sql_table_name, column_n
                         f"with below data \n {list(df_row)} ")
     else:
         select_query = (f"SELECT * FROM {sql_table_name} WHERE {cin_column_name} = '{cin}' AND {din_column_name}"
-                        f" = '{din}' AND {designation_column_name} = '{designation_after_event}' AND {date_of_appointment_column_name} = '{date_of_appointment}'")
+                        f" = '{din}' AND LOWER({designation_column_name}) = '{str(designation_after_event).lower()}' AND {date_of_appointment_column_name} = '{date_of_appointment}'")
 
     logging.info(select_query)
     db_cursor.execute(select_query)
@@ -234,7 +234,7 @@ def insert_datatable_with_table(config_dict, db_config, sql_table_name, column_n
         update_query = f"""UPDATE {sql_table_name}
                         SET {', '.join([f"{col} = '{str(result_dict[col])}'" for col in column_names_list])} 
                         WHERE {cin_column_name} = '{cin}' AND {din_column_name} = '{din}' AND
-                        {designation_column_name} = '{designation_after_event}' AND {date_of_appointment_column_name} = '{date_of_appointment}'"""
+                        LOWER({designation_column_name}) = '{str(designation_after_event).lower()}' AND {date_of_appointment_column_name} = '{date_of_appointment}'"""
 
         logging.info(update_query)
         db_cursor.execute(update_query)
