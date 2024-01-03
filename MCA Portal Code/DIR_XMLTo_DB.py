@@ -128,7 +128,7 @@ def extract_table_values_from_xml(xml_root, table_node_name, child_nodes):
         for node in child_nodes_list:
             # logging.info(node)
             try:
-                node_value = data.find(node).text
+                node_value = data.find(node,namespaces).text
             except AttributeError:
                 node_value = None
             # logging.info(node_value)
