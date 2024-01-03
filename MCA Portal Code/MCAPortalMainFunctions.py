@@ -310,7 +310,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                 file_name = xml[4]
                 xml_file_path = str(path).replace('.pdf', '.xml')
                 output_excel_path = str(path).replace('.pdf', '.xlsx')
-                if 'MGT'.lower() in str(path).lower():
+                if 'MGT'.lower() in str(file_name).lower():
                     Sheet_name = "MGT"
                     config_dict_MGT, config_status = create_main_config_dictionary(excel_file, Sheet_name)
                     if 'MGT-7A' in path:
@@ -349,7 +349,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                         shareholdings = mgt_director_shareholdings_main(db_config,config_dict_shareholdings,output_directory,path,Cin)
                     db_cursor.close()
                     db_connection.close()
-                elif 'MSME'.lower() in str(path).lower():
+                elif 'MSME'.lower() in str(file_name).lower():
                     Sheet_name = "MSME"
                     config_dict_MSME, config_status = create_main_config_dictionary(excel_file, Sheet_name)
                     map_file_path_MSME = config_dict_MSME['mapping_file_path']
@@ -358,7 +358,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     msme_db_insertion = msme_xml_to_db(db_config,config_dict_MSME,map_file_path_MSME,map_sheet_name_MSME,xml_file_path,output_excel_path,Cin,CompanyName)
                     if msme_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
-                elif 'AOC-4'.lower() in str(path).lower() and 'AOC-4(XBRL)'.lower() not in str(path).lower():
+                elif 'AOC-4'.lower() in str(file_name).lower() and 'AOC-4(XBRL)'.lower() not in str(file_name).lower():
                     if 'AOC-4 NBFC'.lower() in str(path).lower():
                         Sheet_name = "AOC NBFC"
                         config_dict_AOC_NBFC, config_status = create_main_config_dictionary(excel_file, Sheet_name)
@@ -373,7 +373,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                             print(f"Excpetion occured while processing AOC-4-NBFC {e}")
                         else:
                             AOC_4_first_file_found = True
-                    elif 'AOC-4 CFS NBFC'.lower() in str(path).lower():
+                    elif 'AOC-4 CFS NBFC'.lower() in str(file_name).lower():
                         Sheet_name = "AOC CFS"
                         config_dict_AOC_CFS, config_status = create_main_config_dictionary(excel_file, Sheet_name)
                         map_file_path_AOC_CFS = config_dict_AOC_CFS['mapping file path']
@@ -387,7 +387,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                             print(f"Excpetion occured while processing AOC-4-NBFC-CFS {e}")
                         else:
                             AOC_4_NBFC_first_file_found = True
-                    elif 'AOC-4 CSR'.lower() in str(path).lower():
+                    elif 'AOC-4 CSR'.lower() in str(file_name).lower():
                         continue
                     else:
                         Sheet_name = "AOC"
@@ -402,7 +402,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                             print(f"Excpetion occured while processing AOC-4 {e}")
                         else:
                             AOC_4_first_file_found = True
-                elif 'CHANGE OF NAME'.lower() in str(path).lower():
+                elif 'CHANGE OF NAME'.lower() in str(file_name).lower():
                     Sheet_name = "Change of name"
                     config_dict_Change_of_name,config_status = create_main_config_dictionary(excel_file,Sheet_name)
                     if 'Fresh Certificate of Incorporation'.lower() in str(path).lower():
@@ -423,7 +423,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                         change_of_name_db_insertion = ChangeOfName_xml_to_db(db_config,config_dict_Change_of_name,map_file_path_Change_of_name,map_sheet_name_Change_of_name,xml_file_path,output_excel_path,Cin,CompanyName)
                         if change_of_name_db_insertion:
                             update_db_insertion_status(Cin, file_name, config_dict, 'Success')
-                elif 'CHG'.lower() in str(path).lower():
+                elif 'CHG'.lower() in str(file_name).lower():
                     Sheet_name = "CHG1"
                     config_dict_CHG,config_status = create_main_config_dictionary(excel_file,Sheet_name)
                     digit_count = sum(c.isdigit() for c in file_name)
@@ -438,7 +438,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     chg_db_insertion = chg1_xml_to_db(db_config,config_dict_CHG,map_file_path_CHG,map_sheet_name_CHG,xml_file_path,output_excel_path,Cin,CompanyName,date)
                     if chg_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
-                elif 'XBRL document in respect Consolidated'.lower() in str(path).lower() or 'XBRL financial statements'.lower() in str(path).lower():
+                elif 'XBRL document in respect Consolidated'.lower() in str(file_name).lower() or 'XBRL financial statements'.lower() in str(file_name).lower():
                     Sheet_name = "AOC XBRL"
                     config_dict_Xbrl, config_status = create_main_config_dictionary(excel_file, Sheet_name)
                     output_json_path = str(path).replace('.pdf', '.json')
@@ -463,7 +463,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     dir_db_insertion = dir_xml_to_db(db_config,config_dict_DIR,map_file_path_DIR,map_sheet_name_dir,xml_file_path,xml_hidden_file_path,output_excel_path,Cin,date)
                     if dir_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
-                elif 'Form8'.lower() in str(path).lower():
+                elif 'Form8'.lower() in str(file_name).lower():
                     Sheet_name = 'Form_8_annual'
                     config_dict_form8,config_status = create_main_config_dictionary(excel_file,Sheet_name)
                     map_file_path_form8 = config_dict_form8['mapping file path']
@@ -479,7 +479,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     form8_interim_db_insertion = form8_interim_xml_to_db(db_config,config_dict_form8_interim,map_file_path_form8_interim,map_sheet_name_form8_interim,xml_file_path,output_excel_path,Cin,date)
                     if form8_interim_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
-                elif 'Form11'.lower() in str(path).lower():
+                elif 'Form11'.lower() in str(file_name).lower():
                     sheet_name_form11 = 'Form_11'
                     config_dict_form11,config_status = create_main_config_dictionary(excel_file,sheet_name_form11)
                     map_file_path_form11 = config_dict_form11['mapping file path']
@@ -488,7 +488,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     form11_db_insertion = form_11_xml_to_db(db_config,config_dict_form11,map_file_path_form11,map_sheet_name_form11,xml_file_path,output_excel_path,Cin,xml_hidden_file_path)
                     if form11_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
-                elif 'FiLLiP'.lower() in str(path).lower():
+                elif 'FiLLiP'.lower() in str(file_name).lower():
                     sheet_name_fillip = 'Form_Fillip'
                     config_dict_fillip,config_status = create_main_config_dictionary(excel_file,sheet_name_fillip)
                     map_file_path_fillip = config_dict_fillip['mapping file path']
@@ -497,7 +497,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     if fillip_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
 
-                elif 'Form 8'.lower() in str(path).lower():
+                elif 'Form 8'.lower() in str(file_name).lower():
                     Sheet_name = "CHG1"
                     config_dict_form8_charge, config_status = create_main_config_dictionary(excel_file, Sheet_name)
                     map_file_path_Form8 = config_dict_form8_charge['Form8_Config']
@@ -507,7 +507,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     if form8_charge_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
 
-                elif 'Form 18'.lower() in str(path).lower() or 'INC 22'.lower() in str(path).lower():
+                elif 'Form 18'.lower() in str(file_name).lower() or 'INC 22'.lower() in str(path).lower():
                     sheet_name = 'Form18'
                     config_dict_form18,config_status = create_main_config_dictionary(excel_file,sheet_name)
                     if 'Form 18'.lower() in str(path).lower():
