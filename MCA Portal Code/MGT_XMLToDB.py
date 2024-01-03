@@ -513,6 +513,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             for _, df_row in hold_sub_assoc_table.iterrows():
                 hold_sub_assoc_value = df_row[config_dict['Hold_Sub_Assoc_column_name']]
                 cin_value = df_row[column_names_list[1]]
+                logging.info(hold_sub_assoc_value)
                 try:
                     cin_length = len(cin_value)
                 except TypeError:
@@ -534,7 +535,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                     associate_tables_list = [item for item in sql_tables_list if
                                              str(hold_sub_assoc_value).lower() in
                                              item.lower()]
-                    # logging.info(associate_tables_list)
+                    logging.info(associate_tables_list)
                     # cin_length = 21  # These values are for testing, uncomment for all the tables testing
                     if cin_length == 21:
                         # companies
