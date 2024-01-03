@@ -502,14 +502,15 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         if field_name == 'designation':
             value = designation_dict.get(value,value)
         single_df.at[index, 'Value'] = value
-    # logging.info(single_df)
-    designation = single_df[single_df['Field_Name'] == 'designation']['Value'].values[0]
-    age_index = single_df[single_df[single_df.columns[field_name_index]] ==
-                                          'age'].index[0]
-    if age_index is not None:
-        date_of_birth = single_df[single_df['Field_Name'] == 'date_of_birth']['Value'].values[0]
-        age = Get_Age(date_of_birth)
-        single_df.loc[age_index,'Value'] = age
+    logging.info(single_df)
+    if 'Form 32'.lower() in str(file_name).lower():
+        designation = single_df[single_df['Field_Name'] == 'designation']['Value'].values[0]
+        age_index = single_df[single_df[single_df.columns[field_name_index]] ==
+                                              'age'].index[0]
+        if age_index is not None:
+            date_of_birth = single_df[single_df['Field_Name'] == 'date_of_birth']['Value'].values[0]
+            age = Get_Age(date_of_birth)
+            single_df.loc[age_index,'Value'] = age
     no_of_directors_row_index = single_df[single_df[single_df.columns[field_name_index]] ==
                                           config_dict['no_of_directors_field_name']].index[0]
     if no_of_directors_row_index is not None:
@@ -537,31 +538,33 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
     # extract group values
     din_list = []
-    sql_tables_list = single_df[single_df.columns[table_name_index]].unique()
-    logging.info(sql_tables_list)
-    din_value = single_df[single_df['Field_Name'] == 'din']['Value'].values[0]
-    logging.info(din_value)
-    for table_name in sql_tables_list:
-        table_df = single_df[single_df[single_df.columns[table_name_index]] == table_name]
-        columns_list = table_df[table_df.columns[column_name_index]].unique()
-        logging.info(columns_list)
-        for column_name in columns_list:
-            logging.info(column_name)
-            # filter table df with only column value
-            column_df = table_df[table_df[table_df.columns[column_name_index]] == column_name]
-            logging.info(column_df)
-            # create json dict with keys of field name and values for the same column name entries
-            json_dict = column_df.set_index(table_df.columns[0])['Value'].to_dict()
-            # Convert the dictionary to a JSON string
-            json_string = json.dumps(json_dict)
-            logging.info(json_string)
-            try:
-                update_database_single_value(db_config, table_name, cin_column_name_in_db, cin_column_value
-                                                 , column_name, json_string,
-                                                 din_value,designation)
-            except Exception as e:
-                logging.info(f"Exception {e} occurred while updating data in dataframe for {table_name} "
-                             f"with data {json_string}")
+    if 'Form 32'.lower() in str(file_name).lower():
+        sql_tables_list = single_df[single_df.columns[table_name_index]].unique()
+        logging.info(sql_tables_list)
+        din_value = single_df[single_df['Field_Name'] == 'din']['Value'].values[0]
+        designation = single_df[single_df['Field_Name'] == 'designation']['Value'].values[0]
+        logging.info(din_value)
+        for table_name in sql_tables_list:
+            table_df = single_df[single_df[single_df.columns[table_name_index]] == table_name]
+            columns_list = table_df[table_df.columns[column_name_index]].unique()
+            logging.info(columns_list)
+            for column_name in columns_list:
+                logging.info(column_name)
+                # filter table df with only column value
+                column_df = table_df[table_df[table_df.columns[column_name_index]] == column_name]
+                logging.info(column_df)
+                # create json dict with keys of field name and values for the same column name entries
+                json_dict = column_df.set_index(table_df.columns[0])['Value'].to_dict()
+                # Convert the dictionary to a JSON string
+                json_string = json.dumps(json_dict)
+                logging.info(json_string)
+                try:
+                    update_database_single_value(db_config, table_name, cin_column_name_in_db, cin_column_value
+                                                     , column_name, json_string,
+                                                     din_value,designation)
+                except Exception as e:
+                    logging.info(f"Exception {e} occurred while updating data in dataframe for {table_name} "
+                                 f"with data {json_string}")
     for index, row in group_df.iterrows():
         xml_type = str(row.iloc[xml_type_index])
         parent_node = str(row.iloc[parent_node_index]).strip()
