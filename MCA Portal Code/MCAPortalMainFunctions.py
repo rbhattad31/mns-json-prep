@@ -455,6 +455,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     else:
                         AOC_XBRL_first_file_found = True
                 elif 'DIR'.lower() in str(file_name).lower():
+                    logging.info(f"Going to extract DIR for {file_name}")
                     Sheet_name = "DIR"
                     config_dict_DIR,config_status = create_main_config_dictionary(excel_file,Sheet_name)
                     map_file_path_DIR = config_dict_DIR['mapping file path']
@@ -522,7 +523,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
 
                 elif 'Form 32'.lower() in str(file_name).lower():
-                    logging.info("Going to extract for Form 32")
+                    logging.info(f"Going to extract for Form 32 for {file_name}")
                     Sheet_name = "DIR"
                     config_dict_form32, config_status = create_main_config_dictionary(excel_file, Sheet_name)
                     map_file_path_form32 = config_dict_form32['Form32_config']
