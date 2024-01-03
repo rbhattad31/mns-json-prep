@@ -517,9 +517,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         no_of_directors_value = single_df.loc[no_of_directors_row_index, 'Value']
         logging.info(f'{no_of_directors_value=}')
         try:
-            if int(no_of_directors_value) > 0 and no_of_directors_value is not None:
-                pass
-            else:
+            if int(no_of_directors_value) == 0 or no_of_directors_value is None or no_of_directors_value == '':
                 logging.info("Found Null directors so going to other directors program")
                 if 'Form 32'.lower() in str(file_name).lower():
                     logging.info("Going to Form 32 other director program")
@@ -527,10 +525,13 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 else:
                     logging.info("Going to DIR other director program")
                     other_director_map_file_path = config_dict['DIR12_other_directors_config']
-                other_than_director_xml_to_db(db_config,config_dict,other_director_map_file_path,map_file_sheet_name,xml_file_path,output_file_path,cin_column_value,filing_date,file_name)
+                other_than_director_xml_to_db(db_config, config_dict, other_director_map_file_path, map_file_sheet_name,
+                                              xml_file_path, output_file_path, cin_column_value, filing_date, file_name)
                 # raise Exception(f"Number of Directors = '{no_of_directors_value}' found in xml is not greater than zero."
                 #                 f"Hence skipping processing directors program")
                 return []
+            else:
+                pass
         except Exception as e:
             pass
     else:
