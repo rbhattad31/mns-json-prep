@@ -516,6 +516,8 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
     no_of_directors_row_index = single_df[single_df[single_df.columns[field_name_index]] ==
                                           config_dict['no_of_directors_field_name']].index[0]
+    digit_count = sum(c.isdigit() for c in file_name)
+    logging.info(digit_count)
     try:
         no_of_directors_value = single_df[single_df['Field_Name'] == 'No_of_directors']['Value'].values[0]
         if no_of_directors_value == 0 or no_of_directors_value is None or no_of_directors_value == '' or no_of_directors_value == 'None':
@@ -524,8 +526,11 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 logging.info("Going to Form 32 other director program")
                 other_director_map_file_path = config_dict['Form32_other_directors_config']
             else:
-                logging.info("Going to DIR other director program")
-                other_director_map_file_path = config_dict['DIR12_other_directors_config']
+                if digit_count == 8:
+                    other_director_map_file_path = config_dict['Form32_other_directors_config']
+                else:
+                    logging.info("Going to DIR other director program")
+                    other_director_map_file_path = config_dict['DIR12_other_directors_config']
             other_than_director_xml_to_db(db_config, config_dict, other_director_map_file_path, map_file_sheet_name,
                                           xml_file_path, output_file_path, cin_column_value, filing_date, file_name)
             # raise Exception(f"Number of Directors = '{no_of_directors_value}' found in xml is not greater than zero."
@@ -563,7 +568,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
     # extract group values
     din_list = []
-    if 'Form 32'.lower() in str(file_name).lower():
+    if 'Form 32'.lower() in str(file_name).lower() or digit_count == 8:
         sql_tables_list = single_df[single_df.columns[table_name_index]].unique()
         logging.info(sql_tables_list)
         din_value = single_df[single_df['Field_Name'] == 'din']['Value'].values[0]

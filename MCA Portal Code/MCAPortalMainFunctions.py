@@ -458,7 +458,14 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     logging.info(f"Going to extract DIR for {file_name}")
                     Sheet_name = "DIR"
                     config_dict_DIR,config_status = create_main_config_dictionary(excel_file,Sheet_name)
-                    map_file_path_DIR = config_dict_DIR['mapping file path']
+                    digit_count = sum(c.isdigit() for c in file_name)
+                    logging.info(digit_count)
+                    if digit_count == 8:
+                        map_file_path_DIR = config_dict_DIR['Form32_config']
+                        logging.info("old file")
+                    else:
+                        map_file_path_DIR = config_dict_DIR['mapping file path']
+                        logging.info("new file")
                     map_sheet_name_dir = config_dict_DIR['mapping file sheet name']
                     xml_hidden_file_path = xml_file_path.replace('.xml', '_hidden.xml')
                     dir_db_insertion = dir_xml_to_db(db_config,config_dict_DIR,map_file_path_DIR,map_sheet_name_dir,xml_file_path,xml_hidden_file_path,output_excel_path,Cin,date,file_name)
