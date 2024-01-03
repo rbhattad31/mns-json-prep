@@ -120,7 +120,10 @@ def extract_table_values_from_xml(xml_root, table_node_name, child_nodes):
     child_nodes_list = [x.strip() for x in child_nodes.split(',')]
     # logging.info(child_nodes_list)
     # logging.info(table_node_name)
-    for data in xml_root.findall(f'.//{table_node_name}'):
+    namespaces = {'xfa': 'http://www.xfa.org/schema/xfa-data/1.0/',
+                  'frm': 'http://www.mit.gov.in/eGov/BackOffice/schema/Form',
+                  'cdt': 'http://www.mit.gov.in/eGov/BackOffice/schema/ComplexDataTypes'}
+    for data in xml_root.findall(f'.//{table_node_name}',namespaces):
         temp_list = []
         for node in child_nodes_list:
             # logging.info(node)
