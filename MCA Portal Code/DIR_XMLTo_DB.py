@@ -518,7 +518,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                                           config_dict['no_of_directors_field_name']].index[0]
     try:
         no_of_directors_value = single_df[single_df['Field_Name'] == 'No_of_directors']['Value'].values[0]
-        if int(no_of_directors_value) == 0 or no_of_directors_value is None or no_of_directors_value == '' or no_of_directors_value == 'None':
+        if no_of_directors_value == 0 or no_of_directors_value is None or no_of_directors_value == '' or no_of_directors_value == 'None':
             logging.info("Found Null directors so going to other directors program")
             if 'Form 32'.lower() in str(file_name).lower():
                 logging.info("Going to Form 32 other director program")
