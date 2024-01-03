@@ -529,9 +529,9 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
                 # These values are for testing, uncomment all for all tables testing
                 # hold_sub_assoc_value = 'ASSOC'
-                if ((hold_sub_assoc_value == config_dict['associate_keyword_in_xml']) or
-                        (hold_sub_assoc_value in config_dict['associate_keyword_in_xml']) or
-                        (config_dict['associate_keyword_in_xml'] in hold_sub_assoc_value)):
+                if ((str(hold_sub_assoc_value).lower() == str(config_dict['associate_keyword_in_xml']).lower()) or
+                        (str(hold_sub_assoc_value).lower() in str(config_dict['associate_keyword_in_xml']).lower()) or
+                        (str(config_dict['associate_keyword_in_xml']).lower() in str(hold_sub_assoc_value).lower())):
                     associate_tables_list = [item for item in sql_tables_list if
                                              str(hold_sub_assoc_value).lower() in
                                              item.lower()]
@@ -539,8 +539,12 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                     # cin_length = 21  # These values are for testing, uncomment for all the tables testing
                     if cin_length == 21:
                         # companies
-                        sql_table_companies = \
-                            [item for item in associate_tables_list if 'companies' in item.lower()][0]
+                        try:
+                            sql_table_companies = \
+                                [item for item in associate_tables_list if 'companies' in item.lower()][0]
+                        except Exception as e:
+                            logging.error(f"Exception occured while getting list of tables for company associates {e}")
+                            continue
                         try:
                             insert_datatable_with_table(db_config, sql_table_companies, hold_sub_assoc_db_table_columns,
                                                         df_row)
@@ -550,7 +554,11 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                     # cin_length = 8
                     elif cin_length == 8 and bool(re.match(llp_pattern, cin_value)):
                         # llp
-                        sql_table_llp = [item for item in associate_tables_list if 'llp' in item.lower()][0]
+                        try:
+                            sql_table_llp = [item for item in associate_tables_list if 'llp' in item.lower()][0]
+                        except Exception as e:
+                            logging.error(f"Exception occured while getting list of tables for llp associates {e}")
+                            continue
                         try:
                             insert_datatable_with_table(db_config, sql_table_llp, hold_sub_assoc_db_table_columns,
                                                         df_row)
@@ -560,7 +568,11 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                     # cin_length = 218
                     else:
                         # others
-                        sql_table_others = [item for item in associate_tables_list if 'others' in item.lower()][0]
+                        try:
+                            sql_table_others = [item for item in associate_tables_list if 'others' in item.lower()][0]
+                        except Exception as e:
+                            logging.error(f"Exception occured while getting list of tables for other associates {e}")
+                            continue
                         try:
                             insert_datatable_with_table(db_config, sql_table_others, hold_sub_assoc_db_table_columns,
                                                         df_row)
@@ -569,17 +581,21 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                                   f'{sql_table_others}- \n', df_row)
 
                 # hold_sub_assoc_value = 'HOLD'
-                if ((hold_sub_assoc_value == config_dict['holding_keyword_in_xml']) or
-                        (hold_sub_assoc_value in config_dict['holding_keyword_in_xml']) or
-                        (config_dict['holding_keyword_in_xml'] in hold_sub_assoc_value)):
+                if ((str(hold_sub_assoc_value).lower() == str(config_dict['holding_keyword_in_xml']).lower()) or
+                        (str(hold_sub_assoc_value).lower() in str(config_dict['holding_keyword_in_xml']).lower()) or
+                        (str(config_dict['holding_keyword_in_xml']).lower() in str(hold_sub_assoc_value).lower())):
                     holding_tables_list = [item for item in sql_tables_list if str(hold_sub_assoc_value).lower() in
                                            item.lower()]
                     # logging.info(holding_tables_list)
                     # cin_length = 21
                     if cin_length == 21:
                         # companies
-                        sql_table_companies = [item for item in holding_tables_list if 'companies' in item.lower()][
-                            0]
+                        try:
+                            sql_table_companies = [item for item in holding_tables_list if 'companies' in item.lower()][
+                                0]
+                        except Exception as e:
+                            logging.error(f"Exception occured while getting list of tables for company holding {e}")
+                            continue
                         try:
                             insert_datatable_with_table(db_config, sql_table_companies, hold_sub_assoc_db_table_columns,
                                                         df_row)
@@ -589,7 +605,11 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                     # cin_length = 8
                     elif cin_length == 8 and bool(re.match(llp_pattern, cin_value)):
                         # llp
-                        sql_table_llp = [item for item in holding_tables_list if 'llp' in item.lower()][0]
+                        try:
+                            sql_table_llp = [item for item in holding_tables_list if 'llp' in item.lower()][0]
+                        except Exception as e:
+                            logging.error(f"Exception occured while getting list of tables for llp holding {e}")
+                            continue
                         try:
                             insert_datatable_with_table(db_config, sql_table_llp, hold_sub_assoc_db_table_columns,
                                                         df_row)
@@ -599,7 +619,11 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                     # cin_length = 218
                     else:
                         # others
-                        sql_table_others = [item for item in holding_tables_list if 'others' in item.lower()][0]
+                        try:
+                            sql_table_others = [item for item in holding_tables_list if 'others' in item.lower()][0]
+                        except Exception as e:
+                            logging.error(f"Exception occured while getting list of tables for other holding {e}")
+                            continue
                         try:
                             insert_datatable_with_table(db_config, sql_table_others, hold_sub_assoc_db_table_columns,
                                                         df_row)
@@ -607,16 +631,20 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                             logging.info(f'Exception {e} occurred while inserting below table row in table '
                                   f'{sql_table_others}- \n', df_row)
                 # hold_sub_assoc_value = 'JOINT'
-                if ((hold_sub_assoc_value == config_dict['joint_venture_keyword_in_xml']) or
-                        (hold_sub_assoc_value in config_dict['joint_venture_keyword_in_xml']) or
-                        (config_dict['joint_venture_keyword_in_xml'] in hold_sub_assoc_value)):
+                if ((str(hold_sub_assoc_value).lower() == str(config_dict['joint_venture_keyword_in_xml']).lower()) or
+                        (str(hold_sub_assoc_value).lower() in str(config_dict['joint_venture_keyword_in_xml']).lower()) or
+                        (str(config_dict['joint_venture_keyword_in_xml']).lower() in str(hold_sub_assoc_value).lower())):
                     joint_tables_list = [item for item in sql_tables_list if str(hold_sub_assoc_value).lower() in
                                          item.lower()]
                     # logging.info(joint_tables_list)
                     # cin_length = 21
                     if cin_length == 21:
                         # companies
-                        sql_table_companies = [item for item in joint_tables_list if 'companies' in item.lower()][0]
+                        try:
+                            sql_table_companies = [item for item in joint_tables_list if 'companies' in item.lower()][0]
+                        except Exception as e:
+                            logging.error(f"Exception occured while getting list of tables for company joint {e}")
+                            continue
                         try:
                             insert_datatable_with_table(db_config, sql_table_companies, hold_sub_assoc_db_table_columns,
                                                         df_row)
@@ -626,7 +654,11 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                     # cin_length = 8
                     elif cin_length == 8 and bool(re.match(llp_pattern, cin_value)):
                         # llp
-                        sql_table_llp = [item for item in joint_tables_list if 'llp' in item.lower()][0]
+                        try:
+                            sql_table_llp = [item for item in joint_tables_list if 'llp' in item.lower()][0]
+                        except Exception as e:
+                            logging.error(f"Exception occured while getting list of tables for llp joint {e}")
+                            continue
                         try:
                             insert_datatable_with_table(db_config, sql_table_llp, hold_sub_assoc_db_table_columns,
                                                         df_row)
@@ -636,7 +668,11 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                     # cin_length = 218
                     else:
                         # others
-                        sql_table_others = [item for item in joint_tables_list if 'others' in item.lower()][0]
+                        try:
+                            sql_table_others = [item for item in joint_tables_list if 'others' in item.lower()][0]
+                        except Exception as e:
+                            logging.error(f"Exception occured while getting list of tables for other joint {e}")
+                            continue
                         try:
                             insert_datatable_with_table(db_config, sql_table_others, hold_sub_assoc_db_table_columns,
                                                         df_row)
@@ -644,9 +680,9 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                             logging.info(f'Exception {e} occurred while inserting below table row in table '
                                   f'{sql_table_others}- \n', df_row)
                 # hold_sub_assoc_value = 'SUBS'
-                if ((hold_sub_assoc_value == config_dict['subsidiary_keyword_in_xml']) or
-                        (hold_sub_assoc_value in config_dict['subsidiary_keyword_in_xml']) or
-                        (config_dict['subsidiary_keyword_in_xml'] in hold_sub_assoc_value)):
+                if ((str(hold_sub_assoc_value).lower() == str(config_dict['subsidiary_keyword_in_xml']).lower()) or
+                        (str(hold_sub_assoc_value).lower() in str(config_dict['subsidiary_keyword_in_xml']).lower()) or
+                        (str(config_dict['subsidiary_keyword_in_xml']).lower() in str(hold_sub_assoc_value).lower())):
                     subsidiary_tables_list = [item for item in sql_tables_list if
                                               str(hold_sub_assoc_value).lower() in
                                               item.lower()]
@@ -654,8 +690,12 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                     # cin_length = 21
                     if cin_length == 21:
                         # companies
-                        sql_table_companies = \
-                            [item for item in subsidiary_tables_list if 'companies' in item.lower()][0]
+                        try:
+                            sql_table_companies = \
+                                [item for item in subsidiary_tables_list if 'companies' in item.lower()][0]
+                        except Exception as e:
+                            logging.error(f"Exception occured while getting list of tables for company holding {e}")
+                            continue
                         try:
                             insert_datatable_with_table(db_config, sql_table_companies, hold_sub_assoc_db_table_columns,
                                                         df_row)
@@ -665,7 +705,11 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                     # cin_length = 8
                     elif cin_length == 8 and bool(re.match(llp_pattern, cin_value)):
                         # llp
-                        sql_table_llp = [item for item in subsidiary_tables_list if 'llp' in item.lower()][0]
+                        try:
+                            sql_table_llp = [item for item in subsidiary_tables_list if 'llp' in item.lower()][0]
+                        except Exception as e:
+                            logging.error(f"Exception occured while getting list of tables for llp holding {e}")
+                            continue
                         try:
                             insert_datatable_with_table(db_config, sql_table_llp, hold_sub_assoc_db_table_columns,
                                                         df_row)
@@ -675,7 +719,11 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                     # cin_length = 218
                     else:
                         # others
-                        sql_table_others = [item for item in subsidiary_tables_list if 'others' in item.lower()][0]
+                        try:
+                            sql_table_others = [item for item in subsidiary_tables_list if 'others' in item.lower()][0]
+                        except Exception as e:
+                            logging.error(f"Exception occured while getting list of tables for other holding {e}")
+                            continue
                         try:
                             insert_datatable_with_table(db_config, sql_table_others, hold_sub_assoc_db_table_columns,
                                                         df_row)
