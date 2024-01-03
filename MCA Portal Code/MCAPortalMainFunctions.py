@@ -454,7 +454,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                         print(f"Exception occured while inserting into db for XBRL")
                     else:
                         AOC_XBRL_first_file_found = True
-                elif 'DIR'.lower() in str(path).lower() and 'Form 32'.lower() not in str(path).lower():
+                elif 'DIR'.lower() in str(file_name).lower():
                     Sheet_name = "DIR"
                     config_dict_DIR,config_status = create_main_config_dictionary(excel_file,Sheet_name)
                     map_file_path_DIR = config_dict_DIR['mapping file path']
@@ -521,11 +521,14 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     if form18_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
 
-                elif 'Form 32'.lower() in str(path).lower():
+                elif 'Form 32'.lower() in str(file_name).lower():
+                    logging.info("Going to extract for Form 32")
                     Sheet_name = "DIR"
                     config_dict_form32, config_status = create_main_config_dictionary(excel_file, Sheet_name)
                     map_file_path_form32 = config_dict_form32['Form32_config']
                     map_sheet_name_form32 = config_dict_form32['mapping file sheet name']
+                    logging.info(map_file_path_form32)
+                    logging.info(map_sheet_name_form32)
                     xml_hidden_file_path = xml_file_path.replace('.xml', '_hidden.xml')
                     form32_db_insertion = dir_xml_to_db(db_config, config_dict_form32, map_file_path_form32, map_sheet_name_form32,
                                                      xml_file_path, xml_hidden_file_path, output_excel_path, Cin, date)

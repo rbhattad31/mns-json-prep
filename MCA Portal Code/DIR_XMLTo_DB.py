@@ -11,6 +11,7 @@ from logging_config import setup_logging
 import logging
 import json
 
+
 def get_single_value_from_xml(xml_root, parent_node, child_node):
     try:
         setup_logging()
@@ -623,6 +624,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
     output_dataframes_list.clear()
     return din_list
+
 
 def other_than_dir_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
                              output_file_path, cin_column_value, filing_date):
