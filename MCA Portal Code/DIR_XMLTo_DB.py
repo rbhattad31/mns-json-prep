@@ -186,7 +186,6 @@ def insert_datatable_with_table(config_dict, db_config, sql_table_name, column_n
     # Create a dictionary from the list of tuples
     result_dict = dict(combined)
     # logging.info(result_dict)
-    result_dict = {key: value for key, value in result_dict.items() if value is not None}
     cin_column_name = config_dict['cin_column_name_in_db']
     cin = result_dict[cin_column_name]
     logging.info(f'{cin=}')
@@ -256,7 +255,6 @@ def insert_datatable_with_other_dir_table(config_dict, db_config, sql_table_name
     # Create a dictionary from the list of tuples
     result_dict = dict(combined)
     # logging.info(result_dict)
-    result_dict = {key: value for key, value in result_dict.items() if value is not None}
     cin_column_name = config_dict['cin_column_name_in_db']
     cin = result_dict[cin_column_name]
     logging.info(f'{cin=}')
@@ -325,7 +323,6 @@ def update_attachment_table(db_config, config_dict, sql_table_name, column_names
     # Create a dictionary from the list of tuples
     result_dict = dict(combined)
     # logging.info(result_dict)
-    result_dict = {key: value for key, value in result_dict.items() if value is not None}
     din_column_name = config_dict['din_column_name_in_db']
     din = result_dict[din_column_name]
 
