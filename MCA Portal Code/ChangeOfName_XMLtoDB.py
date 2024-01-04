@@ -77,13 +77,19 @@ def month_to_number(month_name):
 
     # Use a default value of None in case the input is not a valid month name.
     return month_dict.get(month_name)
+
+
+
 def get_single_value_from_xml(xml_root, parent_node, child_node):
     try:
         setup_logging()
+        namespaces = {'xfa': 'http://www.xfa.org/schema/xfa-data/1.0/',
+                      'frm': 'http://www.mit.gov.in/eGov/BackOffice/schema/Form',
+                      'cdt': 'http://www.mit.gov.in/eGov/BackOffice/schema/ComplexDataTypes'}
         if child_node == 'nan':
             elements = xml_root.findall(f'.//{parent_node}')
         else:
-            elements = xml_root.findall(f'.//{parent_node}//{child_node}')
+            elements = xml_root.findall(f'.//{parent_node}//{child_node}',namespaces)
 
         for element in elements:
             if element.text is None:
