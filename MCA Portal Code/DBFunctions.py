@@ -200,7 +200,8 @@ def get_xml_to_insert(Cin,config_dict):
     files_to_insert = cursor.fetchall()
     return files_to_insert
 
-def update_database_single_value(db_config, table_name, cin_column_name, cin_value,company_name_column_name,company_name, column_name, column_value):
+
+def update_database_single_value(db_config, table_name, cin_column_name, cin_value,company_name_column_name,company_name, column_name, column_value,name,date):
     db_connection = mysql.connector.connect(**db_config)
     db_cursor = db_connection.cursor()
     json_dict = json.loads(column_value)
@@ -213,7 +214,7 @@ def update_database_single_value(db_config, table_name, cin_column_name, cin_val
         column_value = json.dumps(json_dict)
 
     # check if there is already entry with cin
-    query = "SELECT * FROM {} WHERE {} = '{}' and {}='{}'".format(table_name, cin_column_name, cin_value,company_name_column_name,company_name)
+    query = "SELECT * FROM {} WHERE {} = '{}' and {}='{}' and {} = '{}' and {} = '{}'".format(table_name, cin_column_name, cin_value,company_name_column_name,company_name,'name',name,'date',date)
     print(query)
     try:
         db_cursor.execute(query)
@@ -224,22 +225,29 @@ def update_database_single_value(db_config, table_name, cin_column_name, cin_val
 
     # if cin value already exists
     if len(result) > 0:
-        update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}'".format(table_name, column_name,
+        update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}' AND {} = '{}' AND {} = '{}'".format(table_name, column_name,
                                                                                       column_value, cin_column_name,
                                                                                       cin_value,
                                                                                       company_name_column_name,
-                                                                                      company_name)
+                                                                                      company_name,
+                                                                                      'name',
+                                                                                      name,
+                                                                                      'date',
+                                                                                      date)
         # print(update_query)
         db_cursor.execute(update_query)
         print("Updating")
     # if cin value doesn't exist
     else:
-        insert_query = "INSERT INTO {} ({}, {}, {}) VALUES ('{}', '{}', '{}')".format(table_name, cin_column_name,
+        insert_query = "INSERT INTO {} ({}, {}, {},{}) VALUES ('{}', '{}', '{}','{}')".format(table_name, cin_column_name,
                                                                                       company_name_column_name,
-                                                                                      column_name,
+                                                                                      'name',
+                                                                                      'date',
                                                                                       cin_value,
                                                                                       company_name,
-                                                                                      column_value)
+                                                                                      name,
+                                                                                      date
+                                                                                        )
         # print(insert_query)
         db_cursor.execute(insert_query)
         print("Inserting")

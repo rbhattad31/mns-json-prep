@@ -166,6 +166,8 @@ def ChangeOfName_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet
             results.append([field_name, value, sql_table_name, column_name, column_json_node])
 
         sql_tables_list = single_df[single_df.columns[5]].unique()
+        name = single_df.loc[single_df['Field_Name'] == 'name', 'Value'].values[0]
+        date = single_df.loc[single_df['Field_Name'] == 'date', 'Value'].values[0]
         for sql_table in sql_tables_list:
             if sql_table == 'NA':
                 continue
@@ -178,7 +180,7 @@ def ChangeOfName_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet
                 logging.info(json_string)
                 try:
                     update_database_single_value(db_config, sql_table, Cin_Column_Name, cin_column_value,
-                                                 Company_column_name, company_name, column, json_string)
+                                                 Company_column_name, company_name, column, json_string,name,date)
                 except Exception as e:
                     logging.info(f"Exception {e} occurred while updating data in dataframe for {sql_table} "
                           f"with data {json_string}")
