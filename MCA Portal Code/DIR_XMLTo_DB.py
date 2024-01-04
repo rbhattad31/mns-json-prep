@@ -76,7 +76,7 @@ def update_database_single_value(db_config, table_name, cin_column_name, cin_val
         column_value = json.dumps(json_dict)
 
     # check if there is already entry with cin
-    query = "SELECT * FROM {} WHERE {} = '{}' and {}='{}' and LOWER({})='{}'".format(table_name, cin_column_name, cin_value,'din',din,'designation',str(designation).lower())
+    query = 'SELECT * FROM {} WHERE {} = "{}" and {}="{}" and LOWER({})="{}"'.format(table_name, cin_column_name, cin_value,'din',din,'designation',str(designation).lower())
     logging.info(query)
     try:
         db_cursor.execute(query)
@@ -87,7 +87,7 @@ def update_database_single_value(db_config, table_name, cin_column_name, cin_val
 
     # if cin value already exists
     if len(result) == 0:
-        insert_query = "INSERT INTO {} ({}, {},{}) VALUES ('{}', '{}','{}')".format(table_name, cin_column_name,
+        insert_query = 'INSERT INTO {} ({}, {},{}) VALUES ("{}", "{}","{}")'.format(table_name, cin_column_name,
                                                                             'din',
                                                                             'designation',
                                                                             cin_value,
@@ -98,7 +98,7 @@ def update_database_single_value(db_config, table_name, cin_column_name, cin_val
         logging.info("Inserting")
     # if cin value doesn't exist
     else:
-        update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}' AND LOWER({}) = '{}'".format(table_name, column_name,
+        update_query = 'UPDATE {} SET {} = "{}" WHERE {} = "{}" AND {} = "{}" AND LOWER({}) = "{}"'.format(table_name, column_name,
                                                                                       column_value, cin_column_name,
                                                                                       cin_value,
                                                                                       'din',
