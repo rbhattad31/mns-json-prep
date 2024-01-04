@@ -681,7 +681,7 @@ WHERE d1.cin = '{}' AND d1.document LIKE '%Form8%' AND Category = 'Annual Return
             logging.info(f"Exception occured for form 18  status updating {e}")
 
         try:
-            INC22_query = "UPDATE documents set form_data_extraction_needed = 'Y' where document LIKE '%%INC 22%%' and `cin`=%s"
+            INC22_query = "UPDATE documents set form_data_extraction_needed = 'Y' where document LIKE '%%INC-22%%' and `cin`=%s"
             value_INC22_query = (cin,)
             logging.info(INC22_query % value_INC22_query)
             cursor.execute(INC22_query,value_INC22_query)

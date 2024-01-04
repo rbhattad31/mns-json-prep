@@ -529,7 +529,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     config_dict_form18,config_status = create_main_config_dictionary(excel_file,sheet_name)
                     if 'Form 18'.lower() in str(path).lower():
                         map_file_path_form18 = config_dict_form18['mapping file path']
-                    elif 'INC 22'.lower() in str(path).lower():
+                    elif 'INC-22'.lower() in str(path).lower():
                         map_file_path_form18 = config_dict_form18['inc_config']
                     else:
                         map_file_path_form18 = None
