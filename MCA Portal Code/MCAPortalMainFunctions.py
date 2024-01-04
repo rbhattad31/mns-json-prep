@@ -413,16 +413,24 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                             update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                     else:
                         if len(Cin) == 21:
-                            if 'Certificate of Incorporation Consequent'.lower() in str(path).lower() and 'Fresh'.lower() not in str(path).lower():
-                                map_file_path_Change_of_name = config_dict_Change_of_name['certificate_incorporation_config']
-                            else:
-                                map_file_path_Change_of_name = config_dict_Change_of_name['mapping_file_path']
+                            map_file_path_Change_of_name = config_dict_Change_of_name['mapping_file_path']
                         else:
                             map_file_path_Change_of_name = config_dict_Change_of_name['mapping_file_path_llp']
                         map_sheet_name_Change_of_name = config_dict_Change_of_name['mapping _file_sheet_name']
                         change_of_name_db_insertion = ChangeOfName_xml_to_db(db_config,config_dict_Change_of_name,map_file_path_Change_of_name,map_sheet_name_Change_of_name,xml_file_path,output_excel_path,Cin,CompanyName)
                         if change_of_name_db_insertion:
                             update_db_insertion_status(Cin, file_name, config_dict, 'Success')
+                elif 'Certificate of Incorporation Consequent'.lower() in str(file_name).lower() and 'Fresh'.lower() not in str(file_name).lower():
+                    Sheet_name = "Change of name"
+                    config_dict_certificate, config_status = create_main_config_dictionary(excel_file, Sheet_name)
+                    map_file_path_certificate = config_dict_certificate['certificate_incorporation_config']
+                    map_sheet_name_certificate = config_dict_certificate['mapping _file_sheet_name']
+                    certificate_db_insertion = ChangeOfName_xml_to_db(db_config, config_dict_certificate,
+                                                                         map_file_path_certificate,
+                                                                         map_sheet_name_certificate, xml_file_path,
+                                                                         output_excel_path, Cin, CompanyName)
+                    if certificate_db_insertion:
+                        update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                 elif 'CHG'.lower() in str(file_name).lower():
                     Sheet_name = "CHG1"
                     config_dict_CHG,config_status = create_main_config_dictionary(excel_file,Sheet_name)
