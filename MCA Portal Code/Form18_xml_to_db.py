@@ -188,6 +188,9 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         # print(value)
         results.append([field_name, value, sql_table_name, column_name, column_json_node])
 
+    if single_df['Value'].all() == '' or single_df['Value'].all() is None:
+        logging.info("All empty so going for other type of form")
+        raise Exception("All values in the 'Value' column are empty.")
     date = single_df[single_df['Field_Name'] == 'date_of_address_change']['Value'].values[0]
     all_columns_list = single_df[single_df.columns[column_name_index]].unique()
     for column_name in all_columns_list:

@@ -16,6 +16,7 @@ from logging_config import setup_logging
 import logging
 import sys
 import traceback
+from Form18_old_files_pdf_to_xml import extract_form_data
 # Get the current date
 current_date = datetime.date.today()
 
@@ -131,9 +132,12 @@ def save_xfa_data_to_xml(xml_tree, output_path):
         logging.info(f'XML data has been saved to {output_path}')
     else:
         logging.info('No data found to save.')
+
+
 def write_xml_data(xfa_data,output_xml_path):
     with open(output_xml_path, 'wb') as xml_file:
         xml_file.write(xfa_data)
+
 
 def PDFtoXML(pdf_path,file_name):
     # file_names = [file.name for file in folder_path.iterdir() if file.is_file()]
@@ -171,6 +175,15 @@ def PDFtoXML(pdf_path,file_name):
                 logging.info(f"Extracted XFA data for {file_name}")
                 logging.info(f"Saved to {xml_file_path}")
                 return xml_file_path, True
+        elif 'Form 18'.lower() in str(file_name).lower():
+            xml_file_path = pdf_path.replace('.pdf', '.xml')
+            if '.xml' not in xml_file_path:
+                xml_file_path = xml_file_path + '.xml'
+            form18_old_files = extract_form_data(pdf_path,xml_file_path)
+            if form18_old_files:
+                return xml_file_path,True
+            else:
+                return xml_file_path,False
         else:
             # If XFA data is not found, extract table data and save it as XML
             tables = extract_tables_from_pdf(pdf_path)
