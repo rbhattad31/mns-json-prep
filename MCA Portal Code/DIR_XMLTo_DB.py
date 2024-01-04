@@ -196,8 +196,8 @@ def insert_datatable_with_table(config_dict, db_config, sql_table_name, column_n
     designation_after_event_column_name = config_dict['designation_after_event_column_name_in_db']
     designation_column_name = config_dict['designation_column_name']
     designation_after_event = result_dict[designation_column_name]
-    date_of_appointment_column_name = config_dict['date_of_appointment_column_name']
-    date_of_appointment = result_dict[date_of_appointment_column_name]
+    # date_of_appointment_column_name = config_dict['date_of_appointment_column_name']
+    # date_of_appointment = result_dict[date_of_appointment_column_name]
     logging.info(f'{designation_after_event=}')
 
     if cin is None or din is None or designation_after_event is None:
