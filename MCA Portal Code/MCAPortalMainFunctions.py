@@ -420,7 +420,8 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                         change_of_name_db_insertion = ChangeOfName_xml_to_db(db_config,config_dict_Change_of_name,map_file_path_Change_of_name,map_sheet_name_Change_of_name,xml_file_path,output_excel_path,Cin,CompanyName)
                         if change_of_name_db_insertion:
                             update_db_insertion_status(Cin, file_name, config_dict, 'Success')
-                elif 'Certificate of Incorporation Consequent'.lower() in str(file_name).lower() and 'Fresh'.lower() not in str(file_name).lower():
+                elif 'CERTIFICATE OF INCORPORATION CONSEQUENT'.lower() in str(file_name).lower() and 'FRESH'.lower() not in str(file_name).lower():
+                    logging.info("Going to Certificate of incorporation")
                     Sheet_name = "Change of name"
                     config_dict_certificate, config_status = create_main_config_dictionary(excel_file, Sheet_name)
                     map_file_path_certificate = config_dict_certificate['certificate_incorporation_config']
