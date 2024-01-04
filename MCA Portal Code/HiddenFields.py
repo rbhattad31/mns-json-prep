@@ -7,6 +7,7 @@ from logging_config import setup_logging
 import mysql.connector
 from Config import create_main_config_dictionary
 
+
 def update_database_single_value_DIR(db_config, table_name, cin_column_name, cin_value,column_name, column_value,din_column_name,din):
     setup_logging()
     db_connection = mysql.connector.connect(**db_config)
@@ -37,7 +38,7 @@ def update_database_single_value_DIR(db_config, table_name, cin_column_name, cin
 
     # if cin value already exists
     if len(result) > 0 and column_name!='nature':
-        update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}'".format(table_name, column_name,
+        update_query = 'UPDATE {} SET {} = "{}" WHERE {} = "{}" AND {} = "{}"'.format(table_name, column_name,
                                                                                       column_value, cin_column_name,
                                                                                       cin_value,
                                                                                       din_column_name,
@@ -48,7 +49,7 @@ def update_database_single_value_DIR(db_config, table_name, cin_column_name, cin
 
     # if cin value doesn't exist
     else:
-        insert_query = "INSERT INTO {} ({}, {}, {}) VALUES ('{}', '{}', '{}')".format(table_name, cin_column_name,
+        insert_query = 'INSERT INTO {} ({}, {}, {}) VALUES ("{}", "{}", "{}")'.format(table_name, cin_column_name,
                                                                                       din_column_name,
                                                                                       column_name,
                                                                                       cin_value,
