@@ -524,13 +524,13 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     if form8_charge_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
 
-                elif 'Form 18'.lower() in str(file_name).lower() or 'INC-22'.lower() in str(path).lower():
+                elif 'Form 18'.lower() in str(file_name).lower() or 'INC-22'.lower() in str(file_name).lower():
                     sheet_name = 'Form18'
                     config_dict_form18,config_status = create_main_config_dictionary(excel_file,sheet_name)
-                    if 'Form 18'.lower() in str(path).lower():
+                    if 'Form 18'.lower() in str(file_name).lower():
                         logging.info("Going to extract data for Form 18 new files")
                         map_file_path_form18 = config_dict_form18['mapping file path']
-                    elif 'INC-22'.lower() in str(path).lower():
+                    elif 'INC-22'.lower() in str(file_name).lower():
                         logging.info("Going to extract data for INC 22 files")
                         map_file_path_form18 = config_dict_form18['inc_config']
                     else:
