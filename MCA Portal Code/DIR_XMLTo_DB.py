@@ -656,10 +656,19 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         # logging.info(table_df)
 
         # current year
-        # current_year = datetime.now().year
-        # table_df['date_of_birth'] = pd.to_datetime(table_df['date_of_birth'])
-        # table_df['Birth_Year'] = table_df['Birth_Date'].dt.year
-        # table_df['age'] = current_year - table_df['Birth_Year']
+        try:
+            current_year = datetime.now().year
+            date_of_birth_column_name = config_dict['date_of_birth_column_name']
+            age_column_name = config_dict['age_column_name']
+            table_df[date_of_birth_column_name] = pd.to_datetime(table_df[date_of_birth_column_name])
+            table_df['Birth_Year'] = table_df[date_of_birth_column_name].dt.year
+            table_df[age_column_name] = current_year - table_df['Birth_Year']
+            # current_year = datetime.now().year
+            # table_df['date_of_birth'] = pd.to_datetime(table_df['date_of_birth'])
+            # table_df['Birth_Year'] = table_df['Birth_Date'].dt.year
+            # table_df['age'] = current_year - table_df['Birth_Year']
+        except Exception as e:
+            logging.info(f"Error in calculating age {e}")
 
         for i, df_row in table_df.iterrows():
             event_value = table_df.loc[i, config_dict['event_column_name']]
@@ -677,6 +686,12 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         #table_df.loc[table_df[config_dict['event_column_name']] ==
                      #config_dict['resignation_keyword'], config_dict['date_of_cessation_column_name']] = \
             #table_df[config_dict['event_date_column_name']]
+        try:
+            columns_to_remove = ['Birth_Year']
+            table_df = table_df.drop(columns=columns_to_remove)
+            table_df[date_of_birth_column_name] = table_df[date_of_birth_column_name].astype(str)
+        except Exception as e:
+            pass
         logging.info(table_df)
 
         for _, df_row in table_df.iterrows():
