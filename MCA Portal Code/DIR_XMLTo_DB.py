@@ -758,6 +758,10 @@ def other_than_dir_xml_to_db(db_config, config_dict, map_file_path, map_file_she
     event_list = [x.strip() for x in config_dict['event_list'].split(',')]
     event_dict = dict(zip(event_abbreviation_list, event_list))
     logging.info(event_dict)
+    designation_abbreviation_list = [x.strip() for x in config_dict['designation_abbreviation_list'].split(',')]
+    designation_list = [x.strip() for x in config_dict['designation_list'].split(',')]
+    designation_dict = dict(zip(designation_abbreviation_list, designation_list))
+    logging.info(designation_dict)
 
     for index, row in single_df.iterrows():
         # field_name = str(row.iloc[field_name_index]).strip()
@@ -826,6 +830,8 @@ def other_than_dir_xml_to_db(db_config, config_dict, map_file_path, map_file_she
         for i, df_row in table_df.iterrows():
             event_value = table_df.loc[i, config_dict['event_column_name']]
             table_df.loc[i, config_dict['event_column_name']] = event_dict.get(event_value, event_value)
+            designation_value = table_df.loc[i, config_dict['designation_column_name']]
+            table_df.loc[i, config_dict['designation_column_name']] = designation_dict.get(designation_value, designation_value)
 
         table_df.loc[table_df[config_dict['event_column_name']] ==
                      config_dict['appointment_keyword'], config_dict['date_of_appointment_column_name']] = \
