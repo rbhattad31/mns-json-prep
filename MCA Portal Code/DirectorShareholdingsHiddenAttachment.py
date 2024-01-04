@@ -8,33 +8,63 @@ from PIL import Image
 import json
 import requests
 import mysql.connector
+from Config import create_main_config_dictionary
+
 
 def update_value_in_db(db_config,name,no_of_shares,cin):
     db_connection = mysql.connector.connect(**db_config)
     db_cursor = db_connection.cursor()
     db_connection.autocommit = True
 
-    check_name_query = "select * from authorized_signatories where cin = %s and name = %s"
-    values = (cin,name)
+    check_name_query = "select * from authorized_signatories where cin = %s and LOWER(name) = %s"
+    values = (cin,str(name).lower())
     print(check_name_query % values)
     db_cursor.execute(check_name_query,values)
-    name_result = db_cursor.fetchall()
-
-    shareholdings_query = "select * from director_shareholdings where cin = %s and full_name = %s"
-    values = (cin, name)
+    try:
+        name_result = db_cursor.fetchone()
+    except Exception as e:
+        return
+    logging.info(name_result)
+    din = name_result[4]
+    shareholdings_query = "select * from director_shareholdings where cin = %s and LOWER(full_name) = %s"
+    values = (cin, str(name).lower())
     print(shareholdings_query % values)
     db_cursor.execute(shareholdings_query,values)
     shareholdings_result = db_cursor.fetchall()
 
+    paid_up_capital_query = "select paidup_capital from shareholdings_summary where cin = %s"
+    paid_up_capital_value = (cin,)
+    logging.info(paid_up_capital_query % paid_up_capital_value)
+    db_cursor.execute(paid_up_capital_query,paid_up_capital_value)
+    paid_up_capital = db_cursor.fetchone()[0]
+    try:
+        percentage_holding = (float(no_of_shares)/float(paid_up_capital))*100
+        percentage_holding = round(float(percentage_holding),2)
+        logging.info(percentage_holding)
+    except Exception as e:
+        logging.info(f"Error in calculating percentage holding {e}")
+        percentage_holding = None
+
     if len(name_result) != 0:
         if len(shareholdings_result) != 0:
-            update_query = "UPDATE director_shareholdings set no_of_shares = %s where cin = %s and full_name = %s"
-            update_values = (no_of_shares,cin,name)
-            print(update_query % update_values)
+            update_query = "UPDATE director_shareholdings set no_of_shares = %s where cin = %s and LOWER(full_name) = %s"
+            update_values = (no_of_shares,cin,str(name).lower())
+            logging.info(update_query % update_values)
             db_cursor.execute(update_query,update_values)
+
+            din_update_query = "UPDATE director_shareholdings set din_pan = %s where cin = %s and LOWER(full_name) = %s"
+            din_update_values = (din, cin, str(name).lower())
+            logging.info(din_update_query % din_update_values)
+            db_cursor.execute(din_update_query, din_update_values)
+
+            percentage_holding_query = "UPDATE director_shareholdings set percentage_holding = %s where cin = %s and LOWER(full_name) = %s"
+            percentage_holding_value = (percentage_holding, cin, str(name).lower())
+            logging.info(percentage_holding_query % percentage_holding_value)
+            db_cursor.execute(percentage_holding_query,percentage_holding_value)
+
         else:
-            insert_query = "INSERT INTO director_shareholdings(cin,full_name,no_of_shares) VALUES (%s,%s,%s)"
-            insert_values = (cin,name,no_of_shares)
+            insert_query = "INSERT INTO director_shareholdings(cin,full_name,no_of_shares,din_pan,percentage_holding) VALUES (%s,%s,%s,%s,%s)"
+            insert_values = (cin,name,no_of_shares,din,percentage_holding)
             print(insert_query % insert_values)
             db_cursor.execute(insert_query,insert_values)
 
@@ -161,3 +191,4 @@ def mgt_director_shareholdings_main(db_config,config_dict,output_directory,pdf_p
         print(f"Exception in fetching address from MGT {e}")
     else:
         return True
+
