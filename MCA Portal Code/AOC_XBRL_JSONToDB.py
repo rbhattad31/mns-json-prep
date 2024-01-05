@@ -225,17 +225,7 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header):
     # logging.info the extracted years
     # logging.info(years[0])
     # logging.info(values[0])
-    all_none = all(element is None for element in values)
-    paragraph_values = []
-    if all_none:
-        logging.info("Going to capture value from para")
-        input_text = capture_values_from_text(json_file_path,None,None,None)
-        current_year_value_para,previous_year_value_para = find_term_and_numbers(input_text,target_header)
-        paragraph_values.append(current_year_value_para)
-        paragraph_values.append(previous_year_value_para)
-        return paragraph_values
-    else:
-        return values
+    return values
     # for insert_data in zip(years,values):
     #     year = insert_data[0]
     #     value = insert_data[1]
@@ -516,6 +506,12 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                 if len(values) != 0:
                     if year_category == 'Previous':
                         try:
+                            if values[1] is None:
+                                logging.info("Going to capture value from para")
+                                input_text = capture_values_from_text(json_file_path, None, None, None)
+                                current_year_value_para, previous_year_value_para = find_term_and_numbers(input_text,
+                                                                                                        child_nodes)
+                                values[1] = current_year_value_para
                             values[1]=values[1].replace(',','')
                             if million_keyword in filing_standard_check:
                                 num_value = (float(values[1]))*1000000
@@ -540,6 +536,12 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                             single_df.at[index, 'Value'] = values[1]
                     elif year_category == 'Current':
                         try:
+                            if values[0] is None:
+                                logging.info("Going to capture value from para")
+                                input_text = capture_values_from_text(json_file_path, None, None, None)
+                                current_year_value_para, previous_year_value_para = find_term_and_numbers(input_text,
+                                                                                                        child_nodes)
+                                values[0] = previous_year_value_para
                             values[0]=values[0].replace(',','')
                             if million_keyword in filing_standard_check:
                                 logging.info("In Millions")
