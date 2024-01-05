@@ -20,7 +20,7 @@ from DBFunctions import update_process_status
 from DBFunctions import update_locked_by_empty
 import sys
 import traceback
-
+from MCAPortalMainFunctions import update_download_status
 
 def main():
     excel_file = os.environ.get("MCA_Config")
@@ -45,10 +45,11 @@ def main():
                         user = CinData[15]
                         company_name = CinData[3]
                         workflow_status = fetch_workflow_status(db_config,cin)
+                        download_status = CinData[66]
                         logging.info(workflow_status)
                         emails = config_dict['to_email']
                         emails = str(emails).split(',')
-                        if workflow_status == 'download_pending' or workflow_status == 'download_insertion_success':
+                        if (workflow_status == 'Payment_success' or workflow_status == 'download_insertion_success') and download_status == 'N':
                             logging.info(f"Starting to download for {cin}")
                             subject_start = str(config_dict['subject_start']).format(cin, receipt_number)
                             body_start = str(config_dict['Body_start']).format(cin, receipt_number,company_name)
@@ -60,6 +61,7 @@ def main():
                             if Download_Status:
                                 logging.info("Downloaded Successfully")
                                 update_status(user,'XML_Pending',db_config,cin)
+                                update_download_status(db_config,cin)
                             else:
                                 logging.info("Not Downloaded")
                                 raise Exception(f"Download failed for {cin} {exception_message}")
@@ -68,7 +70,7 @@ def main():
                             XML_Generation, hidden_attachments = XMLGeneration(db_config, CinData, config_dict)
                             if XML_Generation:
                                 logging.info("XML Generated successfully")
-                                update_status(user,'db_insertion_pending',db_config,cin)
+                                #update_status(user,'db_insertion_pending',db_config,cin)
                             else:
                                 logging.info("XML Not Generated successfully")
                                 if 'driver' in locals():

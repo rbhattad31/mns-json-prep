@@ -337,12 +337,13 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                         mgt_address = mgt_address_main(db_config,config_dict_MGT_address,output_directory,path,Cin)
                     db_connection = mysql.connector.connect(**db_config)
                     db_cursor = db_connection.cursor()
-                    director_shareholdings_query = "select * from director_shareholdings where cin = %s"
+                    director_shareholdings_query = "select * from director_shareholdings where cin = %s and din_pan != ''"
                     director_shareholdings_values = (Cin,)
                     print(director_shareholdings_query % director_shareholdings_values)
                     db_cursor.execute(director_shareholdings_query,director_shareholdings_values)
                     director_shareholdings_result = db_cursor.fetchall()
                     if len(director_shareholdings_result) == 0:
+                        logging.info("Going to shareholdings hidden attachment")
                         Sheet_name_MGT_address = "OpenAI"
                         config_dict_shareholdings, config_status = create_main_config_dictionary(excel_file,Sheet_name_MGT_address)
                         output_directory = os.path.dirname(path)
@@ -531,8 +532,15 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                         logging.info("Going to extract data for Form 18 new files")
                         map_file_path_form18 = config_dict_form18['mapping file path']
                     elif 'INC-22'.lower() in str(file_name).lower():
+                        digit_count = sum(c.isdigit() for c in file_name)
+                        logging.info(digit_count)
+                        if digit_count == 10:
+                            logging.info("Going to extract for new inc files")
+                            map_file_path_form18 = config_dict_form18['inc_new_config']
+                        else:
+                            logging.info("Going to extract for old inc files")
+                            map_file_path_form18 = config_dict_form18['inc_config']
                         logging.info("Going to extract data for INC 22 files")
-                        map_file_path_form18 = config_dict_form18['inc_config']
                     else:
                         map_file_path_form18 = None
                     map_sheet_name_form18 = config_dict_form18['mapping file sheet name']
@@ -716,7 +724,19 @@ def json_loader_generation(cindata,dbconfig,config_dict,excel_file_path):
         return True,json_file_path,None
 
 
-
+def update_download_status(db_config,cin):
+    connection = mysql.connector.connect(**db_config)
+    cursor = connection.cursor()
+    try:
+        query = "UPDATE orders SET document_download_status = 'Y' WHERE cin=%s"
+        logging.info(query)
+        cursor.execute(query, (cin,))
+        connection.commit()
+    except Exception as e:
+        print(f"Error updating login status in the database: {str(e)}")
+    finally:
+        cursor.close()
+        connection.close()
 
 
 
