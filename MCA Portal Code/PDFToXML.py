@@ -63,7 +63,7 @@ def extract_xfa_data(pdf_path,filename):
     xfa = findInDict('/XFA', pdf.resolved_objects)
     logging.info(xfa)
     if xfa is not None:
-        if 'MSME' in filename or 'AOC-4' in filename or 'CHG' in filename or 'Form8' in filename or 'FiLLiP' in filename or 'Form 8' in filename or 'Form 18' in filename or 'INC-22' in filename or 'Form 32' in filename:
+        if 'MSME' in filename or 'AOC-4' in filename or 'CHG' in filename or 'Form8' in filename or 'FiLLiP' in filename or 'Form 8' in filename or 'Form 18' in filename or 'Form 32' in filename:
             xml = xfa[7].get_object().get_data()
             return xml
         elif 'DIR' in filename or 'Form11' in filename:
@@ -72,6 +72,18 @@ def extract_xfa_data(pdf_path,filename):
                 xml = xfa[i].get_object().get_data()
                 xml_DIR.append(xml)
             return xml_DIR
+        elif 'INC-22' in filename:
+            digit_count = sum(c.isdigit() for c in filename)
+            logging.info(digit_count)
+            xml_INC = []
+            if digit_count == 10:
+                xml = xfa[7].get_object().get_data()
+                return xml
+            else:
+                for i in [7,19]:
+                    xml = xfa[i].get_object().get_data()
+                    xml_INC.append(xml)
+                return xml_INC
         else:
             xml = xfa[9].get_object().get_data()
             return xml
@@ -161,6 +173,25 @@ def PDFtoXML(pdf_path,file_name):
                 write_xml_data(xml_plain, xml_plain_file_path)
                 write_xml_data(xml_hidden,xml_hidden_file_path)
                 return xml_plain_file_path,True
+            elif 'INC-22' in file_name:
+                digit_count = sum(c.isdigit() for c in file_name)
+                logging.info(digit_count)
+                if digit_count == 10:
+                    xml_file_path = pdf_path.replace('.pdf', '.xml')
+                    if '.xml' not in xml_file_path:
+                        xml_file_path = xml_file_path + '.xml'
+                    write_xml_data(xfa_data, xml_file_path)
+                    logging.info(f"Extracted XFA data for {file_name}")
+                    logging.info(f"Saved to {xml_file_path}")
+                    return xml_file_path, True
+                else:
+                    xml_plain = xfa_data[0]
+                    xml_hidden = xfa_data[1]
+                    xml_plain_file_path = pdf_path.replace('.pdf', '.xml')
+                    xml_hidden_file_path = pdf_path.replace('.pdf', '_hidden.xml')
+                    write_xml_data(xml_plain, xml_plain_file_path)
+                    write_xml_data(xml_hidden, xml_hidden_file_path)
+                    return xml_plain_file_path, True
             else:
                 xml_file_path = pdf_path.replace('.pdf', '.xml')
                 """

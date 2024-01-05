@@ -5,11 +5,18 @@ import pandas as pd
 import xml.etree.ElementTree as Et
 import os
 import mysql.connector
-from Config import create_main_config_dictionary
 pd.set_option('display.max_columns', None)
 from logging_config import setup_logging
 import logging
 import json
+from AddressSplitUsingOpenAI import split_openai
+from bs4 import BeautifulSoup
+
+def Get_MultipleFields(Data, fieldname):
+    field_elements = Data.find_all('field', {'name': fieldname})
+    Values = [field.find('text').text if field.find('text') else None for field in field_elements]
+    filtered_values = [value for value in Values if value is not None]
+    return filtered_values
 
 
 def get_single_value_from_xml(xml_root, parent_node, child_node):
@@ -111,7 +118,7 @@ def update_database_single_value(db_config, config_dict, table_name, cin_column_
 
 
 def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
-              output_file_path, cin):
+              output_file_path, cin,xml_hidden_file_path):
     config_dict_keys = ['single_type_indicator', 'group_type_indicator', 'cin_column_name',
                         'field_name_index', 'type_index',
                         'parent_node_index',
@@ -182,7 +189,25 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         sql_table_name = str(row.iloc[sql_table_name_index]).strip()  # Table Name
         column_name = str(row.iloc[column_name_index]).strip()  # column name
         column_json_node = str(row.iloc[column_json_node_index]).strip()  # column json
-        value = get_single_value_from_xml(xml_root, parent_node, child_nodes)
+        if parent_node == 'Split':
+            continue
+        if child_nodes == 'Hidden':
+            with open(xml_hidden_file_path, 'r') as file:
+                xml_content = file.read()
+                # Parse the XML content using BeautifulSoup
+            soup = BeautifulSoup(xml_content, 'xml')
+            values = Get_MultipleFields(soup,parent_node)
+            try:
+                value = values[0]
+            except Exception as e:
+                value = None
+                pass
+        else:
+            value = get_single_value_from_xml(xml_root, parent_node, child_nodes)
+        try:
+            value = value.strip()
+        except Exception as e:
+            pass
         single_df.at[index, 'Value'] = value
         # print(field_name)
         # print(value)
@@ -192,6 +217,25 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         logging.info("All empty so going for other type of form")
         raise Exception("All values in the 'Value' column are empty.")
     date = single_df[single_df['Field_Name'] == 'date_of_address_change']['Value'].values[0]
+    full_address = single_df[single_df['Field_Name'] == 'address_line']['Value'].values[0]
+    splitted_address = split_openai(config_dict,full_address)
+    splitted_address = eval(splitted_address)
+    print(splitted_address)
+    for index, row in single_df.iterrows():
+        field_name = str(row.iloc[field_name_index]).strip()  # Field name
+        parent_node = str(row.iloc[parent_node_index]).strip()  # Parent Node
+        child_nodes = str(row.iloc[child_nodes_index]).strip()  # Child Node
+        sql_table_name = str(row.iloc[sql_table_name_index]).strip()  # Table Name
+        column_name = str(row.iloc[column_name_index]).strip()  # column name
+        column_json_node = str(row.iloc[column_json_node_index]).strip()  # column json
+        if parent_node == 'Split':
+            try:
+                value = splitted_address[field_name]
+                single_df.at[index, 'Value'] = value
+            except Exception as e:
+                continue
+        # print(field_name)
+        # print(value)
     all_columns_list = single_df[single_df.columns[column_name_index]].unique()
     for column_name in all_columns_list:
         if column_name == 'financial_year':
@@ -200,34 +244,34 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             print(date)
             config_dict['date'] = date
 
-        if column_name == config_dict['ba_address_line1_column_name'] or \
-                column_name == config_dict['ba_address_line2_column_name'] or \
-                column_name == config_dict['ba_city_column_name'] or \
-                column_name == config_dict['ba_state_column_name'] or \
-                column_name == config_dict['ba_pincode_column_name']:
-            column_df = single_df[single_df[single_df.columns[column_name_index]] == column_name]
-            config_dict[column_name] = column_df['Value'].iloc[0]  # config_dict['ba_address_line1'] = value
-            print(config_dict[column_name])
-            # create full address from config dict saved values
-    full_address = ', '.join(value for value in [config_dict[config_dict['ba_address_line1_column_name']],
-                                                     config_dict[config_dict['ba_address_line2_column_name']],
-                                                     config_dict[config_dict['ba_city_column_name']],
-                                                     config_dict[config_dict['ba_state_column_name']],
-                                                     config_dict[config_dict['ba_pincode_column_name']]]
-                                 if value is not None
-                                 )
-    print(f'{full_address=}')
-
-    full_address_row_index = single_df[single_df[single_df.columns[column_name_index]] ==
-                                       'full_address'].index[0]
-    print(f'{full_address_row_index=}')
-    if full_address_row_index is not None:
-        if full_address is not None:
-            single_df.loc[full_address_row_index, 'Value'] = full_address
-        else:
-            single_df.loc[full_address_row_index, 'Value'] = None
-    else:
-        print(f"full_address details is not in mapping file.")
+    #     if column_name == config_dict['ba_address_line1_column_name'] or \
+    #             column_name == config_dict['ba_address_line2_column_name'] or \
+    #             column_name == config_dict['ba_city_column_name'] or \
+    #             column_name == config_dict['ba_state_column_name'] or \
+    #             column_name == config_dict['ba_pincode_column_name']:
+    #         column_df = single_df[single_df[single_df.columns[column_name_index]] == column_name]
+    #         config_dict[column_name] = column_df['Value'].iloc[0]  # config_dict['ba_address_line1'] = value
+    #         print(config_dict[column_name])
+    #         # create full address from config dict saved values
+    # full_address = ', '.join(value for value in [config_dict[config_dict['ba_address_line1_column_name']],
+    #                                                  config_dict[config_dict['ba_address_line2_column_name']],
+    #                                                  config_dict[config_dict['ba_city_column_name']],
+    #                                                  config_dict[config_dict['ba_state_column_name']],
+    #                                                  config_dict[config_dict['ba_pincode_column_name']]]
+    #                              if value is not None
+    #                              )
+    # print(f'{full_address=}')
+    #
+    # full_address_row_index = single_df[single_df[single_df.columns[column_name_index]] ==
+    #                                    'full_address'].index[0]
+    # print(f'{full_address_row_index=}')
+    # if full_address_row_index is not None:
+    #     if full_address is not None:
+    #         single_df.loc[full_address_row_index, 'Value'] = full_address
+    #     else:
+    #         single_df.loc[full_address_row_index, 'Value'] = None
+    # else:
+    #     print(f"full_address details is not in mapping file.")
 
 
     purpose_abbreviation_list = [x.strip() for x in config_dict['purpose_abbreviation_list'].split(',')]
@@ -285,9 +329,9 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
 
 def form_18_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
-                      output_file_path, cin):
+                      output_file_path, cin,xml_hidden_file_path):
     try:
-        xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, output_file_path, cin)
+        xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, output_file_path, cin,xml_hidden_file_path)
     except Exception as e:
         print("Below Exception occurred while processing Form 11 file: \n ", e)
         exc_type, exc_value, exc_traceback = sys.exc_info()

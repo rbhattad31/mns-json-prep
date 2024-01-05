@@ -528,6 +528,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                 elif 'Form 18'.lower() in str(file_name).lower() or 'INC-22'.lower() in str(file_name).lower():
                     sheet_name = 'Form18'
                     config_dict_form18,config_status = create_main_config_dictionary(excel_file,sheet_name)
+                    xml_hidden_file_path = xml_file_path.replace('.xml', '_hidden.xml')
                     if 'Form 18'.lower() in str(file_name).lower():
                         logging.info("Going to extract data for Form 18 new files")
                         map_file_path_form18 = config_dict_form18['mapping file path']
@@ -544,7 +545,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     else:
                         map_file_path_form18 = None
                     map_sheet_name_form18 = config_dict_form18['mapping file sheet name']
-                    form18_db_insertion = form_18_xml_to_db(db_config,config_dict_form18,map_file_path_form18,map_sheet_name_form18,xml_file_path,output_excel_path,Cin)
+                    form18_db_insertion = form_18_xml_to_db(db_config,config_dict_form18,map_file_path_form18,map_sheet_name_form18,xml_file_path,output_excel_path,Cin,xml_hidden_file_path)
                     if form18_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                     else:
@@ -553,7 +554,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                             map_file_path_form18_old = config_dict_form18['form18_old_files_config']
                             form18_old_db_insertion = form_18_xml_to_db(db_config, config_dict_form18, map_file_path_form18_old,
                                                                     map_sheet_name_form18, xml_file_path,
-                                                                    output_excel_path, Cin)
+                                                                    output_excel_path, Cin,xml_hidden_file_path)
                             if form18_old_db_insertion:
                                 update_db_insertion_status(Cin, file_name, config_dict, 'Success')
 

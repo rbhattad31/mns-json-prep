@@ -15,6 +15,19 @@ import logging
 from logging_config import setup_logging
 
 
+def find_term_and_numbers(input_text, term):
+    #pattern = re.compile(f'{re.escape(term)}\D*(\d+)\D*(\d+)')
+    pattern = re.compile(f'{re.escape(term)}[\\n\\s]*([\\d,]+)[\\n\\s]*([\\d,]+)')
+    match = pattern.search(input_text)
+
+    if match:
+        number1 = match.group(1)
+        number2 = match.group(2)
+        return number1, number2
+    else:
+        return None
+
+
 def extract_between_phrases(input_sentence, start_phrase, end_phrase):
     pattern = re.compile(f'{re.escape(start_phrase)}(.*?){re.escape(end_phrase)}', re.DOTALL)
     match = pattern.search(input_sentence)
@@ -212,7 +225,17 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header):
     # logging.info the extracted years
     # logging.info(years[0])
     # logging.info(values[0])
-    return values
+    all_none = all(element is None for element in values)
+    paragraph_values = []
+    if all_none:
+        logging.info("Going to capture value from para")
+        input_text = capture_values_from_text(json_file_path,None,None,None)
+        current_year_value_para,previous_year_value_para = find_term_and_numbers(input_text,target_header)
+        paragraph_values.append(current_year_value_para)
+        paragraph_values.append(previous_year_value_para)
+        return paragraph_values
+    else:
+        return values
     # for insert_data in zip(years,values):
     #     year = insert_data[0]
     #     value = insert_data[1]
@@ -342,6 +365,7 @@ def Auditor_information(sentence, keyword):
     else:
         return None
 
+
 def update_database_single_value_AOC(db_config, table_name, cin_column_name, cin_value,company_name_column_name,company_name, column_name, column_value,year,nature,filing_standard):
     setup_logging()
     db_connection = mysql.connector.connect(**db_config)
@@ -364,7 +388,7 @@ def update_database_single_value_AOC(db_config, table_name, cin_column_name, cin
         column_value = json.dumps(json_dict)
 
     # check if there is already entry with cin
-    query = "SELECT * FROM {} WHERE {} = '{}' and {}='{}' and {}='{}' and {}='{}'".format(table_name, cin_column_name, cin_value,company_name_column_name,company_name,'year',year,'nature',nature)
+    query = "SELECT * FROM {} WHERE {} = '{}' and {}='{}' and {}='{}' and {}='{}' and {}='{}'".format(table_name, cin_column_name, cin_value,company_name_column_name,company_name,'year',year,'nature',nature,'filing_standard',filing_standard)
     logging.info(query)
     try:
         db_cursor.execute(query)
@@ -375,7 +399,7 @@ def update_database_single_value_AOC(db_config, table_name, cin_column_name, cin
 
     # if cin value already exists
     if len(result) > 0 and column_name!='nature':
-        update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}' AND {}='{}' AND {}='{}'".format(table_name, column_name,
+        update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}' AND {}='{}' AND {}='{}' AND {}='{}'".format(table_name, column_name,
                                                                                       column_value, cin_column_name,
                                                                                       cin_value,
                                                                                       company_name_column_name,
@@ -383,30 +407,36 @@ def update_database_single_value_AOC(db_config, table_name, cin_column_name, cin
                                                                                       'Year',
                                                                                       year,
                                                                                       'nature',
-                                                                                      nature)
+                                                                                      nature,
+                                                                                      'filing_standard',
+                                                                                      filing_standard)
         logging.info(update_query)
         db_cursor.execute(update_query)
         logging.info("Updating")
 
     # if cin value doesn't exist
     elif column_name == 'nature':
-        update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}' AND {}='{}' AND nature is null".format(
+        update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}' AND {}='{}' AND {}='{}' AND nature is null".format(
             table_name, column_name,
             column_value, cin_column_name,
             cin_value,
             company_name_column_name,
             company_name,
             'Year',
-            year)
+            year,
+            'filing_standard',
+             filing_standard)
         logging.info(update_query)
         db_cursor.execute(update_query)
         logging.info("Updating nature")
     else:
-        insert_query = "INSERT INTO {} ({}, {}, {}) VALUES ('{}', '{}', '{}')".format(table_name, cin_column_name,
+        insert_query = "INSERT INTO {} ({}, {}, {},{}) VALUES ('{}', '{}', '{}','{}')".format(table_name, cin_column_name,
                                                                                       company_name_column_name,
+                                                                                     'filing_standard',
                                                                                       column_name,
                                                                                       cin_value,
                                                                                       company_name,
+                                                                                      filing_standard,
                                                                                       column_value)
         logging.info(insert_query)
         db_cursor.execute(insert_query)
@@ -647,6 +677,8 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
         previous_year = previous_year_df[previous_year_df['Field_Name'] == 'year']['Value'].values[0]
         current_year_nature = current_year_df[current_year_df['Field_Name'] == 'nature']['Value'].values[0]
         previous_year_nature = previous_year_df[previous_year_df['Field_Name'] == 'nature']['Value'].values[0]
+        previous_year_filing_standard = previous_year_df[previous_year_df['Field_Name'] == 'filing_standard']['Value'].values[0]
+        current_year_filing_standard = current_year_df[current_year_df['Field_Name'] == 'filing_standard']['Value'].values[0]
         if current_year is None:
             raise Exception(f"Exception occurred while extracting year value {current_year} from current year data")
         if previous_year is None:
@@ -654,13 +686,13 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
         single_df_list = []
         db_connection = mysql.connector.connect(**db_config)
         db_cursor = db_connection.cursor()
-        previous_year_check_query = "select * from financials where year = %s and cin =%s and nature = %s"
-        previous_year_values = (previous_year,cin_column_value,previous_year_nature)
+        previous_year_check_query = "select * from financials where year = %s and cin =%s and nature = %s and filing_standard = %s"
+        previous_year_values = (previous_year,cin_column_value,previous_year_nature,previous_year_filing_standard)
         logging.info(previous_year_check_query % previous_year_values)
         db_cursor.execute(previous_year_check_query,previous_year_values)
         previous_year_result = db_cursor.fetchall()
-        current_year_check_query = "select * from financials where year = %s and cin =%s and nature = %s"
-        current_year_values = (current_year,cin_column_value,current_year_nature)
+        current_year_check_query = "select * from financials where year = %s and cin =%s and nature = %s and filing_standard = %s"
+        current_year_values = (current_year,cin_column_value,current_year_nature,current_year_filing_standard)
         logging.info(current_year_check_query,current_year_values)
         db_cursor.execute(current_year_check_query,current_year_values)
         current_year_result = db_cursor.fetchall()

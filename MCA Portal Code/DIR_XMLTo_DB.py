@@ -198,6 +198,9 @@ def insert_datatable_with_table(config_dict, db_config, sql_table_name, column_n
     designation_after_event = result_dict[designation_column_name]
     date_of_appointment_column_name = config_dict['date_of_appointment_column_name']
     date_of_appointment = result_dict[date_of_appointment_column_name]
+    date_of_cessation_column_name = config_dict['date_of_cessation_column_name']
+    date_of_cessation = result_dict[date_of_cessation_column_name]
+
     logging.info(f'{designation_after_event=}')
 
     if cin is None or din is None or designation_after_event is None:
@@ -205,8 +208,21 @@ def insert_datatable_with_table(config_dict, db_config, sql_table_name, column_n
                         f" in table {sql_table_name} "
                         f"with below data \n {list(df_row)} ")
     else:
-        select_query = (f"SELECT * FROM {sql_table_name} WHERE {cin_column_name} = '{cin}' AND {din_column_name}"
-                        f" = '{din}' AND LOWER({designation_column_name}) = '{str(designation_after_event).lower()}' AND ({date_of_appointment_column_name}) = '{date_of_appointment}'")
+        if date_of_cessation is not None:
+            if date_of_cessation != '' or date_of_cessation != '-':
+                logging.info("Date of cessation query")
+                select_query = (f"SELECT * FROM {sql_table_name} WHERE {cin_column_name} = '{cin}' AND {din_column_name}"
+                            f" = '{din}' AND LOWER({designation_column_name}) = '{str(designation_after_event).lower()}' AND ({date_of_cessation_column_name}) = '{date_of_cessation}'")
+            else:
+                logging.info("Date of appointment query")
+                select_query = (
+                    f"SELECT * FROM {sql_table_name} WHERE {cin_column_name} = '{cin}' AND {din_column_name}"
+                    f" = '{din}' AND LOWER({designation_column_name}) = '{str(designation_after_event).lower()}' AND ({date_of_appointment_column_name}) = '{date_of_appointment}'")
+
+        else:
+            logging.info("Date of appointment query")
+            select_query = (f"SELECT * FROM {sql_table_name} WHERE {cin_column_name} = '{cin}' AND {din_column_name}"
+                            f" = '{din}' AND LOWER({designation_column_name}) = '{str(designation_after_event).lower()}' AND ({date_of_appointment_column_name}) = '{date_of_appointment}'")
 
     logging.info(select_query)
     db_cursor.execute(select_query)
@@ -226,19 +242,48 @@ def insert_datatable_with_table(config_dict, db_config, sql_table_name, column_n
         result_dict.pop(cin_column_name)
         result_dict.pop(din_column_name)
         result_dict.pop(designation_column_name)
-        result_dict.pop(date_of_appointment_column_name)
+        if date_of_cessation is not None:
+            if date_of_cessation != '' or date_of_cessation != '-':
+                result_dict.pop(date_of_cessation_column_name)
+            else:
+                result_dict.pop(date_of_appointment_column_name)
+        else:
+            result_dict.pop(date_of_appointment_column_name)
 
         column_names_list = list(column_names_list)
         column_names_list.remove(cin_column_name)
         column_names_list.remove(din_column_name)
         column_names_list.remove(designation_column_name)
-        column_names_list.remove(date_of_appointment_column_name)
+        if date_of_cessation is not None:
+            if date_of_cessation != '' or date_of_cessation != '-':
+                column_names_list.remove(date_of_cessation_column_name)
+            else:
+                column_names_list.remove(date_of_appointment_column_name)
+        else:
+            column_names_list.remove(date_of_appointment_column_name)
 
-        update_query = f"""UPDATE {sql_table_name}
-                        SET {', '.join([f"{col} = '{str(result_dict[col])}'" for col in column_names_list])} 
-                        WHERE {cin_column_name} = '{cin}' AND {din_column_name} = '{din}' AND
-                        LOWER({designation_column_name}) = '{str(designation_after_event).lower()}'
-                        AND ({date_of_appointment_column_name}) = '{date_of_appointment}'"""
+        if date_of_cessation is not None:
+            if date_of_cessation != '' or date_of_cessation != '-':
+                logging.info("Date of cessation update query")
+                update_query = f"""UPDATE {sql_table_name}
+                                        SET {', '.join([f"{col} = '{str(result_dict[col])}'" for col in column_names_list])} 
+                                        WHERE {cin_column_name} = '{cin}' AND {din_column_name} = '{din}' AND
+                                        LOWER({designation_column_name}) = '{str(designation_after_event).lower()}'
+                                        AND ({date_of_cessation_column_name}) = '{date_of_cessation}'"""
+            else:
+                logging.info("Date of appointment update query")
+                update_query = f"""UPDATE {sql_table_name}
+                                SET {', '.join([f"{col} = '{str(result_dict[col])}'" for col in column_names_list])} 
+                                WHERE {cin_column_name} = '{cin}' AND {din_column_name} = '{din}' AND
+                                LOWER({designation_column_name}) = '{str(designation_after_event).lower()}'
+                                AND ({date_of_appointment_column_name}) = '{date_of_appointment}'"""
+        else:
+            logging.info("Date of appointment update query")
+            update_query = f"""UPDATE {sql_table_name}
+                                            SET {', '.join([f"{col} = '{str(result_dict[col])}'" for col in column_names_list])} 
+                                            WHERE {cin_column_name} = '{cin}' AND {din_column_name} = '{din}' AND
+                                            LOWER({designation_column_name}) = '{str(designation_after_event).lower()}'
+                                            AND ({date_of_appointment_column_name}) = '{date_of_appointment}'"""
 
         logging.info(update_query)
         db_cursor.execute(update_query)
@@ -272,14 +317,27 @@ def insert_datatable_with_other_dir_table(config_dict, db_config, sql_table_name
     designation = result_dict[designation_column_name]
     date_of_appointment_column_name = config_dict['date_of_appointment_column_name']
     date_of_appointment = result_dict[date_of_appointment_column_name]
+    date_of_cessation_column_name = config_dict['date_of_cessation_column_name']
+    date_of_cessation = result_dict[date_of_cessation_column_name]
+
 
     if cin is None or pan is None:
         raise Exception(f"One of the Value of CIN, PAN and 'Event Date' values are empty for record"
                         f"to update in table {sql_table_name} "
                         f"with below data \n {list(df_row)} ")
     else:
-        select_query = (f"SELECT * FROM {sql_table_name} WHERE {cin_column_name} = '{cin}' AND {pan_column_name}"
-                        f" = '{pan}' AND {designation_column_name} = '{designation}' AND {date_of_appointment_column_name} = '{date_of_appointment}'")
+        if date_of_cessation is not None:
+            if date_of_cessation != '' or date_of_cessation != '-':
+                select_query = (
+                    f"SELECT * FROM {sql_table_name} WHERE {cin_column_name} = '{cin}' AND {pan_column_name}"
+                    f" = '{pan}' AND {designation_column_name} = '{designation}' AND {date_of_cessation_column_name} = '{date_of_cessation}'")
+            else:
+                select_query = (
+                    f"SELECT * FROM {sql_table_name} WHERE {cin_column_name} = '{cin}' AND {pan_column_name}"
+                    f" = '{pan}' AND {designation_column_name} = '{designation}' AND {date_of_appointment_column_name} = '{date_of_appointment}'")
+        else:
+            select_query = (f"SELECT * FROM {sql_table_name} WHERE {cin_column_name} = '{cin}' AND {pan_column_name}"
+                            f" = '{pan}' AND {designation_column_name} = '{designation}' AND {date_of_appointment_column_name} = '{date_of_appointment}'")
 
     logging.info(select_query)
     db_cursor.execute(select_query)
@@ -299,18 +357,42 @@ def insert_datatable_with_other_dir_table(config_dict, db_config, sql_table_name
         result_dict.pop(cin_column_name)
         result_dict.pop(pan_column_name)
         result_dict.pop(designation_column_name)
-        result_dict.pop(date_of_appointment_column_name)
+        if date_of_cessation is not None:
+            if date_of_cessation != '' or date_of_cessation != '-':
+                result_dict.pop(date_of_cessation)
+            else:
+                result_dict.pop(date_of_appointment_column_name)
+        else:
+            result_dict.pop(date_of_appointment_column_name)
 
         column_names_list = list(column_names_list)
         column_names_list.remove(cin_column_name)
         column_names_list.remove(pan_column_name)
         column_names_list.remove(designation_column_name)
-        column_names_list.remove(date_of_appointment_column_name)
+        if date_of_cessation is not None:
+            if date_of_cessation != '' or date_of_cessation != '-':
+                column_names_list.remove(date_of_cessation_column_name)
+            else:
+                column_names_list.remove(date_of_appointment_column_name)
+        else:
+            column_names_list.remove(date_of_appointment_column_name)
 
-        update_query = f'''UPDATE {sql_table_name}
-                        SET {', '.join([f"{col} = '{str(result_dict[col])}'" for col in column_names_list])} 
-                        WHERE {cin_column_name} = '{cin}' AND {pan_column_name} = '{pan}' AND
-                        {designation_column_name} = '{designation}' AND {date_of_appointment_column_name} = '{date_of_appointment}' '''
+        if date_of_cessation is not None:
+            if date_of_cessation != '' or date_of_cessation != '-':
+                update_query = f'''UPDATE {sql_table_name}
+                                        SET {', '.join([f"{col} = '{str(result_dict[col])}'" for col in column_names_list])} 
+                                        WHERE {cin_column_name} = '{cin}' AND {pan_column_name} = '{pan}' AND
+                                        {designation_column_name} = '{designation}' AND {date_of_cessation_column_name} = '{date_of_cessation}' '''
+            else:
+                update_query = f'''UPDATE {sql_table_name}
+                                        SET {', '.join([f"{col} = '{str(result_dict[col])}'" for col in column_names_list])} 
+                                        WHERE {cin_column_name} = '{cin}' AND {pan_column_name} = '{pan}' AND
+                                        {designation_column_name} = '{designation}' AND {date_of_appointment_column_name} = '{date_of_appointment}' '''
+        else:
+            update_query = f'''UPDATE {sql_table_name}
+                            SET {', '.join([f"{col} = '{str(result_dict[col])}'" for col in column_names_list])} 
+                            WHERE {cin_column_name} = '{cin}' AND {pan_column_name} = '{pan}' AND
+                            {designation_column_name} = '{designation}' AND {date_of_appointment_column_name} = '{date_of_appointment}' '''
 
         logging.info(update_query)
         db_cursor.execute(update_query)

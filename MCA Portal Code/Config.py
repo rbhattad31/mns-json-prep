@@ -9,7 +9,6 @@ def create_main_config_dictionary(path, sheet_name):
     try:
 
         dict_config_main = {}
-
         if not os.path.exists(path):
             raise ConfigException("Exception: Config file is not exist in the path provided {0}".format(path))
         try:
