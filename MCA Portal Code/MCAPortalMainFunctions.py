@@ -574,7 +574,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     if form32_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                 elif 'DIR_2'.lower() in file_name.lower() or 'DIR-2'.lower() in file_name.lower() or 'DIR 2'.lower() in file_name.lower() or 'DIR-2-'.lower() in file_name.lower():
-                    Sheet_name = "DIR"
+                    Sheet_name = "OpenAI"
                     config_dict_dir, config_status = create_main_config_dictionary(excel_file, Sheet_name)
                     map_file_path_dir2 = config_dict_dir['DIR2_map_file_path']
                     map_file_sheet_name = config_dict_dir['mapping file sheet name']
@@ -582,7 +582,9 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     # dir_hidden_xml = dir_attachment_xml_to_db(db_config, config_dict_dir, map_file_path_dir2,
                     #                                           map_file_sheet_name, file_name, output_excel_path,
                     #                                           Cin)
-                    dir2_main(db_config,config_dict_dir,None,path,Cin)
+                    dir2 = dir2_main(db_config,config_dict_dir,None,path,Cin)
+                    if dir2:
+                        update_db_insertion_status(Cin, file_name, config_dict, 'Success')
             except Exception as e:
                 print(f"Exception occured while inserting into DB {e}")
                 continue
@@ -614,13 +616,13 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                         mgt7_xml_to_db(db_cursor, config_dict, map_file_path, map_file_sheet_name, hiddenattachment,
                                  output_excel_path, Cin, CompanyName)
                     elif 'DIR_2'.lower() in hiddenattachment.lower() or 'DIR-2'.lower() in hiddenattachment.lower() or 'DIR 2'.lower() in hiddenattachment.lower() or 'DIR-2-'.lower() in hiddenattachment.lower():
-                        Sheet_name = "DIR"
+                        Sheet_name = "OpenAI"
                         config_dict_dir, config_status = create_main_config_dictionary(excel_file, Sheet_name)
                         map_file_path_dir2 = config_dict_dir['DIR2_map_file_path']
                         map_file_sheet_name = config_dict_dir['mapping file sheet name']
                         output_excel_path = str(hiddenattachment).replace('.xml', '.xlsx')
                         #dir_hidden_xml = dir_attachment_xml_to_db(db_config,config_dict_dir,map_file_path_dir2,map_file_sheet_name,hiddenattachment,output_excel_path,Cin)
-                        dir2_main(db_config, config_dict_dir, None, hiddenattachment, Cin)
+                        dir2 = dir2_main(db_config, config_dict_dir, None, hiddenattachment, Cin)
                     else:
                         pass
         except Exception as e:
