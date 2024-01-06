@@ -467,22 +467,38 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     else:
                         AOC_XBRL_first_file_found = True
                 elif 'DIR'.lower() in str(file_name).lower():
-                    logging.info(f"Going to extract DIR for {file_name}")
-                    Sheet_name = "DIR"
-                    config_dict_DIR,config_status = create_main_config_dictionary(excel_file,Sheet_name)
-                    digit_count = sum(c.isdigit() for c in file_name)
-                    logging.info(digit_count)
-                    if digit_count == 8:
-                        map_file_path_DIR = config_dict_DIR['Form32_config']
-                        logging.info("old file")
+                    if 'DIR_2'.lower() in file_name.lower() or 'DIR-2'.lower() in file_name.lower() or 'DIR 2'.lower() in file_name.lower() or 'DIR-2-'.lower() in file_name.lower():
+                        logging.info("Going to extract for Dir-2 hidden attachment")
+                        Sheet_name = "OpenAI"
+                        config_dict_dir, config_status = create_main_config_dictionary(excel_file, Sheet_name)
+                        map_file_path_dir2 = config_dict_dir['DIR2_map_file_path']
+                        map_file_sheet_name = config_dict_dir['mapping file sheet name']
+                        output_excel_path = str(file_name).replace('.xml', '.xlsx')
+                        # dir_hidden_xml = dir_attachment_xml_to_db(db_config, config_dict_dir, map_file_path_dir2,
+                        #                                           map_file_sheet_name, file_name, output_excel_path,
+                        #                                           Cin)
+                        dir2 = dir2_main(db_config, config_dict_dir, None, path, Cin)
+                        if dir2:
+                            update_db_insertion_status(Cin, file_name, config_dict, 'Success')
+                    elif 'DIR-11'.lower() in str(file_name).lower():
+                        continue
                     else:
-                        map_file_path_DIR = config_dict_DIR['mapping file path']
-                        logging.info("new file")
-                    map_sheet_name_dir = config_dict_DIR['mapping file sheet name']
-                    xml_hidden_file_path = xml_file_path.replace('.xml', '_hidden.xml')
-                    dir_db_insertion = dir_xml_to_db(db_config,config_dict_DIR,map_file_path_DIR,map_sheet_name_dir,xml_file_path,xml_hidden_file_path,output_excel_path,Cin,date,file_name)
-                    if dir_db_insertion:
-                        update_db_insertion_status(Cin, file_name, config_dict, 'Success')
+                        logging.info(f"Going to extract DIR for {file_name}")
+                        Sheet_name = "DIR"
+                        config_dict_DIR,config_status = create_main_config_dictionary(excel_file,Sheet_name)
+                        digit_count = sum(c.isdigit() for c in file_name)
+                        logging.info(digit_count)
+                        if digit_count == 8:
+                            map_file_path_DIR = config_dict_DIR['Form32_config']
+                            logging.info("old file")
+                        else:
+                            map_file_path_DIR = config_dict_DIR['mapping file path']
+                            logging.info("new file")
+                        map_sheet_name_dir = config_dict_DIR['mapping file sheet name']
+                        xml_hidden_file_path = xml_file_path.replace('.xml', '_hidden.xml')
+                        dir_db_insertion = dir_xml_to_db(db_config,config_dict_DIR,map_file_path_DIR,map_sheet_name_dir,xml_file_path,xml_hidden_file_path,output_excel_path,Cin,date,file_name)
+                        if dir_db_insertion:
+                            update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                 elif 'Form8'.lower() in str(file_name).lower():
                     Sheet_name = 'Form_8_annual'
                     config_dict_form8,config_status = create_main_config_dictionary(excel_file,Sheet_name)
@@ -573,18 +589,18 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                                                      xml_file_path, xml_hidden_file_path, output_excel_path, Cin, date,file_name)
                     if form32_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
-                elif 'DIR_2'.lower() in file_name.lower() or 'DIR-2'.lower() in file_name.lower() or 'DIR 2'.lower() in file_name.lower() or 'DIR-2-'.lower() in file_name.lower():
-                    Sheet_name = "OpenAI"
-                    config_dict_dir, config_status = create_main_config_dictionary(excel_file, Sheet_name)
-                    map_file_path_dir2 = config_dict_dir['DIR2_map_file_path']
-                    map_file_sheet_name = config_dict_dir['mapping file sheet name']
-                    output_excel_path = str(file_name).replace('.xml', '.xlsx')
-                    # dir_hidden_xml = dir_attachment_xml_to_db(db_config, config_dict_dir, map_file_path_dir2,
-                    #                                           map_file_sheet_name, file_name, output_excel_path,
-                    #                                           Cin)
-                    dir2 = dir2_main(db_config,config_dict_dir,None,path,Cin)
-                    if dir2:
-                        update_db_insertion_status(Cin, file_name, config_dict, 'Success')
+                # elif 'DIR_2'.lower() in file_name.lower() or 'DIR-2'.lower() in file_name.lower() or 'DIR 2'.lower() in file_name.lower() or 'DIR-2-'.lower() in file_name.lower():
+                #     Sheet_name = "OpenAI"
+                #     config_dict_dir, config_status = create_main_config_dictionary(excel_file, Sheet_name)
+                #     map_file_path_dir2 = config_dict_dir['DIR2_map_file_path']
+                #     map_file_sheet_name = config_dict_dir['mapping file sheet name']
+                #     output_excel_path = str(file_name).replace('.xml', '.xlsx')
+                #     # dir_hidden_xml = dir_attachment_xml_to_db(db_config, config_dict_dir, map_file_path_dir2,
+                #     #                                           map_file_sheet_name, file_name, output_excel_path,
+                #     #                                           Cin)
+                #     dir2 = dir2_main(db_config,config_dict_dir,None,path,Cin)
+                #     if dir2:
+                #         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
             except Exception as e:
                 print(f"Exception occured while inserting into DB {e}")
                 continue
