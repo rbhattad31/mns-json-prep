@@ -523,7 +523,7 @@ WHERE d1.cin = '{}' AND d1.document LIKE '%AOC%' AND d1.document not LIKE '%AOC-
             connection.commit()
             update_query_DIR = """UPDATE documents 
                 SET form_data_extraction_needed = 'Y' 
-                WHERE LOWER(document) LIKE '%%dir-12%%' 
+                WHERE LOWER(document) LIKE '%%dir%%' 
                 AND LOWER(document) NOT LIKE '%%directors%%' 
                 AND LOWER(document) NOT LIKE '%%director%%' 
                 AND cin = %s 

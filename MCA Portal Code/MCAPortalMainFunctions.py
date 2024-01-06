@@ -48,6 +48,8 @@ from DIRAddressHiddenAttachment import mgt_address_main
 from DirectorShareholdingsHiddenAttachment import mgt_director_shareholdings_main
 from Form18_xml_to_db import form_18_xml_to_db
 from FreshCertificateOpenAI import fresh_name_main
+from DIR_11_xml_to_db import xml_to_db
+from DIR2PDFToDB import dir2_main
 def sign_out(driver,config_dict,CinData):
     try:
         sign_out_button = driver.find_element(By.XPATH, '//a[@id="loginAnchor" and text()="Signout"]')
@@ -571,6 +573,16 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                                                      xml_file_path, xml_hidden_file_path, output_excel_path, Cin, date,file_name)
                     if form32_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
+                elif 'DIR_2'.lower() in file_name.lower() or 'DIR-2'.lower() in file_name.lower() or 'DIR 2'.lower() in file_name.lower() or 'DIR-2-'.lower() in file_name.lower():
+                    Sheet_name = "DIR"
+                    config_dict_dir, config_status = create_main_config_dictionary(excel_file, Sheet_name)
+                    map_file_path_dir2 = config_dict_dir['DIR2_map_file_path']
+                    map_file_sheet_name = config_dict_dir['mapping file sheet name']
+                    output_excel_path = str(file_name).replace('.xml', '.xlsx')
+                    # dir_hidden_xml = dir_attachment_xml_to_db(db_config, config_dict_dir, map_file_path_dir2,
+                    #                                           map_file_sheet_name, file_name, output_excel_path,
+                    #                                           Cin)
+                    dir2_main(db_config,config_dict_dir,None,path,Cin)
             except Exception as e:
                 print(f"Exception occured while inserting into DB {e}")
                 continue
@@ -607,11 +619,39 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                         map_file_path_dir2 = config_dict_dir['DIR2_map_file_path']
                         map_file_sheet_name = config_dict_dir['mapping file sheet name']
                         output_excel_path = str(hiddenattachment).replace('.xml', '.xlsx')
-                        dir_hidden_xml = dir_attachment_xml_to_db(db_config,config_dict_dir,map_file_path_dir2,map_file_sheet_name,hiddenattachment,output_excel_path,Cin)
+                        #dir_hidden_xml = dir_attachment_xml_to_db(db_config,config_dict_dir,map_file_path_dir2,map_file_sheet_name,hiddenattachment,output_excel_path,Cin)
+                        dir2_main(db_config, config_dict_dir, None, hiddenattachment, Cin)
                     else:
                         pass
         except Exception as e:
             logging.info(f"Exception Occured {e}")
+
+        try:
+            dir11_connection = mysql.connector.connect(**db_config)
+            dir11_cursor = dir11_connection.cursor()
+            dir11_connection.autocommit = True
+            dir11_query = "SELECT * FROM documents where cin=%s and Download_Status='Downloaded' and form_data_extraction_status='Success' and DB_insertion_status='Pending' and form_data_extraction_needed = 'Y' and document like '%%DIR-11%%'"
+            dir11_values = (Cin,)
+            logging.info(dir11_query % dir11_values)
+            dir11_cursor.execute(dir11_query,dir11_values)
+            dir11_result = dir11_cursor.fetchall()
+            dir11_cursor.close()
+            dir11_connection.close()
+            for dir11 in dir11_result:
+                Sheet_name = "DIR"
+                config_dict_dir11, config_status = create_main_config_dictionary(excel_file, Sheet_name)
+                map_file_path_dir11 = config_dict_dir11['DIR11_config']
+                map_file_sheet_name = config_dict_dir11['mapping file sheet name']
+                path = dir11[8]
+                date = dir11[5]
+                file_name = dir11[4]
+                xml_file_path = str(path).replace('.pdf', '.xml')
+                output_excel_path = str(path).replace('.pdf', '.xlsx')
+                cin_column_name = 'cin'
+                xml_to_db(db_config,config_dict_dir11,map_file_path_dir11,map_file_sheet_name,xml_file_path,cin_column_name,Cin)
+        except Exception as e:
+            logging.info(f"Exception occured while inserting for Dir 11 {e}")
+
         try:
             gst_connection = mysql.connector.connect(**db_config)
             gst_cursor = gst_connection.cursor()
