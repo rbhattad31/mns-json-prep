@@ -6,6 +6,8 @@ import logging
 import pandas as pd
 import mysql.connector
 from Config import create_main_config_dictionary
+import sys
+import traceback
 
 
 def get_single_value_from_xml(xml_root, parent_node, child_node):
@@ -32,6 +34,7 @@ def get_single_value_from_xml(xml_root, parent_node, child_node):
 
 def update_database_single_value(db_config, table_name, cin_column_name, cin_value, column_name, column_value, din,
                                  designation):
+    setup_logging()
     db_connection = mysql.connector.connect(**db_config)
     db_cursor = db_connection.cursor()
     json_dict = json.loads(column_value)
@@ -103,6 +106,7 @@ def update_database_single_value(db_config, table_name, cin_column_name, cin_val
 
 def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, cin_column_name_in_db,
               cin_column_value):
+    setup_logging()
     field_name_index = config_dict['field_name_index']
     xml_type_index = config_dict['xml_type_index']
     single_group_type_index = config_dict['single_group_type_index']
@@ -199,6 +203,24 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                              f"with data {json_string}")
 
 
+def dir11_main(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, cin_column_name_in_db,
+              cin_column_value):
+    try:
+        setup_logging()
+        xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, cin_column_name_in_db,
+              cin_column_value)
+    except Exception as e:
+        logging.info(f"Exception occured while inserting for dir 11")
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        # Get the formatted traceback as a string
+        traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+        # logging.info the traceback details
+        for line in traceback_details:
+            logging.info(line.strip())
+        return False
+    else:
+        return True
 # main_dict = create_main_config_dictionary(r"C:\Users\BRADSOL123\Documents\Python\Config\Config_Python.xlsx",
 #                                           'DIR')
 # config_dict = main_dict[0]

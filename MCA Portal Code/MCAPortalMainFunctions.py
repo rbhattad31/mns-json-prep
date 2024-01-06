@@ -48,7 +48,7 @@ from DIRAddressHiddenAttachment import mgt_address_main
 from DirectorShareholdingsHiddenAttachment import mgt_director_shareholdings_main
 from Form18_xml_to_db import form_18_xml_to_db
 from FreshCertificateOpenAI import fresh_name_main
-from DIR_11_xml_to_db import xml_to_db
+from DIR_11_xml_to_db import dir11_main
 from DIR2PDFToDB import dir2_main
 def sign_out(driver,config_dict,CinData):
     try:
@@ -471,9 +471,9 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                         logging.info("Going to extract for Dir-2 hidden attachment")
                         Sheet_name = "OpenAI"
                         config_dict_dir, config_status = create_main_config_dictionary(excel_file, Sheet_name)
-                        map_file_path_dir2 = config_dict_dir['DIR2_map_file_path']
-                        map_file_sheet_name = config_dict_dir['mapping file sheet name']
-                        output_excel_path = str(file_name).replace('.xml', '.xlsx')
+                        # map_file_path_dir2 = config_dict_dir['DIR2_map_file_path']
+                        # map_file_sheet_name = config_dict_dir['mapping file sheet name']
+                        # output_excel_path = str(file_name).replace('.xml', '.xlsx')
                         # dir_hidden_xml = dir_attachment_xml_to_db(db_config, config_dict_dir, map_file_path_dir2,
                         #                                           map_file_sheet_name, file_name, output_excel_path,
                         #                                           Cin)
@@ -634,9 +634,9 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     elif 'DIR_2'.lower() in hiddenattachment.lower() or 'DIR-2'.lower() in hiddenattachment.lower() or 'DIR 2'.lower() in hiddenattachment.lower() or 'DIR-2-'.lower() in hiddenattachment.lower():
                         Sheet_name = "OpenAI"
                         config_dict_dir, config_status = create_main_config_dictionary(excel_file, Sheet_name)
-                        map_file_path_dir2 = config_dict_dir['DIR2_map_file_path']
-                        map_file_sheet_name = config_dict_dir['mapping file sheet name']
-                        output_excel_path = str(hiddenattachment).replace('.xml', '.xlsx')
+                        # map_file_path_dir2 = config_dict_dir['DIR2_map_file_path']
+                        # map_file_sheet_name = config_dict_dir['mapping file sheet name']
+                        # output_excel_path = str(hiddenattachment).replace('.xml', '.xlsx')
                         #dir_hidden_xml = dir_attachment_xml_to_db(db_config,config_dict_dir,map_file_path_dir2,map_file_sheet_name,hiddenattachment,output_excel_path,Cin)
                         dir2 = dir2_main(db_config, config_dict_dir, None, hiddenattachment, Cin)
                     else:
@@ -666,7 +666,9 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                 xml_file_path = str(path).replace('.pdf', '.xml')
                 output_excel_path = str(path).replace('.pdf', '.xlsx')
                 cin_column_name = 'cin'
-                xml_to_db(db_config,config_dict_dir11,map_file_path_dir11,map_file_sheet_name,xml_file_path,cin_column_name,Cin)
+                dir11 = dir11_main(db_config,config_dict_dir11,map_file_path_dir11,map_file_sheet_name,xml_file_path,cin_column_name,Cin)
+                if dir11:
+                    update_db_insertion_status(Cin, file_name, config_dict, 'Success')
         except Exception as e:
             logging.info(f"Exception occured while inserting for Dir 11 {e}")
 
