@@ -594,6 +594,10 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                         input_text = capture_values_from_text(json_file_path, None, None, None)
                         current_year_value_para, previous_year_value_para = find_term_and_numbers(input_text,
                                                                                                   child_nodes)
+                        current_year_value_para = current_year_value_para.replace(',', '')
+                        previous_year_value_para = previous_year_value_para.replace(',', '')
+                        current_year_value_para = float(current_year_value_para)
+                        previous_year_value_para = float(previous_year_value_para)
                         if year_category == 'Previous':
                             single_df.at[index,'Value'] = previous_year_value_para
                         else:
