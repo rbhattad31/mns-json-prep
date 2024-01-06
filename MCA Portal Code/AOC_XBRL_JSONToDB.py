@@ -506,12 +506,6 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                 if len(values) != 0:
                     if year_category == 'Previous':
                         try:
-                            if values[1] is None:
-                                logging.info("Going to capture value from para")
-                                input_text = capture_values_from_text(json_file_path, None, None, None)
-                                current_year_value_para, previous_year_value_para = find_term_and_numbers(input_text,
-                                                                                                        child_nodes)
-                                values[1] = current_year_value_para
                             values[1]=values[1].replace(',','')
                             if million_keyword in filing_standard_check:
                                 num_value = (float(values[1]))*1000000
@@ -536,12 +530,6 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                             single_df.at[index, 'Value'] = values[1]
                     elif year_category == 'Current':
                         try:
-                            if values[0] is None:
-                                logging.info("Going to capture value from para")
-                                input_text = capture_values_from_text(json_file_path, None, None, None)
-                                current_year_value_para, previous_year_value_para = find_term_and_numbers(input_text,
-                                                                                                        child_nodes)
-                                values[0] = previous_year_value_para
                             values[0]=values[0].replace(',','')
                             if million_keyword in filing_standard_check:
                                 logging.info("In Millions")
@@ -600,6 +588,15 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                                 single_df.at[index,'Value'] = values[0]
                     else:
                         single_df.at[index, 'Value'] = None
+                else:
+                    logging.info("Going to capture value from para")
+                    input_text = capture_values_from_text(json_file_path, None, None, None)
+                    current_year_value_para, previous_year_value_para = find_term_and_numbers(input_text,
+                                                                                              child_nodes)
+                    if year_category == 'Previous':
+                        single_df.at[index,'Value'] = previous_year_value_para
+                    else:
+                        single_df.at[index, 'Value'] = current_year_value_para
             elif parent_node == config_dict['Constant_Keyword']:
                 if field_name == 'filing_standard':
                     value = filing_standard
