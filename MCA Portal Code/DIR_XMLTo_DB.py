@@ -954,6 +954,9 @@ def other_than_dir_xml_to_db(db_config, config_dict, map_file_path, map_file_she
             table_df[config_dict['father_name_second_name_node_name']].fillna('') + ' ' + \
             table_df[config_dict['father_name_last_name_node_name']].fillna('')
 
+
+        table_df[config_dict['address_column_name']] = table_df[config_dict['address_line1_node_name']].fillna('') + ',' + table_df[config_dict['address_line2_node_name']].fillna('') + ',' + table_df[config_dict['city_node_name']].fillna('') + ',' + table_df[config_dict['state_node_name']].fillna('') + ',' + table_df[config_dict['pincode_node_name']].fillna('')
+
         columns_to_remove = [config_dict['name_first_name_node_name'],
                              config_dict['name_second_name_node_name'],
                              config_dict['name_last_name_node_name'],
