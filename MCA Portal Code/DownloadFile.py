@@ -34,6 +34,7 @@ def initialize_driver(chrome_driver_path):
     driver = webdriver.Chrome(service=service, options=options)
     return driver
 
+
 def select_category(category,driver):
     try:
         setup_logging()
@@ -48,6 +49,8 @@ def select_category(category,driver):
     except Exception as e:
         logging.warning(f"Exception while selecting category {e}")
         return False
+
+
 def Navigate_to_Company(Cin,CompanyName,driver,dbconfig):
     try:
         setup_logging()

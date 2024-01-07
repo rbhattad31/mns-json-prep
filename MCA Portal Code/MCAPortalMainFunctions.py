@@ -232,7 +232,7 @@ def XMLGeneration(db_config,CinData,config_dict):
                     #         logging.info(f"Error in XBRL DB Update {e}")
                     if PDF_to_XML:
                         update_xml_extraction_status(Cin, file_name, config_dict, 'Success')
-                        hidden_attachments = CheckHiddenAttachemnts(xml_file_path, folder_path, pdf_path, file_name)
+                        hidden_attachments = CheckHiddenAttachemnts(xml_file_path, folder_path, pdf_path, file_name,db_config,Cin,CompanyName)
                         for element in hidden_attachments:
                             hidden_attachments_list.append(element)
                     else:

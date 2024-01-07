@@ -23,9 +23,11 @@ current_date = datetime.date.today()
 # Format the date as dd-MM-yyyy
 formatted_date = current_date.strftime("%d-%m-%Y")
 
+today_date = current_date.strftime("%d-%m-%Y")
 # logging.info the formatted date
+user_name = os.getlogin()
 
-def get_embedded_pdfs(input_pdf_path, output_path,file_name_hidden_pdf):
+def get_embedded_pdfs(input_pdf_path, output_path,file_name_hidden_pdf,db_config,cin,company_name):
     setup_logging()
     os.makedirs(output_path, exist_ok=True)
     doc = fitz.open(input_pdf_path)
@@ -43,6 +45,30 @@ def get_embedded_pdfs(input_pdf_path, output_path,file_name_hidden_pdf):
         #logging.info(fData)
         with open(out_pdf, 'wb') as outfile:
             outfile.write(fData)
+        try:
+            connection = mysql.connector.connect(**db_config)
+            cursor = connection.cursor()
+            connection.autocommit = True
+
+            check_query = 'select * from documents where cin = %s and document_download_path = %s'
+            values = (cin,out_pdf)
+            logging.info(check_query % values)
+            cursor.execute(check_query,values)
+            result = cursor.fetchall()
+            if len(result) == 0:
+                logging.info("Inserting hidden attachment into db")
+                query = "Insert into documents(cin,company,Category,document,form_data_extraction_status,created_date,created_by,form_data_extraction_needed,Download_Status,DB_insertion_status,document_download_path) Values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+                values = (cin, company_name, 'Hidden Attachment', file_name, 'Success', current_date, user_name, 'Y',
+                          'Downloaded', 'Pending',out_pdf)
+                logging.info(query % values)
+                cursor.execute(query, values)
+            cursor.close()
+            connection.close()
+        except Exception as e:
+            logging.info(f"Error in updating in db for hidden attachment {e}")
+            continue
+
+
 def extract_xfa_data(pdf_path,filename):
     setup_logging()
     def findInDict(needle, haystack):
@@ -248,7 +274,7 @@ def PDFtoXML(pdf_path,file_name):
         return None,False
 
 
-def CheckHiddenAttachemnts(xml_file_path,folder_path,pdf_path,file_name):
+def CheckHiddenAttachemnts(xml_file_path,folder_path,pdf_path,file_name,db_config,cin,company_name):
     hidden_xml_list = []
     setup_logging()
     if os.path.exists(pdf_path):
@@ -277,7 +303,7 @@ def CheckHiddenAttachemnts(xml_file_path,folder_path,pdf_path,file_name):
                             # If it doesn't exist, create it
                             os.makedirs(business_activity_folder_name)
                         logging.info("Downloading the Hidden Attachments")
-                        get_embedded_pdfs(pdf_path, business_activity_folder_name,file_name)
+                        get_embedded_pdfs(pdf_path, business_activity_folder_name,file_name,db_config,cin,company_name)
                         files_in_Business_folder = os.listdir(business_activity_folder_name)
                         for files in files_in_Business_folder:
                             if "Business Activity" not in files:
@@ -303,7 +329,7 @@ def CheckHiddenAttachemnts(xml_file_path,folder_path,pdf_path,file_name):
                     if not os.path.exists(subsidiary_folder_name):
                         # If it doesn't exist, create it
                         os.makedirs(subsidiary_folder_name)
-                    get_embedded_pdfs(pdf_path, subsidiary_folder_name,file_name)
+                    get_embedded_pdfs(pdf_path, subsidiary_folder_name,file_name,db_config,cin,company_name)
                     files_in_Subsidiary_Folder = os.listdir(subsidiary_folder_name)
                     for files in files_in_Subsidiary_Folder:
                         if not any(keyword not in files for keyword in ["Subsidiaries", "Holding", "Associate", "Joint Venture"]):
@@ -329,7 +355,7 @@ def CheckHiddenAttachemnts(xml_file_path,folder_path,pdf_path,file_name):
             DIR_hidden_attachment_folder = os.path.join(folder_path,"DIR_2",str(os.path.basename(pdf_path)).replace('.pdf',''))
             if not os.path.exists(DIR_hidden_attachment_folder):
                 os.makedirs(DIR_hidden_attachment_folder)
-            get_embedded_pdfs(pdf_path,DIR_hidden_attachment_folder,file_name)
+            get_embedded_pdfs(pdf_path,DIR_hidden_attachment_folder,file_name,db_config,cin,company_name)
             DIR_hidden_attachment_files = os.listdir(DIR_hidden_attachment_folder)
             for DIR_hidden in DIR_hidden_attachment_files:
                 print(DIR_hidden)
