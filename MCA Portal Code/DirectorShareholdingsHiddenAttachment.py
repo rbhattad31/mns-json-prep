@@ -45,6 +45,18 @@ def update_value_in_db(db_config,name,no_of_shares,cin):
     except Exception as e:
         logging.info(f"Error in calculating percentage holding {e}")
         percentage_holding = None
+    try:
+        year_query = "select * from director_shareholdings where cin = %s and din_pan = ''"
+        year_values = (cin,)
+        logging.info(year_query % year_values)
+        db_cursor.execute(year_query,year_values)
+        year_result = db_cursor.fetchone()
+        year = year_result[6]
+        financial_year = year_result[7]
+    except Exception as e:
+        logging.info(f"Error in capturing year and financial year {e}")
+        year = ''
+        financial_year = ''
 
     if len(name_result) != 0:
         if len(shareholdings_result) != 0:
@@ -68,9 +80,19 @@ def update_value_in_db(db_config,name,no_of_shares,cin):
             logging.info(designation_query % designation_value)
             db_cursor.execute(designation_query, designation_value)
 
+            year_query = "UPDATE director_shareholdings set year = %s where cin = %s and LOWER(full_name) = %s"
+            year_values = (year,cin,str(name).lower())
+            logging.info(year_query % year_values)
+            db_cursor.execute(year_query,year_values)
+
+            financial_year_query = "UPDATE director_shareholdings set financial_year = %s where cin = %s and LOWER(full_name) = %s"
+            financial_year_values = (financial_year, cin, str(name).lower())
+            logging.info(financial_year_query % financial_year_values)
+            db_cursor.execute(financial_year_query, financial_year_values)
+
         else:
-            insert_query = "INSERT INTO director_shareholdings(cin,full_name,no_of_shares,din_pan,percentage_holding,designation) VALUES (%s,%s,%s,%s,%s,%s)"
-            insert_values = (cin,name,no_of_shares,din,percentage_holding,designation)
+            insert_query = "INSERT INTO director_shareholdings(cin,full_name,no_of_shares,din_pan,percentage_holding,designation,year,financial_year) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)"
+            insert_values = (cin,name,no_of_shares,din,percentage_holding,designation,year,financial_year)
             print(insert_query % insert_values)
             db_cursor.execute(insert_query,insert_values)
 
