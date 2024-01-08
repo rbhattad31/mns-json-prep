@@ -88,6 +88,7 @@ def Login_and_Download(config_dict,CinData):
         Url = config_dict['Url']
         Cin, CompanyName, User = CinData[2], CinData[3], CinData[15]
         workflow_status = CinData[5]
+        db_insertion_status = CinData[67]
         db_config = get_db_credentials(config_dict)
         update_locked_by(db_config,Cin)
         last_logged_in_user = None
@@ -116,7 +117,7 @@ def Login_and_Download(config_dict,CinData):
             raise Exception(f"Failed to Navigate to {CompanyName}")
         category_list = ['Annual Returns and Balance Sheet eForms','Certificates','Charge Documents','Change in Directors','Incorporation Documents','LLP Forms(Conversion of company to LLP)','Other eForm Documents','Other Attachments']
         insertion_counter = 0
-        if workflow_status != 'download_insertion_success':
+        if db_insertion_status != 'Y':
             for item in category_list:
                 try:
                     category_selection = select_category(item,driver)
@@ -134,7 +135,8 @@ def Login_and_Download(config_dict,CinData):
                     print(f"Exception Occured for category {item}{e}")
                     continue
             if len(category_list) == insertion_counter:
-                update_status(User, 'download_insertion_success', db_config, Cin)
+                #update_status(User, 'download_insertion_success', db_config, Cin)
+                update_download_insertion_status(db_config,Cin)
             else:
                 raise Exception(f"Download Insertion failed for {Cin}")
         for category in category_list:
@@ -799,6 +801,19 @@ def update_download_status(db_config,cin):
         cursor.close()
         connection.close()
 
+def update_download_insertion_status(db_config,cin):
+    connection = mysql.connector.connect(**db_config)
+    cursor = connection.cursor()
+    try:
+        query = "UPDATE orders SET document_db_insertion_status = 'Y' WHERE cin=%s"
+        logging.info(query)
+        cursor.execute(query, (cin,))
+        connection.commit()
+    except Exception as e:
+        print(f"Error updating login status in the database: {str(e)}")
+    finally:
+        cursor.close()
+        connection.close()
 
 
 
