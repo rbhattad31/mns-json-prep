@@ -5,7 +5,7 @@ from email.mime.base import MIMEBase
 from email import encoders
 import os
 
-def send_email(config_dict,subject, body, to_emails, attachment_path=None):
+def send_email(config_dict,subject, body, to_emails, attachment_paths=None):
     try:
         # Email configuration
         sender_email = config_dict['sender_email']
@@ -23,16 +23,20 @@ def send_email(config_dict,subject, body, to_emails, attachment_path=None):
         msg.attach(MIMEText(body, 'plain'))
 
         # Attach file if specified
-        if attachment_path:
-            attachment = open(attachment_path, 'rb')
-            part = MIMEBase('application', 'octet-stream')
-            part.set_payload((attachment).read())
-            encoders.encode_base64(part)
-            file_name_with_extension = os.path.basename(attachment_path)
-            file_name, _ = os.path.splitext(file_name_with_extension)
-            file_name = file_name + '.json'
-            part.add_header('Content-Disposition', "attachment; filename= " + file_name)
-            msg.attach(part)
+        if attachment_paths:
+            for attachment_path in attachment_paths:
+                attachment = open(attachment_path, 'rb')
+                part = MIMEBase('application', 'octet-stream')
+                part.set_payload((attachment).read())
+                encoders.encode_base64(part)
+                file_name_with_extension = os.path.basename(attachment_path)
+                file_name, _ = os.path.splitext(file_name_with_extension)
+                if '.xlsx' in attachment_path:
+                    file_name = file_name + '.xlsx'
+                else:
+                    file_name = file_name + '.json'
+                part.add_header('Content-Disposition', "attachment; filename= " + file_name)
+                msg.attach(part)
 
         # Connect to the SMTP server
         with smtplib.SMTP(smtp_server, smtp_port) as server:

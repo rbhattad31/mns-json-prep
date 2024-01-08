@@ -13,7 +13,7 @@ def fetch_data_from_database(db_config):
 
     # Example query, replace it with your actual query
     # query = "SELECT OrderID, CINNumber, CompanyName, BotFinalStatus, PaymentByUser, Remarks FROM orders"
-    query = "SELECT * FROM orders"
+    query = "SELECT * from orders WHERE DATE(created_date) = CURDATE() and (LOWER(process_status) = 'completed' or LOWER(process_status) = 'inprogress' or LOWER(process_status) = 'exception')"
     cursor.execute(query)
 
     data = cursor.fetchall()
@@ -25,8 +25,10 @@ def fetch_data_from_database(db_config):
 
 # Function to insert data into Excel file
 
-def insert_data_into_excel(data,config_excel_file_path,root_path):
+
+def generate_transactional_log(db_config,config_excel_file_path,root_path):
     try:
+        data = fetch_data_from_database(db_config)
         if not os.path.exists(config_excel_file_path):
             raise Exception(f"Config Excel file not found")
         current_date = datetime.date.today()
@@ -55,21 +57,23 @@ def insert_data_into_excel(data,config_excel_file_path,root_path):
 
         # Save the workbook
         workbook.save(transactional_log_file_path)
+        return transactional_log_file_path
     except Exception as e:
         print(f"Error in generating Transactional Log {e}")
+        return None
 
 
-if __name__ == "__main__":
-    # Fetch data from the cPanel database
-    config_excel_file_path = r"C:\MCA Portal\Final Transactional Log.xlsx"
-    db_config = {
-        "host": "162.241.123.123",
-        "user": "classle3_deal_saas",
-        "password": "o2i=hi,64u*I",
-        "database": "classle3_mns_credit",
-    }
-    data_from_database = fetch_data_from_database(db_config)
-
-    # Insert data into the Excel file
-    root_path = 'C:\MCA Portal'
-    insert_data_into_excel(data_from_database,config_excel_file_path,root_path)
+# if __name__ == "__main__":
+#     # Fetch data from the cPanel database
+#     config_excel_file_path = r"C:\MCA Portal\Final Transactional Log.xlsx"
+#     db_config = {
+#         "host": "162.241.123.123",
+#         "user": "classle3_deal_saas",
+#         "password": "o2i=hi,64u*I",
+#         "database": "classle3_mns_credit",
+#     }
+#     data_from_database = fetch_data_from_database(db_config)
+#
+#     # Insert data into the Excel file
+#     root_path = 'C:\MCA Portal'
+#     generate_transactional_log(data_from_database,config_excel_file_path,root_path)

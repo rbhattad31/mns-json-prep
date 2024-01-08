@@ -21,6 +21,8 @@ from DBFunctions import update_locked_by_empty
 import sys
 import traceback
 from MCAPortalMainFunctions import update_download_status
+from TransactionalLog import generate_transactional_log
+
 
 def main():
     excel_file = os.environ.get("MCA_Config")
@@ -95,8 +97,14 @@ def main():
                                 cin_completed_body = str(config_dict['cin_Completed_body']).format(cin,receipt_number,company_name)
                                 update_process_status('Completed',db_config,cin)
                                 update_locked_by_empty(db_config,cin)
+                                config_transactional_log_path = config_dict['config_transactional_log_path']
+                                root_path = config_dict['Root path']
+                                transaction_log_path = generate_transactional_log(db_config,config_transactional_log_path,root_path)
                                 try:
-                                    send_email(config_dict,cin_complete_subject,cin_completed_body,emails,json_file_path)
+                                    attachments = []
+                                    attachments.append(json_file_path)
+                                    attachments.append(transaction_log_path)
+                                    send_email(config_dict,cin_complete_subject,cin_completed_body,emails,attachments)
                                 except Exception as e:
                                     logging.info(f"Exception occured while sending end email {e}")
                             else:
