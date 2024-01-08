@@ -51,7 +51,7 @@ def main():
                         logging.info(workflow_status)
                         emails = config_dict['to_email']
                         emails = str(emails).split(',')
-                        if (workflow_status == 'Payment_success' or workflow_status == 'download_insertion_success') and download_status == 'N':
+                        if (workflow_status == 'Payment_success' or workflow_status == 'download_insertion_success' or workflow_status == 'XML_Pending') and download_status == 'N':
                             logging.info(f"Starting to download for {cin}")
                             subject_start = str(config_dict['subject_start']).format(cin, receipt_number)
                             body_start = str(config_dict['Body_start']).format(cin, receipt_number,company_name)
