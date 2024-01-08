@@ -16,7 +16,7 @@ def update_value_in_db(db_config,name,no_of_shares,cin):
     db_cursor = db_connection.cursor()
     db_connection.autocommit = True
 
-    check_name_query = "select * from authorized_signatories where cin = %s and LOWER(name) = %s"
+    check_name_query = "select * from authorized_signatories where cin = %s and LOWER(name) = %s and extracted_from = 'Master Data'"
     values = (cin,str(name).lower())
     print(check_name_query % values)
     db_cursor.execute(check_name_query,values)
@@ -26,6 +26,7 @@ def update_value_in_db(db_config,name,no_of_shares,cin):
         return
     logging.info(name_result)
     din = name_result[4]
+    designation = name_result[6]
     shareholdings_query = "select * from director_shareholdings where cin = %s and LOWER(full_name) = %s"
     values = (cin, str(name).lower())
     print(shareholdings_query % values)
@@ -62,9 +63,14 @@ def update_value_in_db(db_config,name,no_of_shares,cin):
             logging.info(percentage_holding_query % percentage_holding_value)
             db_cursor.execute(percentage_holding_query,percentage_holding_value)
 
+            designation_query = "UPDATE director_shareholdings set designation = %s where cin = %s and LOWER(full_name) = %s"
+            designation_value = (designation, cin, str(name).lower())
+            logging.info(designation_query % designation_value)
+            db_cursor.execute(designation_query, designation_value)
+
         else:
-            insert_query = "INSERT INTO director_shareholdings(cin,full_name,no_of_shares,din_pan,percentage_holding) VALUES (%s,%s,%s,%s,%s)"
-            insert_values = (cin,name,no_of_shares,din,percentage_holding)
+            insert_query = "INSERT INTO director_shareholdings(cin,full_name,no_of_shares,din_pan,percentage_holding,designation) VALUES (%s,%s,%s,%s,%s,%s)"
+            insert_values = (cin,name,no_of_shares,din,percentage_holding,designation)
             print(insert_query % insert_values)
             db_cursor.execute(insert_query,insert_values)
 
