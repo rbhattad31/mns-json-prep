@@ -283,7 +283,29 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath,options
                             file_download_button = driver.find_element(By.XPATH, file_xpath)
                             file_download_button.click()
                         except:
-                            continue
+                            try:
+                                if 'change of name'.lower() in str(filename).lower():
+                                    pattern = re.compile(r'Change of Name.*$', re.IGNORECASE)
+                                    logging.info("For change of name going for different x path")
+                                    # Use re.search to find the first occurrence of the pattern in the input string
+                                    match = pattern.search(filename)
+                                    if match:
+                                        # Extract the matched portion from the input string
+                                        result = match.group(0)
+
+                                        # Print the result
+                                        logging.info(result)
+                                        file_xpath = f'//a[contains(text(),"{result}")]'
+                                        file_download_button = driver.find_element(By.XPATH, file_xpath)
+                                        file_download_button.click()
+                                    else:
+                                        logging.info("Pattern not found in the input string.")
+                                        continue
+                                else:
+                                    continue
+                            except Exception as e:
+                                logging.info(f"Error for change of name x path {e}")
+                                continue
                         file_directory = os.path.dirname(filepath)
                         file_directory = file_directory
                         logging.info(file_directory)
