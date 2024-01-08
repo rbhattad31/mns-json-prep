@@ -62,17 +62,17 @@ def main():
                             Download_Status, driver,exception_message = Login_and_Download(config_dict, CinData)
                             if Download_Status:
                                 logging.info("Downloaded Successfully")
-                                update_status(user,'XML_Pending',db_config,cin)
+                                #update_status(user,'XML_Pending',db_config,cin)
                                 update_download_status(db_config,cin)
                             else:
                                 logging.info("Not Downloaded")
                                 raise Exception(f"Download failed for {cin} {exception_message}")
                         workflow_status = fetch_workflow_status(db_config,cin)
-                        if workflow_status == 'XML_Pending':
+                        if workflow_status == 'XML_Pending' and download_status == 'Y':
                             XML_Generation, hidden_attachments = XMLGeneration(db_config, CinData, config_dict)
                             if XML_Generation:
                                 logging.info("XML Generated successfully")
-                                #update_status(user,'db_insertion_pending',db_config,cin)
+                                update_status(user,'db_insertion_pending',db_config,cin)
                             else:
                                 logging.info("XML Not Generated successfully")
                                 if 'driver' in locals():
