@@ -22,6 +22,7 @@ import sys
 import traceback
 from MCAPortalMainFunctions import update_download_status
 from TransactionalLog import generate_transactional_log
+from DBFunctions import fetch_download_status
 
 
 def main():
@@ -47,7 +48,7 @@ def main():
                         user = CinData[15]
                         company_name = CinData[3]
                         workflow_status = fetch_workflow_status(db_config,cin)
-                        download_status = CinData[66]
+                        download_status = fetch_download_status(db_config,cin)
                         logging.info(workflow_status)
                         emails = config_dict['to_email']
                         emails = str(emails).split(',')
@@ -68,6 +69,7 @@ def main():
                                 logging.info("Not Downloaded")
                                 raise Exception(f"Download failed for {cin} {exception_message}")
                         workflow_status = fetch_workflow_status(db_config,cin)
+                        download_status = fetch_download_status(db_config, cin)
                         if workflow_status == 'XML_Pending' and download_status == 'Y':
                             XML_Generation, hidden_attachments = XMLGeneration(db_config, CinData, config_dict)
                             if XML_Generation:

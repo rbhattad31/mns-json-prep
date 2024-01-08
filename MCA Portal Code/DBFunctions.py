@@ -321,3 +321,17 @@ def check_files_and_update(cin,db_config):
 
     except Exception as e:
         print(f"Error in updating missing file status {e}")
+
+def fetch_download_status(db_config,cin):
+    setup_logging()
+    connection = mysql.connector.connect(**db_config)
+    cursor = connection.cursor(buffered=True)
+    query = "select document_download_status from orders where cin=%s"
+    values = (cin,)
+    logging.info(query % values)
+    cursor.execute(query,values)
+    download_status = cursor.fetchone()[0]
+    time.sleep(1)
+    cursor.close()
+    connection.close()
+    return download_status
