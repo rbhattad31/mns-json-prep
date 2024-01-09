@@ -93,7 +93,7 @@ def fresh_name_pdf_to_db(pdf_path,config_dict,db_config,cin):
         pdf_text = extract_text_from_pdf(pdf_path)
         name = fetch_name_details_using_open_ai(pdf_text,config_dict)
         name = eval(name)
-        new_name = name['new_name']
+        new_name = name['name']
         date = name['date']
         print(new_name,date)
         update_value_in_db(db_config,new_name,date,cin)
