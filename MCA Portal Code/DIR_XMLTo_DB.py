@@ -618,7 +618,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 other_director_map_file_path = config_dict['Form32_other_directors_config']
             else:
                 if digit_count == 8:
-                    other_director_map_file_path = config_dict['Form32_other_directors_config']
+                    other_director_map_file_path = config_dict['DIR12_old_date_config_other_directors']
                 else:
                     logging.info("Going to DIR other director program")
                     other_director_map_file_path = config_dict['DIR12_other_directors_config']
