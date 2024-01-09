@@ -23,6 +23,7 @@ import traceback
 from MCAPortalMainFunctions import update_download_status
 from TransactionalLog import generate_transactional_log
 from DBFunctions import fetch_download_status
+from DBFunctions import fetch_order_download_data_from_table
 
 
 def main():
@@ -34,112 +35,128 @@ def main():
         if config_status == "Pass":
             db_config = get_db_credentials(config_dict)
             connection,cursor = connect_to_database(db_config)
-            columnnames,CinDBData , CinFetchStatus = fetch_order_data_from_table(connection)
-            if CinFetchStatus == "Pass":
-                cin = None
-                receipt_number = None
-                company_name = None
-                hidden_attachments = []
-                emails = []
-                for CinData in CinDBData:
+            next_cin = True
+            while next_cin:
+                download_columnnames, downloadData, downloadFetchStatus = fetch_order_download_data_from_table(
+                    connection)
+                for downloaddata in downloadData:
                     try:
-                        cin = CinData[2]
-                        receipt_number = CinData[1]
-                        user = CinData[15]
-                        company_name = CinData[3]
-                        workflow_status = fetch_workflow_status(db_config,cin)
-                        download_status = fetch_download_status(db_config,cin)
+                        cin = downloaddata[2]
+                        receipt_number = downloaddata[1]
+                        user = downloaddata[15]
+                        company_name = downloaddata[3]
+                        workflow_status = downloadData[5]
+                        download_status = downloadData[66]
                         logging.info(workflow_status)
                         emails = config_dict['to_email']
                         emails = str(emails).split(',')
-                        if (workflow_status == 'Payment_success' or workflow_status == 'download_insertion_success' or workflow_status == 'XML_Pending') and download_status == 'N':
+                        if (workflow_status == 'Payment_success' or workflow_status == 'XML_Pending') and download_status == 'N':
                             logging.info(f"Starting to download for {cin}")
                             subject_start = str(config_dict['subject_start']).format(cin, receipt_number)
-                            body_start = str(config_dict['Body_start']).format(cin, receipt_number,company_name)
+                            body_start = str(config_dict['Body_start']).format(cin, receipt_number, company_name)
                             try:
                                 send_email(config_dict, subject_start, body_start, emails, None)
                             except Exception as e:
                                 logging.info(f"Error sending email {e}")
-                            Download_Status, driver,exception_message = Login_and_Download(config_dict, CinData)
+                            Download_Status, driver, exception_message = Login_and_Download(config_dict, CinData)
                             if Download_Status:
                                 logging.info("Downloaded Successfully")
-                                #update_status(user,'XML_Pending',db_config,cin)
-                                update_download_status(db_config,cin)
+                                # update_status(user,'XML_Pending',db_config,cin)
+                                update_download_status(db_config, cin)
                             else:
                                 logging.info("Not Downloaded")
                                 raise Exception(f"Download failed for {cin} {exception_message}")
-                        workflow_status = fetch_workflow_status(db_config,cin)
-                        download_status = fetch_download_status(db_config, cin)
-                        if workflow_status == 'XML_Pending' and download_status == 'Y':
-                            XML_Generation, hidden_attachments = XMLGeneration(db_config, CinData, config_dict)
-                            if XML_Generation:
-                                logging.info("XML Generated successfully")
-                                update_status(user,'db_insertion_pending',db_config,cin)
-                            else:
-                                logging.info("XML Not Generated successfully")
+                    except Exception as e:
+                        logging.info(f"Error in downloading")
+                columnnames,CinDBData , CinFetchStatus = fetch_order_data_from_table(connection)
+                if len(CinDBData) < 1:
+                    next_cin = False
+                    continue
+                if CinFetchStatus == "Pass":
+                    cin = None
+                    receipt_number = None
+                    company_name = None
+                    hidden_attachments = []
+                    emails = []
+                    for CinData in CinDBData:
+                        try:
+                            cin = CinData[2]
+                            receipt_number = CinData[1]
+                            user = CinData[15]
+                            company_name = CinData[3]
+                            workflow_status = downloadData[5]
+                            download_status = downloadData[66]
+                            logging.info(workflow_status)
+                            emails = config_dict['to_email']
+                            emails = str(emails).split(',')
+                            if workflow_status == 'XML_Pending' and download_status == 'Y':
+                                XML_Generation, hidden_attachments = XMLGeneration(db_config, CinData, config_dict)
+                                if XML_Generation:
+                                    logging.info("XML Generated successfully")
+                                    update_status(user,'db_insertion_pending',db_config,cin)
+                                else:
+                                    logging.info("XML Not Generated successfully")
+                                    if 'driver' in locals():
+                                        sign_out(driver, config_dict, CinData)
+                                    continue
+                            if workflow_status == 'db_insertion_pending':
+                                Insert_fields_into_DB,exception_message_db = insert_fields_into_db(hidden_attachments, config_dict, CinData,excel_file)
+                                if Insert_fields_into_DB:
+                                    logging.info("Successfully Inserted into DB")
+                                    update_status(user,'Loader_pending',db_config,cin)
+                                else:
+                                    logging.info("Not Successfully Inserted into DB")
+                                    raise Exception(exception_message_db)
+                            if workflow_status == 'Loader_pending':
+                                json_loader,json_file_path,exception_message = json_loader_generation(CinData, db_config, config_dict,excel_file)
+                                if json_loader:
+                                    logging.info("JSON Loader generated succesfully")
+                                    update_json_loader_db(CinData, config_dict)
+                                    cin_complete_subject = str(config_dict['cin_Completed_subject']).format(cin,receipt_number)
+                                    cin_completed_body = str(config_dict['cin_Completed_body']).format(cin,receipt_number,company_name)
+                                    update_process_status('Completed',db_config,cin)
+                                    update_locked_by_empty(db_config,cin)
+                                    config_transactional_log_path = config_dict['config_transactional_log_path']
+                                    root_path = config_dict['Root path']
+                                    transaction_log_path = generate_transactional_log(db_config,config_transactional_log_path,root_path)
+                                    try:
+                                        attachments = []
+                                        attachments.append(json_file_path)
+                                        attachments.append(transaction_log_path)
+                                        send_email(config_dict,cin_complete_subject,cin_completed_body,emails,attachments)
+                                    except Exception as e:
+                                        logging.info(f"Exception occured while sending end email {e}")
+                                else:
+                                    logging.info("JSON Loader not generated")
+                                    raise Exception(f"Exception occured for json loader generation {cin} {exception_message}")
+                            try:
+                                sign_out(driver, config_dict, CinData)
+                            except:
+                                pass
+                        except Exception as e:
+                            logging.info(f"Exception occured for cin {cin} {e}")
+                            exc_type, exc_value, exc_traceback = sys.exc_info()
+
+                            # Get the formatted traceback as a string
+                            traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+                            # logging.info the traceback details
+                            for line in traceback_details:
+                                logging.error(line.strip())
+                            exception_subject = str(config_dict['Exception_subject']).format(cin,receipt_number)
+                            exception_body = str(config_dict['Exception_message']).format(cin,receipt_number,company_name,e)
+                            try:
                                 if 'driver' in locals():
                                     sign_out(driver, config_dict, CinData)
-                                continue
-                        workflow_status = fetch_workflow_status(db_config,cin)
-                        if workflow_status == 'db_insertion_pending':
-                            Insert_fields_into_DB,exception_message_db = insert_fields_into_db(hidden_attachments, config_dict, CinData,excel_file)
-                            if Insert_fields_into_DB:
-                                logging.info("Successfully Inserted into DB")
-                                update_status(user,'Loader_pending',db_config,cin)
-                            else:
-                                logging.info("Not Successfully Inserted into DB")
-                                raise Exception(exception_message_db)
-                        workflow_status = fetch_workflow_status(db_config,cin)
-                        if workflow_status == 'Loader_pending':
-                            json_loader,json_file_path,exception_message = json_loader_generation(CinData, db_config, config_dict,excel_file)
-                            if json_loader:
-                                logging.info("JSON Loader generated succesfully")
-                                update_json_loader_db(CinData, config_dict)
-                                cin_complete_subject = str(config_dict['cin_Completed_subject']).format(cin,receipt_number)
-                                cin_completed_body = str(config_dict['cin_Completed_body']).format(cin,receipt_number,company_name)
-                                update_process_status('Completed',db_config,cin)
-                                update_locked_by_empty(db_config,cin)
-                                config_transactional_log_path = config_dict['config_transactional_log_path']
-                                root_path = config_dict['Root path']
-                                transaction_log_path = generate_transactional_log(db_config,config_transactional_log_path,root_path)
-                                try:
-                                    attachments = []
-                                    attachments.append(json_file_path)
-                                    attachments.append(transaction_log_path)
-                                    send_email(config_dict,cin_complete_subject,cin_completed_body,emails,attachments)
-                                except Exception as e:
-                                    logging.info(f"Exception occured while sending end email {e}")
-                            else:
-                                logging.info("JSON Loader not generated")
-                                raise Exception(f"Exception occured for json loader generation {cin} {exception_message}")
-                        try:
-                            sign_out(driver, config_dict, CinData)
-                        except:
-                            pass
-                    except Exception as e:
-                        logging.info(f"Exception occured for cin {cin} {e}")
-                        exc_type, exc_value, exc_traceback = sys.exc_info()
-
-                        # Get the formatted traceback as a string
-                        traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
-
-                        # logging.info the traceback details
-                        for line in traceback_details:
-                            logging.error(line.strip())
-                        exception_subject = str(config_dict['Exception_subject']).format(cin,receipt_number)
-                        exception_body = str(config_dict['Exception_message']).format(cin,receipt_number,company_name,e)
-                        try:
-                            if 'driver' in locals():
-                                sign_out(driver, config_dict, CinData)
-                        except:
-                            pass
-                        try:
-                            send_email(config_dict,exception_subject,exception_body,emails,None)
-                        except Exception as e:
-                            print(f"Error sending email {e}")
-            else:
-                print("Unable to fetch data")
-                raise Exception("Unable to fetch data")
+                            except:
+                                pass
+                            try:
+                                send_email(config_dict,exception_subject,exception_body,emails,None)
+                            except Exception as e:
+                                print(f"Error sending email {e}")
+        else:
+            print("Unable to fetch data")
+            raise Exception("Unable to fetch data")
     except FileNotFoundError:
         print(f"Configuration file '{excel_file}' not found. Please make sure it exists.")
     except Exception as e:

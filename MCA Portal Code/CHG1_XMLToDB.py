@@ -218,7 +218,18 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             logging.info(f'{status_value=}')
             single_df.loc[status_row_index, 'Value'] = status_dict.get(status_value, "Status Not Found")
         status = single_df.loc[single_df['Field_Name'] == 'status', 'Value'].values[0]
+        holder_name = single_df.loc[single_df['Field_Name'] == 'holder_name', 'Value'].values[0]
+        amount = single_df.loc[single_df['Field_Name'] == 'amount', 'Value'].values[0]
+        try:
+            amount = str(amount).replace(',','')
+            amount = float(amount)
+            amount = int(amount)
+        except Exception as e:
+            print(e)
+            pass
         logging.info(status)
+        logging.info(holder_name)
+        logging.info(amount)
         date = single_df.loc[single_df['Field_Name'] == 'date', 'Value'].values[0]
         if str(status).lower() == 'creation':
             date_column = 'date_of_creation'
@@ -228,12 +239,29 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             date_column = 'date_of_satisfaction'
         else:
             date_column = 'date'
-        type_column = config_dict['type_column_name']
-        if charge_id is None or charge_id == '' or charge_id == '-' or charge_id == 0 or charge_id == '0':
+        #type_column = config_dict['type_column_name']
+        holder_column = config_dict['holder_name_column_name']
+        amount_column_name = config_dict['amount_column_name']
+        if charge_id is not None:
+            if charge_id == '' or charge_id == '-' or charge_id == 0 or charge_id == '0' or charge_id == 'None':
+                db_connection = mysql.connector.connect(**db_config)
+                db_cursor = db_connection.cursor()
+                db_connection.autocommit = True
+                charge_id_check_query = "select id from open_charges where {} = '{}' and REPLACE({},',','') = '{}' and {}='{}' and {} = '{}'".format(cin_column_name_in_db,cin_column_value,amount_column_name,amount,date_column,date,holder_column,holder_name)
+                logging.info(charge_id_check_query)
+                db_cursor.execute(charge_id_check_query)
+                charge_id = db_cursor.fetchone()[0]
+                logging.info(charge_id)
+                single_df.loc[single_df['Field_Name'] == 'id', 'Value'] = charge_id
+            else:
+                logging.info("Charge ID Present")
+        else:
             db_connection = mysql.connector.connect(**db_config)
             db_cursor = db_connection.cursor()
             db_connection.autocommit = True
-            charge_id_check_query = "select id from open_charges where {} = '{}' and {} = '{}' and {}='{}'".format(cin_column_name_in_db,cin_column_value,type_column,status,date_column,date)
+            charge_id_check_query = "select id from open_charges where {} = '{}' and REPLACE({},',','') = '{}' and {}='{}' and {} = '{}'".format(
+                cin_column_name_in_db, cin_column_value, amount_column_name, amount, date_column, date, holder_column,
+                holder_name)
             logging.info(charge_id_check_query)
             db_cursor.execute(charge_id_check_query)
             charge_id = db_cursor.fetchone()[0]
@@ -459,3 +487,21 @@ def chg1_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, x
         return False
     else:
         return True
+
+# db_config = {
+# "host": "162.241.123.123",
+# "user": "classle3_deal_saas",
+# "password": "o2i=hi,64u*I",
+# "database": "classle3_mns_credit",
+# }
+# excel_path = r"C:\Users\BRADSOL123\Documents\Python\Config\Config_Python.xlsx"
+# sheet_name = 'CHG1'
+# config_dict,status = create_main_config_dictionary(excel_path,sheet_name)
+# map_file_path = r"C:\Users\BRADSOL123\Documents\Python\Config\CHG-1_nodes_config.xlsx"
+# map_file_sheet = 'Sheet1'
+# xml_file_path = r"C:\Users\BRADSOL123\Documents\Form CHG-1-07122016_signed.xml"
+# output_file_path = r"C:\Users\BRADSOL123\Documents\Form CHG-1-07122016_signed.xlsx"
+# cin = 'U22110KA1997PTC022596'
+# company_name = 'RAMYA REPROGRAPHIC PRIVATE LIMITED'
+# filing_date = '07-12-2016'
+# chg1_xml_to_db(db_config,config_dict,map_file_path,map_file_sheet,xml_file_path,output_file_path,cin,company_name,filing_date)

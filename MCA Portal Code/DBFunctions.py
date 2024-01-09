@@ -27,10 +27,10 @@ def fetch_order_data_from_table(connection):
             setup_logging()
             cursor = connection.cursor()
             # Construct the SQL query
-            query = "SELECT * FROM orders where process_status=%s and payment_by_user!=''"
+            query = "SELECT * FROM orders where process_status=%s and payment_by_user!='' and workflow_status in ('Payment_success','XML_Pending','db_insertion_pending','Loader_pending')"
             #value1 = ("Download_Pending")
-            cursor.execute(query, ('InProgress(non-llp)',))
-            logging.info(query, ('InProgress(non-llp)',))
+            cursor.execute(query, ('InProgress',))
+            logging.info(query, ('InProgress',))
             # Get the column names from the cursor description
             column_names = [desc[0] for desc in cursor.description]
 
@@ -335,3 +335,27 @@ def fetch_download_status(db_config,cin):
     cursor.close()
     connection.close()
     return download_status
+
+
+def fetch_order_download_data_from_table(connection):
+    try:
+        if connection:
+            setup_logging()
+            cursor = connection.cursor()
+            # Construct the SQL query
+            query = "SELECT * FROM orders where process_status=%s and payment_by_user!='' and document_download_status = 'N' and (workflow_status = 'Payment_success' or workflow_status = 'XML_Pending') LIMIT 1"
+            #value1 = ("Download_Pending")
+            cursor.execute(query, ('InProgress',))
+            logging.info(query, ('InProgress',))
+            # Get the column names from the cursor description
+            column_names = [desc[0] for desc in cursor.description]
+
+            # Fetch all the rows
+            rows = cursor.fetchall()
+            Status="Pass"
+            connection.close()
+            return column_names, rows,Status
+
+    except mysql.connector.Error as error:
+        print("Error:", error)
+        return None
