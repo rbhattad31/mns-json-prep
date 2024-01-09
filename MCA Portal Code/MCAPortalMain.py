@@ -34,11 +34,10 @@ def main():
         config_dict, config_status = create_main_config_dictionary(excel_file, Sheet_name)
         if config_status == "Pass":
             db_config = get_db_credentials(config_dict)
-            connection,cursor = connect_to_database(db_config)
             next_cin = True
             while next_cin:
-                download_columnnames, downloadData, downloadFetchStatus = fetch_order_download_data_from_table(
-                    connection)
+                connection, cursor = connect_to_database(db_config)
+                download_columnnames, downloadData, downloadFetchStatus = fetch_order_download_data_from_table(connection)
                 for downloaddata in downloadData:
                     try:
                         cin = downloaddata[2]
@@ -68,6 +67,7 @@ def main():
                                 raise Exception(f"Download failed for {cin} {exception_message}")
                     except Exception as e:
                         logging.info(f"Error in downloading")
+                connection, cursor = connect_to_database(db_config)
                 columnnames,CinDBData , CinFetchStatus = fetch_order_data_from_table(connection)
                 if len(CinDBData) < 1:
                     next_cin = False
