@@ -57,7 +57,7 @@ def main():
                                 send_email(config_dict, subject_start, body_start, emails, None)
                             except Exception as e:
                                 logging.info(f"Error sending email {e}")
-                            Download_Status, driver, exception_message = Login_and_Download(config_dict, downloadData)
+                            Download_Status, driver, exception_message = Login_and_Download(config_dict, downloaddata)
                             if Download_Status:
                                 logging.info("Downloaded Successfully")
                                 # update_status(user,'XML_Pending',db_config,cin)
