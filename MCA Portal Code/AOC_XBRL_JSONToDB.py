@@ -434,7 +434,7 @@ def update_database_single_value_AOC(db_config, table_name, cin_column_name, cin
     db_connection.commit()
     db_cursor.close()
     db_connection.close()
-def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, json_file_path, output_file_path,cin_column_value, company_name,aoc_xbrl_first_file_found):
+def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, json_file_path, output_file_path,cin_column_value, company_name,aoc_xbrl_first_file_found,file_name):
     try:
         setup_logging()
         output_dataframes_list = []
@@ -479,9 +479,9 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                 continue
 
             if field_name == config_dict['Nature_field_name']:
-                if config_dict['Standalone_nature_keyword'] in filing_standard_check:
+                if 'XBRL financial statements'.lower() in str(file_name).lower():
                     nature = 'Standalone'
-                elif config_dict['Consolidated_nature_keyword'] in filing_standard_check:
+                elif 'XBRL document in respect Consolidated'.lower() in str(file_name).lower():
                     nature = 'Consolidated'
                 else:
                     nature = None

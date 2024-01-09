@@ -461,7 +461,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     try:
                         aoc_xbrl_db_insertion = AOC_XBRL_JSON_to_db(db_config, config_dict_Xbrl, map_file_path_xbrl,
                                                                     map_sheet_name_xbrl, output_json_path,
-                                                                    output_excel_path, Cin, CompanyName,AOC_XBRL_first_file_found)
+                                                                    output_excel_path, Cin, CompanyName,AOC_XBRL_first_file_found,file_name)
                         if aoc_xbrl_db_insertion:
                             update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                     except Exception as e:
