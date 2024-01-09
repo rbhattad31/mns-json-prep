@@ -351,10 +351,11 @@ def fetch_order_download_data_from_table(connection):
             column_names = [desc[0] for desc in cursor.description]
 
             # Fetch all the rows
-            rows = cursor.fetchone()
+            rows = cursor.fetchall()
+            result_list = [list(row) for row in rows]
             Status="Pass"
             connection.close()
-            return column_names, rows,Status
+            return column_names, result_list,Status
 
     except mysql.connector.Error as error:
         print("Error:", error)
