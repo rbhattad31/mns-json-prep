@@ -351,7 +351,7 @@ def fetch_order_download_data_from_table(connection):
             column_names = [desc[0] for desc in cursor.description]
 
             # Fetch all the rows
-            rows = cursor.fetchall()
+            rows = cursor.fetchone()
             Status="Pass"
             connection.close()
             return column_names, rows,Status
