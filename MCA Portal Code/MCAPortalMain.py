@@ -44,8 +44,8 @@ def main():
                         receipt_number = downloaddata[1]
                         user = downloaddata[15]
                         company_name = downloaddata[3]
-                        workflow_status = downloadData[5]
-                        download_status = downloadData[66]
+                        workflow_status = downloaddata[5]
+                        download_status = downloaddata[66]
                         logging.info(workflow_status)
                         emails = config_dict['to_email']
                         emails = str(emails).split(',')
