@@ -84,8 +84,8 @@ def main():
                             receipt_number = CinData[1]
                             user = CinData[15]
                             company_name = CinData[3]
-                            workflow_status = downloadData[5]
-                            download_status = downloadData[66]
+                            workflow_status = CinData[5]
+                            download_status = CinData[66]
                             logging.info(workflow_status)
                             emails = config_dict['to_email']
                             emails = str(emails).split(',')
