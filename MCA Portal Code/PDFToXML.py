@@ -232,7 +232,8 @@ def PDFtoXML(pdf_path,file_name):
                 logging.info(f"Extracted XFA data for {file_name}")
                 logging.info(f"Saved to {xml_file_path}")
                 return xml_file_path, True
-        elif 'Form 18'.lower() in str(file_name).lower():
+        elif 'Form 18'.lower() in str(file_name).lower() or 'Form 8'.lower() in str(file_name).lower():
+            logging.info("Going to other type of xfa data")
             xml_file_path = pdf_path.replace('.pdf', '.xml')
             if '.xml' not in xml_file_path:
                 xml_file_path = xml_file_path + '.xml'

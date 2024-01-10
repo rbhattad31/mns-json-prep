@@ -544,6 +544,13 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                                                       xml_file_path, output_excel_path, Cin, CompanyName, date)
                     if form8_charge_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
+                    else:
+                        logging.info("Going to Form 8 other type")
+                        map_file_path_form8_other_type = config_dict_form8_charge['form8_other_type_config']
+                        form8_other_type = chg1_xml_to_db(db_config, config_dict_form8_charge, map_file_path_form8_other_type, map_sheet_name_Form8,
+                                                      xml_file_path, output_excel_path, Cin, CompanyName, date)
+                        if form8_other_type:
+                            update_db_insertion_status(Cin, file_name, config_dict, 'Success')
 
                 elif 'Form 18'.lower() in str(file_name).lower() or 'INC-22'.lower() in str(file_name).lower():
                     sheet_name = 'Form18'

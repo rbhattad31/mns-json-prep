@@ -29,18 +29,45 @@ def extract_form_data(pdf_path, output_xml_path):
                 # Check if the widget is a form field
                 if widget.field_type:
                     # Get the field name and value
-                    field_name = widget.field_name
+                    if widget.field_type_string == 'RadioButton':
+                        print("Radio button")
+                        field_name = widget.field_name
+                        print(field_name)
+                        if widget.field_value:
+                            field_value = widget.field_value
+                            print(field_value)
+                        else:
+                            field_value = ''
+                        # Sanitize the field name to create a valid XML node name
+                        sanitized_name = sanitize_xml_node_name(field_name)
 
-                    # Use the page object to get the text from the widget
-                    field_value = page.get_text("text", clip=widget.rect)
+                        # Create a new XML element for the field
+                        field_element = ET.SubElement(root, sanitized_name)
+                        if field_value == '0' or field_value == '1':
+                            if field_name == 'Form8_Dtls[0].page1[0].Form_for_R[0]':
+                                if field_value == '1':
+                                    field_element.text = 'CRTN'
+                                elif field_value == '0':
+                                    field_element.text = 'MDFN'
+                                else:
+                                    field_element.text = ''
+                            elif field_name == 'Form8_Dtls[0].page1[0].Wheconfininvolved[0]' or field_name == 'Form8_Dtls[0].page1[0].Jointch_involved[0]' or field_name == 'Form8_Dtls[0].page2[0].Form_for_involved[0]':
+                                if str(field_value).lower() == '1':
+                                    field_element.text = 'No'
+                                else:
+                                    field_element.text = 'Yes'
+                    else:
+                        field_name = widget.field_name
 
-                    # Sanitize the field name to create a valid XML node name
-                    sanitized_name = sanitize_xml_node_name(field_name)
+                        # Use the page object to get the text from the widget
+                        field_value = page.get_text("text", clip=widget.rect)
 
-                    # Create a new XML element for the field
-                    field_element = ET.SubElement(root, sanitized_name)
-                    field_element.text = field_value
+                        # Sanitize the field name to create a valid XML node name
+                        sanitized_name = sanitize_xml_node_name(field_name)
 
+                        # Create a new XML element for the field
+                        field_element = ET.SubElement(root, sanitized_name)
+                        field_element.text = field_value
         # Close the PDF file
         pdf_document.close()
 
@@ -51,17 +78,17 @@ def extract_form_data(pdf_path, output_xml_path):
         tree.write(output_xml_path, encoding="utf-8", xml_declaration=True)
 
     except Exception as e:
-        print(f"Exception occured while converting to xml for Form 18 old files")
+        print(f"Exception occured while converting to xml for Form 18 old files{e}")
         return False
     else:
         return True
 
-# Example usage
-
-# Replace 'your_pdf_file.pdf' with the path to your PDF file
-# pdf_path = r"C:\Users\BRADSOL123\Documents\Form 18-130606.PDF"
+# # Example usage
+#
+# # Replace 'your_pdf_file.pdf' with the path to your PDF file
+# pdf_path = r"C:\Users\BRADSOL123\Documents\Form 8-130707-ChargeId-10058187.PDF"
 #
 # # Replace 'output.xml' with the desired output XML file path
-# output_xml_path = r"C:\Users\BRADSOL123\Documents\Form 18-130606.xml"
+# output_xml_path = r"C:\Users\BRADSOL123\Documents\Form 8-130707-ChargeId-10058187.xml"
 #
 # extract_form_data(pdf_path, output_xml_path)

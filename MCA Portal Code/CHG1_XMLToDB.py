@@ -201,6 +201,9 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
     # update single values in datatable
     # get all the tables names for all single values df
+    if (single_df['Value'] == '').all() or single_df['Value'].isna().all() or single_df['Value'].isnull().all():
+        logging.info("All empty so going for other type of form")
+        raise Exception("All values in the 'Value' column are empty.")
     try:
         charge_id = single_df.loc[single_df['Field_Name'] == 'id', 'Value'].values[0]
         status_abbreviation_list = [x.strip() for x in config_dict['status_abbreviation_list'].split(',')]
