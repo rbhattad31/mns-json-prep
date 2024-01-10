@@ -201,9 +201,18 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
     # update single values in datatable
     # get all the tables names for all single values df
-    if (single_df['Value'] == '').all() or single_df['Value'].isna().all() or single_df['Value'].isnull().all():
-        logging.info("All empty so going for other type of form")
-        raise Exception("All values in the 'Value' column are empty.")
+    valid_field_names = ['status', 'filing_date']
+
+    if (single_df['Field_Name'].isin(valid_field_names)).all():
+        logging.info("Checking values for 'status' and 'filing_date' columns.")
+
+        # Check if values other than 'status' and 'filing_date' are empty
+        other_than_status_filing_date = single_df[~single_df['Field_Name'].isin(valid_field_names)]
+
+        if (other_than_status_filing_date['Value'] == '').all() or other_than_status_filing_date[
+            'Value'].isna().all() or other_than_status_filing_date['Value'].isnull().all():
+            logging.info("All other values are empty, going for other type of form.")
+            raise Exception("All values other than 'status' and 'filing_date' are empty.")
     try:
         charge_id = single_df.loc[single_df['Field_Name'] == 'id', 'Value'].values[0]
         status_abbreviation_list = [x.strip() for x in config_dict['status_abbreviation_list'].split(',')]
