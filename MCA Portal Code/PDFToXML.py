@@ -56,12 +56,13 @@ def get_embedded_pdfs(input_pdf_path, output_path,file_name_hidden_pdf,db_config
             cursor.execute(check_query,values)
             result = cursor.fetchall()
             if len(result) == 0:
-                logging.info("Inserting hidden attachment into db")
-                query = "Insert into documents(cin,company,Category,document,form_data_extraction_status,created_date,created_by,form_data_extraction_needed,Download_Status,DB_insertion_status,document_download_path) Values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
-                values = (cin, company_name, 'Hidden Attachment', file_name, 'Success', current_date, user_name, 'Y',
-                          'Downloaded', 'Pending',out_pdf)
-                logging.info(query % values)
-                cursor.execute(query, values)
+                if 'DIR_2'.lower() in file_name.lower() or 'DIR-2'.lower() in file_name.lower() or 'DIR 2'.lower() in file_name.lower():
+                    logging.info("Inserting hidden attachment into db for DIR 2")
+                    query = "Insert into documents(cin,company,Category,document,form_data_extraction_status,created_date,created_by,form_data_extraction_needed,Download_Status,DB_insertion_status,document_download_path) Values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+                    values = (cin, company_name, 'Hidden Attachment', file_name, 'Success', current_date, user_name, 'Y',
+                              'Downloaded', 'Pending',out_pdf)
+                    logging.info(query % values)
+                    cursor.execute(query, values)
             cursor.close()
             connection.close()
         except Exception as e:
