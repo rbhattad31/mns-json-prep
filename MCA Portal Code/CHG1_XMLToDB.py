@@ -253,6 +253,10 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 charge_id = db_cursor.fetchone()[0]
                 logging.info(charge_id)
                 single_df.loc[single_df['Field_Name'] == 'id', 'Value'] = charge_id
+                update_query = "update charge_sequence set charge_id = %s where cin = %s and holder_name = %s and amount = %s and date = %s"
+                update_values = (charge_id,cin_column_value,holder_name,amount,date)
+                logging.info(update_query % update_values)
+                db_cursor.execute(update_query,update_values)
             else:
                 logging.info("Charge ID Present")
         else:
@@ -267,6 +271,10 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             charge_id = db_cursor.fetchone()[0]
             logging.info(charge_id)
             single_df.loc[single_df['Field_Name'] == 'id', 'Value'] = charge_id
+            update_query = "update charge_sequence set charge_id = %s where cin = %s and holder_name = %s and amount = %s and date = %s"
+            update_values = (charge_id, cin_column_value, holder_name, amount, date)
+            logging.info(update_query % update_values)
+            db_cursor.execute(update_query, update_values)
     except Exception as e:
         logging.info(f"Exception occured in updating charge id {e}")
     sql_tables_list = single_df[single_df.columns[5]].unique()
