@@ -186,6 +186,10 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             value = get_single_value_from_xml(xml_root, parent_node, child_nodes)
             if field_name == 'date':
                 try:
+                    try:
+                        value = str(value).replace("\n","")
+                    except:
+                        pass
                     value = datetime.strptime(value, '%Y-%m-%d').strftime('%d/%m/%Y')
                 except Exception as e:
                     logging.info(f"Excpetion occured for date conversion to dd/mm/yyyy \n {e}")
@@ -194,6 +198,10 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             if value is None:
                 name_child_node = 'NAME_CHARGE_HOLD'
                 value = get_single_value_from_xml(xml_root,parent_node,name_child_node)
+        try:
+            value = str(value).replace("\n", "")
+        except:
+            pass
         single_df.at[index, 'Value'] = value
         logging.info(value)
         results.append([field_name, value, sql_table_name, column_name, column_json_node])
@@ -203,16 +211,12 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
     # get all the tables names for all single values df
     valid_field_names = ['status', 'filing_date']
 
-    if (single_df['Field_Name'].isin(valid_field_names)).all():
-        logging.info("Checking values for 'status' and 'filing_date' columns.")
-
         # Check if values other than 'status' and 'filing_date' are empty
-        other_than_status_filing_date = single_df[~single_df['Field_Name'].isin(valid_field_names)]
-
-        if (other_than_status_filing_date['Value'] == '').all() or other_than_status_filing_date[
-            'Value'].isna().all() or other_than_status_filing_date['Value'].isnull().all():
-            logging.info("All other values are empty, going for other type of form.")
-            raise Exception("All values other than 'status' and 'filing_date' are empty.")
+    other_than_status_filing_date = single_df[~single_df['Field_Name'].isin(valid_field_names)]
+    print(other_than_status_filing_date)
+    if (other_than_status_filing_date['Value'] == '').all() or other_than_status_filing_date['Value'].isna().all() or other_than_status_filing_date['Value'].isnull().all():
+        logging.info("All other values are empty, going for other type of form.")
+        raise Exception("All values other than 'status' and 'filing_date' are empty.")
     try:
         charge_id = single_df.loc[single_df['Field_Name'] == 'id', 'Value'].values[0]
         status_abbreviation_list = [x.strip() for x in config_dict['status_abbreviation_list'].split(',')]
@@ -233,6 +237,10 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         holder_name = single_df.loc[single_df['Field_Name'] == 'holder_name', 'Value'].values[0]
         amount = single_df.loc[single_df['Field_Name'] == 'amount', 'Value'].values[0]
         try:
+            try:
+                amount = str(amount).replace("\n", "")
+            except:
+                pass
             amount = str(amount).replace(',','')
             amount = float(amount)
             amount = int(amount)
@@ -311,6 +319,10 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             date = table_df.loc[table_df['Column_Name'] == config_dict['date_column_name'], 'Value'].values[0]
             amount = table_df.loc[table_df['Column_Name'] == config_dict['amount_column_name'], 'Value'].values[0]
             try:
+                try:
+                    amount = str(amount).replace(',', '')
+                except:
+                    pass
                 amount = float(amount)
                 amount = int(amount)
             except Exception as e:
@@ -369,6 +381,10 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             status = table_df.loc[table_df['Column_Name'] == config_dict['status_column_name'],'Value'].values[0]
             amount = table_df.loc[table_df['Column_Name'] == config_dict['amount_column_name'],'Value'].values[0]
             try:
+                try:
+                    amount = str(amount).replace(',', '')
+                except:
+                    pass
                 amount = float(amount)
                 amount = int(amount)
             except Exception as e:
@@ -517,11 +533,11 @@ def chg1_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, x
 # excel_path = r"C:\Users\BRADSOL123\Documents\Python\Config\Config_Python.xlsx"
 # sheet_name = 'CHG1'
 # config_dict,status = create_main_config_dictionary(excel_path,sheet_name)
-# map_file_path = r"C:\Users\BRADSOL123\Documents\Python\Config\CHG-1_nodes_config.xlsx"
+# map_file_path = r"C:\Users\BRADSOL123\Documents\Python\Config\FORM8_otherthanxfa_nodes_config_old_files.xlsx"
 # map_file_sheet = 'Sheet1'
-# xml_file_path = r"C:\Users\BRADSOL123\Documents\Form CHG-1-07122016_signed.xml"
-# output_file_path = r"C:\Users\BRADSOL123\Documents\Form CHG-1-07122016_signed.xlsx"
-# cin = 'U22110KA1997PTC022596'
-# company_name = 'RAMYA REPROGRAPHIC PRIVATE LIMITED'
-# filing_date = '07-12-2016'
+# xml_file_path = r"C:\Users\BRADSOL123\Documents\Form 8-250407.xml"
+# output_file_path = r"C:\Users\BRADSOL123\Documents\Form 8-250407.xlsx"
+# cin = 'U25112MP1992PTC007003'
+# company_name = 'ARUN TYRES PVT LTD'
+# filing_date = '25-04-2007'
 # chg1_xml_to_db(db_config,config_dict,map_file_path,map_file_sheet,xml_file_path,output_file_path,cin,company_name,filing_date)
