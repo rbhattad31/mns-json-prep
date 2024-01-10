@@ -214,8 +214,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         # Check if values other than 'status' and 'filing_date' are empty
     other_than_status_filing_date = single_df[~single_df['Field_Name'].isin(valid_field_names)]
     print(other_than_status_filing_date)
-    if (other_than_status_filing_date['Value'] == '').all() or other_than_status_filing_date['Value'].isna().all() or \
-            other_than_status_filing_date['Value'].isnull().all():
+    if other_than_status_filing_date['Value'].isna().all() or other_than_status_filing_date['Value'].isnull().all():
         logging.info("All other values are empty, going for another type of form.")
         raise Exception("All values other than 'status' and 'filing_date' are empty.")
     try:
