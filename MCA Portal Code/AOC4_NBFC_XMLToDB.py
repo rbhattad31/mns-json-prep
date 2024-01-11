@@ -515,8 +515,8 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                           f"with data {json_string}")
     common_sql_tables_list = common_df[common_df.columns[sql_table_name_index]].unique()
     # logging.info(common_sql_tables_list)
-    if aoc4_nbfc_first_file_found:
-        years = years[1:]
+    # if aoc4_nbfc_first_file_found:
+    #     years = years[1:]
     for common_table_name in common_sql_tables_list:
         logging.info(common_table_name)
         if common_table_name != config_dict['financials_table_name']:

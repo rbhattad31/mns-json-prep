@@ -424,7 +424,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
     previous_year_filing_standard = previous_year_df[previous_year_df['Field_Name'] == 'filing_standard']['Value'].values[0]
 
     logging.info("Saving Single Values to database")
-    logging.info(aoc4_nbfc_cfs_first_file_found)
+    #logging.info(aoc4_nbfc_cfs_first_file_found)
     # if not aoc4_nbfc_cfs_first_file_found:
     #     print(aoc4_nbfc_cfs_first_file_found)
     #     single_df_list.append(current_year_df)
@@ -496,10 +496,10 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                           f"with data {json_string}")
     common_sql_tables_list = common_df[common_df.columns[sql_table_name_index]].unique()
     # logging.info(common_sql_tables_list)
-    if aoc4_nbfc_cfs_first_file_found:
-        years = years[1:]
-    if aoc4_nbfc_cfs_first_file_found:
-        filing_standards = filing_standards[1:]
+    # if aoc4_nbfc_cfs_first_file_found:
+    #     years = years[1:]
+    # if aoc4_nbfc_cfs_first_file_found:
+    #     filing_standards = filing_standards[1:]
     for common_table_name in common_sql_tables_list:
         logging.info(common_table_name)
         if common_table_name != config_dict['financials_table_name']:
