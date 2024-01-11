@@ -76,7 +76,7 @@ def update_database_single_value(db_config, table_name, cin_column_name, cin_val
                                                                                            column_name,
                                                                                            cin_value,
                                                                                            din,
-                                                                                           designation, column_value,'cessation')
+                                                                                           designation,'cessation',column_value)
         print(insert_query)
         logging.info(insert_query)
         db_cursor.execute(insert_query)
