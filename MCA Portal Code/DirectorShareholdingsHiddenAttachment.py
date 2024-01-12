@@ -139,7 +139,7 @@ def fetch_address_din_using_open_ai(text,config_dict):
                 }
             ],
             "temperature": 0.7,
-            "max_tokens": 200,
+            "max_tokens": 1000,
             "top_p": 1,
             "frequency_penalty": 0,
             "presence_penalty": 0
@@ -220,3 +220,16 @@ def mgt_director_shareholdings_main(db_config,config_dict,output_directory,pdf_p
     else:
         return True
 
+# pdf_path = r"C:\Users\BRADSOL123\Desktop\XBRL\Form MGT-7A-22102023_signed.pdf"
+# excel_path = r"C:\Users\BRADSOL123\Documents\Python\Config\Config_Python.xlsx"
+# sheet_name = 'OpenAI'
+# config_dict,status = create_main_config_dictionary(excel_path,sheet_name)
+# db_config = {
+# "host": "162.241.123.123",
+# "user": "classle3_deal_saas",
+# "password": "o2i=hi,64u*I",
+# "database": "classle3_mns_credit",
+# }
+# cin = 'U25112MP1992PTC007003'
+# output_directory = r"C:\Users\BRADSOL123\Desktop\XBRL"
+# mgt_director_shareholdings_main(db_config,config_dict,output_directory,pdf_path,cin)

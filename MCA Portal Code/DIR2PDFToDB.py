@@ -14,9 +14,11 @@ import json
 import requests
 import mysql.connector
 from Config import create_main_config_dictionary
-
+import sys
+import traceback
 
 def update_value_in_db(db_config, DIN, PAN, MobileNumber, Email, CIN):
+    setup_logging()
     db_connection = mysql.connector.connect(**db_config)
     db_cursor = db_connection.cursor()
     db_connection.autocommit = True
@@ -122,6 +124,7 @@ def get_hidden_attachment(input_pdf_path, output_path, file_name_hidden_pdf):
 
 
 def fetch_address_din_using_open_ai(text, config_dict):
+    setup_logging()
     try:
         url = config_dict['url']
         prompt = text + ' ' + config_dict['DIR2_prompt']
@@ -135,7 +138,7 @@ def fetch_address_din_using_open_ai(text, config_dict):
                 }
             ],
             "temperature": 0.7,
-            "max_tokens": 200,
+            "max_tokens": 1000,
             "top_p": 1,
             "frequency_penalty": 0,
             "presence_penalty": 0
@@ -160,6 +163,7 @@ def fetch_address_din_using_open_ai(text, config_dict):
 
 
 def MGT_director_shareholdings_pdf_to_db(pdf_path, config_dict, db_config, cin):
+    setup_logging()
     try:
         pdf_document = fitz.open(pdf_path)
         # xml_path = str(pdf_path).replace('.pdf', '.xml')
@@ -168,23 +172,29 @@ def MGT_director_shareholdings_pdf_to_db(pdf_path, config_dict, db_config, cin):
         #     xml_file.write("<?xml version='1.0' encoding='utf-8'?>\n")
         #     xml_file.write("<PDFData>\n")
         total_text = ''
-        for page_num in range(pdf_document.page_count):
-            page = pdf_document.load_page(page_num)
-            for img_index, image in enumerate(page.get_images(full=True)):
-                try:
-                    xref = image[0]
-                    base_image = pdf_document.extract_image(xref)
-                    image_data = base_image["image"]
+        text = ''
+        pdf_reader = PdfReader(pdf_path)
+        for page in pdf_reader.pages:
+            text += page.extract_text()
+        total_text = text
+        if (total_text == ''):
+            for page_num in range(pdf_document.page_count):
+                page = pdf_document.load_page(page_num)
+                for img_index, image in enumerate(page.get_images(full=True)):
+                    try:
+                        xref = image[0]
+                        base_image = pdf_document.extract_image(xref)
+                        image_data = base_image["image"]
 
-                    with open(f"temp_image_{img_index}.png", "wb") as img_file:
-                        img_file.write(image_data)
-                    text = image_to_text(f"temp_image_{img_index}.png")
-                    total_text += text
-                except Exception as e:
-                    print(f"Exception Occurred while converting image to text{e}")
-                else:
-                    os.remove(f"temp_image_{img_index}.png")
-        print(total_text)
+                        with open(f"temp_image_{img_index}.png", "wb") as img_file:
+                            img_file.write(image_data)
+                        text = image_to_text(f"temp_image_{img_index}.png")
+                        total_text += text
+                    except Exception as e:
+                        logging.info(f"Exception Occurred while converting image to text{e}")
+                    else:
+                        os.remove(f"temp_image_{img_index}.png")
+        logging.info(f"OCR Captured text: {total_text}")
         shareholders_details = fetch_address_din_using_open_ai(total_text, config_dict)
         # print(shareholders_details)
         shareholders_details = eval(shareholders_details)
@@ -196,16 +206,24 @@ def MGT_director_shareholdings_pdf_to_db(pdf_path, config_dict, db_config, cin):
                         PAN = shareholder['PAN']
                         MobileNumber = shareholder['MobileNumber']
                         Email = shareholder['Email']
-                        print('DIN-', DIN)
-                        print('PAN-', PAN)
-                        print('MobileNumber-', MobileNumber)
-                        print('Email-', Email)
+                        logging.info('DIN-', DIN)
+                        logging.info('PAN-', PAN)
+                        logging.info('MobileNumber-', MobileNumber)
+                        logging.info('Email-', Email)
                         update_value_in_db(db_config, DIN, PAN, MobileNumber, Email, cin)
                 except Exception as e:
                     return True
                     # DIN not available
     except Exception as e:
-        print(f"Exception in finding address in MGT{e}")
+        logging.info(f"Exception in finding address in MGT{e}")
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+
+        # Get the formatted traceback as a string
+        traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+        # logging.info the traceback details
+        for line in traceback_details:
+            logging.error(line.strip())
         return False
     else:
         return True
@@ -213,27 +231,28 @@ def MGT_director_shareholdings_pdf_to_db(pdf_path, config_dict, db_config, cin):
 
 def dir2_main(db_config, config_dict, output_directory, pdf_path, cin):
     try:
+        setup_logging()
         # hidden_attachment = get_hidden_attachment(pdf_path, output_directory, None)
         # if hidden_attachment is not None:
         address = MGT_director_shareholdings_pdf_to_db(pdf_path, config_dict, db_config, cin)
         if address:
             return True
     except Exception as e:
-        print(f"Exception in fetching address from MGT {e}")
+        logging.info(f"Exception in fetching address from MGT {e}")
     else:
         return True
 
 
-# Cin = 'U01210MH1999PTC119449'
-# output = r'C:\Users\BRADSOL\Documents\python\MCA_DataExtraction\Output'
-# pdf = r'C:\Users\BRADSOL\Documents\python\MCA_DataExtraction\dir2_files\dir2_files\DIR-2- Sally (1).pdf'
-# main_dict = create_main_config_dictionary(r'C:\Users\BRADSOL\Documents\python\MCA_DataExtraction\Config_Python.xlsx',
+# Cin = 'U27310DL2006PTC147173'
+# output = r"C:\Users\BRADSOL123\Desktop\XBRL\Semco Dir"
+# pdf = r"C:\Users\BRADSOL123\Desktop\XBRL\Semco Dir\DIR-2 Consent.pdf"
+# main_dict = create_main_config_dictionary(r"C:\Users\BRADSOL123\Documents\Python\Config\Config_Python.xlsx",
 #                                           'OpenAI')
 # config_dict = main_dict[0]
 # db_config = {
-#     "host": "localhost",
-#     "user": "root",
-#     "password": "",
-#     "database": "classle3_mns_credit",
+# "host": "162.241.123.123",
+# "user": "classle3_deal_saas",
+# "password": "o2i=hi,64u*I",
+# "database": "classle3_mns_credit",
 # }
 # dir2_main(db_config, config_dict, output, pdf, Cin)
