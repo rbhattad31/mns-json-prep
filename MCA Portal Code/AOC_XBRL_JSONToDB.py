@@ -61,7 +61,7 @@ def get_single_value_from_xml(xml_root, parent_node, child_node):
               f"\n {e}")
         return None
 
-def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,table_check_element):
+def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,table_check_element,field_name):
     years = []
     setup_logging()
     # Define the regular expression pattern for matching the date range
@@ -93,93 +93,122 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,tabl
                         row_values = [value for i, value in enumerate(row) if (
                                 (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
                                 isinstance(row[i], str) and row[i] != "NaN"))]
-                        if row[0] == target_header and len(row_values) > 1:
-                            print("Going Straight")
-                            # current_year_value = row[1]
-                            # logging.info(current_year_value)
-                            row_values = [value for i, value in enumerate(row) if (
-                                    (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
-                                    isinstance(row[i], str) and row[i] != "NaN"))]
-                            current_year_value = row_values[1]
-                            try:
-                                previous_year_value = row_values[2]
-                            except Exception as e:
-                                print(f"Exception in straight values {e} for {target_header}")
-                                next_row = table_data[r + 1]
-                                print(next_row)
-                                if str(next_row[0]).lower() == 'nan':
-                                    try:
-                                        if str(next_row[1]).lower() != 'nan':
-                                            previous_year_value = next_row[1]
-                                        else:
-                                            previous_year_value = next_row[2]
-                                        print(f"Have taken previous year value from next row {previous_year_value}")
-                                    except Exception as e:
-                                        previous_year_value = None
-                                else:
-                                    previous_year_value = None
-                            current_year_value = re.sub(r'\([^)]*\)', '', str(current_year_value))
-                            previous_year_value = re.sub(r'\([^)]*\)', '', str(previous_year_value))
-                            values.append(current_year_value)
-                            values.append(previous_year_value)
-                            print(values)
-                            value_found = True
-                        elif target_header in row[0]:
-                            print("Going Straight")
-                            # current_year_value = row[1]
-                            # logging.info(current_year_value)
-                            row_values = [value for i, value in enumerate(row) if (
-                                    (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
-                                    isinstance(row[i], str) and row[i] != "NaN"))]
-                            current_year_value = row_values[1]
-                            try:
-                                previous_year_value = row_values[2]
-                            except Exception as e:
-                                print(f"Exception in straight values {e} for {target_header}")
-                                next_row = table_data[r + 1]
-                                print(next_row)
-                                if str(next_row[0]).lower() == 'nan':
-                                    try:
-                                        if str(next_row[1]).lower() != 'nan':
-                                            previous_year_value = next_row[1]
-                                        else:
-                                            previous_year_value = next_row[2]
-                                        print(f"Have taken previous year value from next row {previous_year_value}")
-                                    except Exception as e:
-                                        previous_year_value = None
-                                else:
-                                    previous_year_value = None
-                            current_year_value = re.sub(r'\([^)]*\)', '', str(current_year_value))
-                            previous_year_value = re.sub(r'\([^)]*\)', '', str(previous_year_value))
-                            values.append(current_year_value)
-                            values.append(previous_year_value)
-                            print(values)
-                            value_found = True
-                        else:
-                            value_previous_year = None
-                            value_current_year = None
-                            # logging.info("Going for breaks")
-                            if not header_found:
-                                if row[0] == target_header:
-                                    header_found = True
-                                else:
-                                    continue
-                            if header is None and any(math.isnan(x) for x in row[1:] if isinstance(x, (float, int))):
-                                header = row[0]
-                                # logging.info(header)
-                            elif header is not None and isinstance(row[0], (float, int)) and math.isnan(row[0]):
+                        if field_name == 'total_changes_in_inventories_or_finished_goods' and (row[0] == 'Changes in inventories of finished goods, work-in-progress and' or row[0] == 'Changes in inventories of finished goods, work-in-progress and stock-in-trade'):
+                            if len(row_values) > 1:
+                                print("Going Straight")
+                                # current_year_value = row[1]
+                                # logging.info(current_year_value)
                                 row_values = [value for i, value in enumerate(row) if (
                                         (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
                                         isinstance(row[i], str) and row[i] != "NaN"))]
-                                # logging.info(row_values)
-                                value_current_year = row_values[0]
-                                value_previous_year = row_values[1]
-                                value_current_year = re.sub(r'\([^)]*\)', '', str(value_current_year))
-                                value_previous_year = re.sub(r'\([^)]*\)', '', str(value_previous_year))
+                                current_year_value = row_values[1]
+                                try:
+                                    previous_year_value = row_values[2]
+                                except Exception as e:
+                                    print(f"Exception in straight values {e} for {target_header}")
+                                    next_row = table_data[r + 1]
+                                    print(next_row)
+                                    if str(next_row[0]).lower() == 'nan':
+                                        try:
+                                            if str(next_row[1]).lower() != 'nan':
+                                                previous_year_value = next_row[1]
+                                            else:
+                                                previous_year_value = next_row[2]
+                                            print(f"Have taken previous year value from next row {previous_year_value}")
+                                        except Exception as e:
+                                            previous_year_value = None
+                                    else:
+                                        previous_year_value = None
+                                current_year_value = re.sub(r'\([^)]*\)', '', str(current_year_value))
+                                previous_year_value = re.sub(r'\([^)]*\)', '', str(previous_year_value))
+                                values.append(current_year_value)
+                                values.append(previous_year_value)
+                                print(values)
                                 value_found = True
-                                values.append(value_current_year)
-                                values.append(value_previous_year)
-                                header_found = False
+                            else:
+                                value_previous_year = None
+                                value_current_year = None
+                                # logging.info("Going for breaks")
+                                if not header_found:
+                                    if row[0] == target_header:
+                                        header_found = True
+                                    else:
+                                        continue
+                                if header is None and any(
+                                        math.isnan(x) for x in row[1:] if isinstance(x, (float, int))):
+                                    header = row[0]
+                                    # logging.info(header)
+                                elif header is not None and isinstance(row[0], (float, int)) and math.isnan(row[0]):
+                                    row_values = [value for i, value in enumerate(row) if (
+                                            (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
+                                            isinstance(row[i], str) and row[i] != "NaN"))]
+                                    # logging.info(row_values)
+                                    value_current_year = row_values[0]
+                                    value_previous_year = row_values[1]
+                                    value_current_year = re.sub(r'\([^)]*\)', '', str(value_current_year))
+                                    value_previous_year = re.sub(r'\([^)]*\)', '', str(value_previous_year))
+                                    value_found = True
+                                    values.append(value_current_year)
+                                    values.append(value_previous_year)
+                                    header_found = False
+                        else:
+                            if row[0] == target_header and len(row_values) > 1 and field_name != 'total_changes_in_inventories_or_finished_goods':
+                                print("Going Straight")
+                                # current_year_value = row[1]
+                                # logging.info(current_year_value)
+                                row_values = [value for i, value in enumerate(row) if (
+                                        (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
+                                        isinstance(row[i], str) and row[i] != "NaN"))]
+                                current_year_value = row_values[1]
+                                try:
+                                    previous_year_value = row_values[2]
+                                except Exception as e:
+                                    print(f"Exception in straight values {e} for {target_header}")
+                                    next_row = table_data[r + 1]
+                                    print(next_row)
+                                    if str(next_row[0]).lower() == 'nan':
+                                        try:
+                                            if str(next_row[1]).lower() != 'nan':
+                                                previous_year_value = next_row[1]
+                                            else:
+                                                previous_year_value = next_row[2]
+                                            print(f"Have taken previous year value from next row {previous_year_value}")
+                                        except Exception as e:
+                                            previous_year_value = None
+                                    else:
+                                        previous_year_value = None
+                                current_year_value = re.sub(r'\([^)]*\)', '', str(current_year_value))
+                                previous_year_value = re.sub(r'\([^)]*\)', '', str(previous_year_value))
+                                values.append(current_year_value)
+                                values.append(previous_year_value)
+                                print(values)
+                                value_found = True
+                            else:
+                                if field_name != 'total_changes_in_inventories_or_finished_goods':
+                                    value_previous_year = None
+                                    value_current_year = None
+                                    # logging.info("Going for breaks")
+                                    if not header_found:
+                                        if row[0] == target_header:
+                                            header_found = True
+                                        else:
+                                            continue
+                                    if header is None and any(math.isnan(x) for x in row[1:] if isinstance(x, (float, int))):
+                                        header = row[0]
+                                        # logging.info(header)
+                                    elif header is not None and isinstance(row[0], (float, int)) and math.isnan(row[0]):
+                                        row_values = [value for i, value in enumerate(row) if (
+                                                (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
+                                                isinstance(row[i], str) and row[i] != "NaN"))]
+                                        # logging.info(row_values)
+                                        value_current_year = row_values[0]
+                                        value_previous_year = row_values[1]
+                                        value_current_year = re.sub(r'\([^)]*\)', '', str(value_current_year))
+                                        value_previous_year = re.sub(r'\([^)]*\)', '', str(value_previous_year))
+                                        value_found = True
+                                        values.append(value_current_year)
+                                        values.append(value_previous_year)
+                                        header_found = False
                     except:
                         continue
                     if value_found:
@@ -486,7 +515,7 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
             #     else:
             #         single_df.at[index, 'Value'] = None
             if parent_node == config_dict['Straight_Keyword']:
-                values = JSONtoDB_AOC_XBRL_straight(cin_column_value,company_name,json_file_path,child_nodes,table_column_check)
+                values = JSONtoDB_AOC_XBRL_straight(cin_column_value,company_name,json_file_path,child_nodes,table_column_check,field_name)
                 logging.info(f"{child_nodes}:{values}")
                 million_keyword = 'Millions of INR'
                 crores_keyword = 'Crores of INR'
