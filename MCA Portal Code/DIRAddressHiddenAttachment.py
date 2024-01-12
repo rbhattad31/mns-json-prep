@@ -9,26 +9,32 @@ import json
 import requests
 import mysql.connector
 from Config import create_main_config_dictionary
+import PyPDF2
+from PyPDF2 import PdfReader
+
 
 def update_value_in_db(db_config,din,address,cin):
-    db_connection = mysql.connector.connect(**db_config)
-    db_cursor = db_connection.cursor()
-    db_connection.autocommit = True
+    try:
+        db_connection = mysql.connector.connect(**db_config)
+        db_cursor = db_connection.cursor()
+        db_connection.autocommit = True
 
-    check_address_query = "select * from authorized_signatories where cin = %s and din = %s"
-    values = (cin,din)
-    print(check_address_query % values)
-    db_cursor.execute(check_address_query,values)
-    result = db_cursor.fetchall()
+        check_address_query = "select * from authorized_signatories where cin = %s and din = %s"
+        values = (cin,din)
+        print(check_address_query % values)
+        db_cursor.execute(check_address_query,values)
+        result = db_cursor.fetchall()
 
-    if len(result) != 0:
-        update_query = "UPDATE authorized_signatories set address = %s where cin = %s and din = %s"
-        update_values = (address,cin,din)
-        print(update_query % update_values)
-        db_cursor.execute(update_query,update_values)
+        if len(result) != 0:
+            update_query = "UPDATE authorized_signatories set address = %s where cin = %s and din = %s"
+            update_values = (address,cin,din)
+            print(update_query % update_values)
+            db_cursor.execute(update_query,update_values)
 
-    db_cursor.close()
-    db_connection.close()
+        db_cursor.close()
+        db_connection.close()
+    except Exception as e:
+        logging.info(f"Exception occured while inserting into Db {e}")
 
 
 def image_to_text(image_path):
@@ -45,22 +51,28 @@ def MGT_Address_pdf_to_db(pdf_path,config_dict,db_config,cin):
             xml_file.write("<?xml version='1.0' encoding='utf-8'?>\n")
             xml_file.write("<PDFData>\n")
         total_text = ''
-        for page_num in range(pdf_document.page_count):
-            page = pdf_document.load_page(page_num)
-            for img_index, image in enumerate(page.get_images(full=True)):
-                try:
-                    xref = image[0]
-                    base_image = pdf_document.extract_image(xref)
-                    image_data = base_image["image"]
+        text = ''
+        pdf_reader = PdfReader(pdf_path)
+        for page in pdf_reader.pages:
+            text += page.extract_text()
+        total_text = text
+        if total_text == '':
+            for page_num in range(pdf_document.page_count):
+                page = pdf_document.load_page(page_num)
+                for img_index, image in enumerate(page.get_images(full=True)):
+                    try:
+                        xref = image[0]
+                        base_image = pdf_document.extract_image(xref)
+                        image_data = base_image["image"]
 
-                    with open(f"temp_image_{img_index}.png", "wb") as img_file:
-                        img_file.write(image_data)
-                    text = image_to_text(f"temp_image_{img_index}.png")
-                    total_text += text
-                except Exception as e:
-                    print(f"Exception Occured while converting image to text{e}")
-                else:
-                    os.remove(f"temp_image_{img_index}.png")
+                        with open(f"temp_image_{img_index}.png", "wb") as img_file:
+                            img_file.write(image_data)
+                        text = image_to_text(f"temp_image_{img_index}.png")
+                        total_text += text
+                    except Exception as e:
+                        print(f"Exception Occured while converting image to text{e}")
+                    else:
+                        os.remove(f"temp_image_{img_index}.png")
         print(total_text)
         directors_details = fetch_address_din_using_open_ai(total_text,config_dict)
         print(directors_details)

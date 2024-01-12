@@ -18,75 +18,78 @@ import sys
 import traceback
 
 def update_value_in_db(db_config, DIN, PAN, MobileNumber, Email, CIN):
-    setup_logging()
-    db_connection = mysql.connector.connect(**db_config)
-    db_cursor = db_connection.cursor()
-    db_connection.autocommit = True
-    # Either DIN or PAN will be available, CIN will be constant.
+    try:
+        setup_logging()
+        db_connection = mysql.connector.connect(**db_config)
+        db_cursor = db_connection.cursor()
+        db_connection.autocommit = True
+        # Either DIN or PAN will be available, CIN will be constant.
 
-    if bool(DIN):
-        # Authorized_Signatures
-        DIN_Query = "select * from authorized_signatories where din = %s and cin = %s"
-        values = (DIN, CIN)
-        print(DIN_Query % values)
-        db_cursor.execute(DIN_Query, values)
-        DIN_Result = db_cursor.fetchall()
+        if bool(DIN):
+            # Authorized_Signatures
+            DIN_Query = "select * from authorized_signatories where din = %s and cin = %s"
+            values = (DIN, CIN)
+            print(DIN_Query % values)
+            db_cursor.execute(DIN_Query, values)
+            DIN_Result = db_cursor.fetchall()
 
-        if len(DIN_Result) != 0:
-            # update Query:
-            update_query = "UPDATE authorized_signatories set pan = %s,phone_number = %s,email = %s where din = %s and cin = %s"
-            update_values = (PAN, MobileNumber, Email, DIN, CIN)
-            print(update_query % update_values)
-            db_cursor.execute(update_query, update_values)
-        # else:
-        #     # Insert Query:
-        #     insert_query = "INSERT INTO authorized_signatories(din,pan,phone_number,email,cin) VALUES (%s,%s,%s,%s,%s)"
-        #     insert_values = (DIN, PAN, MobileNumber, Email, CIN)
-        #     print(insert_query % insert_values)
-        #     db_cursor.execute(insert_query, insert_values)
+            if len(DIN_Result) != 0:
+                # update Query:
+                update_query = "UPDATE authorized_signatories set pan = %s,phone_number = %s,email = %s where din = %s and cin = %s"
+                update_values = (PAN, MobileNumber, Email, DIN, CIN)
+                print(update_query % update_values)
+                db_cursor.execute(update_query, update_values)
+            # else:
+            #     # Insert Query:
+            #     insert_query = "INSERT INTO authorized_signatories(din,pan,phone_number,email,cin) VALUES (%s,%s,%s,%s,%s)"
+            #     insert_values = (DIN, PAN, MobileNumber, Email, CIN)
+            #     print(insert_query % insert_values)
+            #     db_cursor.execute(insert_query, insert_values)
 
-        # director_network
-        DirectorNetwork_query = "select * from director_network where din = %s and cin = %s"
-        values = (DIN, CIN)
-        print(DirectorNetwork_query % values)
-        db_cursor.execute(DirectorNetwork_query, values)
-        DirectorNetwork_result = db_cursor.fetchall()
+            # director_network
+            DirectorNetwork_query = "select * from director_network where din = %s and cin = %s"
+            values = (DIN, CIN)
+            print(DirectorNetwork_query % values)
+            db_cursor.execute(DirectorNetwork_query, values)
+            DirectorNetwork_result = db_cursor.fetchall()
 
-        if len(DirectorNetwork_result) != 0:
-            # update Query:
-            update_query = "UPDATE director_network set pan = %s where din = %s and cin = %s"
-            update_values = (PAN, DIN, CIN)
-            print(update_query % update_values)
-            db_cursor.execute(update_query, update_values)
-        # else:
-        #     # Insert Query:
-        #     insert_query = "INSERT INTO director_network(din,pan,cin) VALUES (%s,%s,%s)"
-        #     insert_values = (DIN, PAN, CIN)
-        #     print(insert_query % insert_values)
-        #     db_cursor.execute(insert_query, insert_values)
+            if len(DirectorNetwork_result) != 0:
+                # update Query:
+                update_query = "UPDATE director_network set pan = %s where din = %s and cin = %s"
+                update_values = (PAN, DIN, CIN)
+                print(update_query % update_values)
+                db_cursor.execute(update_query, update_values)
+            # else:
+            #     # Insert Query:
+            #     insert_query = "INSERT INTO director_network(din,pan,cin) VALUES (%s,%s,%s)"
+            #     insert_values = (DIN, PAN, CIN)
+            #     print(insert_query % insert_values)
+            #     db_cursor.execute(insert_query, insert_values)
 
-    else:
-        PAN_Query = "select * from authorized_signatories where pan = %s and cin = %s"
-        values = (PAN, CIN)
-        print(PAN_Query % values)
-        db_cursor.execute(PAN_Query, values)
-        PAN_Result = db_cursor.fetchall()
+        else:
+            PAN_Query = "select * from authorized_signatories where pan = %s and cin = %s"
+            values = (PAN, CIN)
+            print(PAN_Query % values)
+            db_cursor.execute(PAN_Query, values)
+            PAN_Result = db_cursor.fetchall()
 
-        if len(PAN_Result) != 0:
-            # update Query:
-            update_query = "UPDATE authorized_signatories set phone_number = %s,email = %s where pan = %s and cin = %s"
-            update_values = (MobileNumber, Email, PAN, CIN)
-            print(update_query % update_values)
-            db_cursor.execute(update_query, update_values)
-        # else:
-        #     # Insert Query:
-        #     insert_query = "INSERT INTO authorized_signatories(cin,din,pan,phone_number,email) VALUES (%s,%s,%s,%s,%s)"
-        #     insert_values = (CIN, DIN, PAN, MobileNumber, Email)
-        #     print(insert_query % insert_values)
-        #     db_cursor.execute(insert_query, insert_values)
+            if len(PAN_Result) != 0:
+                # update Query:
+                update_query = "UPDATE authorized_signatories set phone_number = %s,email = %s where pan = %s and cin = %s"
+                update_values = (MobileNumber, Email, PAN, CIN)
+                print(update_query % update_values)
+                db_cursor.execute(update_query, update_values)
+            # else:
+            #     # Insert Query:
+            #     insert_query = "INSERT INTO authorized_signatories(cin,din,pan,phone_number,email) VALUES (%s,%s,%s,%s,%s)"
+            #     insert_values = (CIN, DIN, PAN, MobileNumber, Email)
+            #     print(insert_query % insert_values)
+            #     db_cursor.execute(insert_query, insert_values)
 
-    db_cursor.close()
-    db_connection.close()
+        db_cursor.close()
+        db_connection.close()
+    except Exception as e:
+        logging.info(f"Exception ocured while inserting into Db {e}")
 
 
 def image_to_text(image_path):
