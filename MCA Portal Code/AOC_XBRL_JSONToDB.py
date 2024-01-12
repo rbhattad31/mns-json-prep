@@ -37,6 +37,8 @@ def extract_between_phrases(input_sentence, start_phrase, end_phrase):
     else:
         return None
 
+
+
 def get_single_value_from_xml(xml_root, parent_node, child_node):
     try:
         setup_logging()
@@ -59,7 +61,7 @@ def get_single_value_from_xml(xml_root, parent_node, child_node):
               f"\n {e}")
         return None
 
-def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header):
+def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,table_check_element):
     years = []
     setup_logging()
     # Define the regular expression pattern for matching the date range
@@ -73,144 +75,100 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header):
     # Initialize variables to store the current and previous year values
     current_year_value = None
     previous_year_value = None
-    values = []
     header = None
+    values = []
+    j = 0
+    table_counter = 0
     value_found = False
+    table_found = False
     header_found = False
     # Search for the target header in the JSON data
     for item in data:
         for table_name, table_data in item.items():
-            for row in table_data:
-                try:
-                    row_values = [value for i, value in enumerate(row) if (
-                            (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
-                            isinstance(row[i], str) and row[i] != "NaN"))]
-                    if row[0] == target_header and len(row_values) > 1:
-                        #logging.info("Going Straight")
-                        #current_year_value = row[1]
-                        #logging.info(current_year_value)
+            print(table_data)
+            if any(table_check_element in sublist for sublist in table_data) or table_found:
+                print('found')
+                for r, row in enumerate(table_data):
+                    try:
                         row_values = [value for i, value in enumerate(row) if (
                                 (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
                                 isinstance(row[i], str) and row[i] != "NaN"))]
-                        current_year_value = row_values[1]
-                        try:
-                            previous_year_value = row_values[2]
-                        except Exception as e:
-                            logging.info(f"Exception in straight values {e} for {target_header}")
-                            previous_year_value = 0
-                        # if len(row) > 2 and ((isinstance(row[2], (float, int)) and not math.isnan(row[2])) or (isinstance(row[2], str) and row[2] != "NaN")):
-                        #     previous_year_value = row[2]
-                        #     logging.info(previous_year_value)
-                        # elif len(row) > 3 and ((isinstance(row[3], (float, int)) and not math.isnan(row[3])) or (isinstance(row[3], str) and row[3] != "NaN")):
-                        #     previous_year_value = row[3]
-                        # elif len(row) > 4 and ((isinstance(row[4], (float, int)) and not math.isnan(row[4])) or (isinstance(row[4], str) and row[4] != "NaN")):
-                        #     previous_year_value = row[4]
-                        # else:
-                        #     previous_year_value = None
-                        current_year_value = re.sub(r'\([^)]*\)', '', str(current_year_value))
-                        previous_year_value = re.sub(r'\([^)]*\)', '', str(previous_year_value))
-                        values.append(current_year_value)
-                        values.append(previous_year_value)
-                    # elif len(row) >= 3 and row[0] == target_header and ((isinstance(row[2], (float, int)) and math.isnan(row[2])) or (isinstance(row[2], str) and row[2] == "NaN")) and ((isinstance(row[1], (float, int)) and not math.isnan(row[1])) or (isinstance(row[1], str) and row[1] != "NaN")):
-                    #     current_year_value = row[1]
-                    #     logging.info(current_year_value)
-                    #     if len(row) > 3 and row[3] is not None:
-                    #         previous_year_value = row[3]
-                    #         logging.info(previous_year_value)
-                    #     current_year_value = re.sub(r'\([^)]*\)', '', current_year_value)
-                    #     previous_year_value = re.sub(r'\([^)]*\)', '', previous_year_value)
-                    #     values.append(current_year_value)
-                    #     values.append(previous_year_value)
-                    # elif len(row) >= 4 and row[0] == target_header and ((isinstance(row[1], (float, int)) and math.isnan(row[1])) or (isinstance(row[2], str) and row[1] == "NaN")) and ((isinstance(row[2], (float, int)) and not math.isnan(row[2])) or (isinstance(row[2], str) and row[2] != "NaN")):
-                    #     current_year_value = row[2]
-                    #     logging.info(current_year_value)
-                    #     if len(row) > 4 and row[4] is not None:
-                    #         previous_year_value = row[4]
-                    #         logging.info(previous_year_value)
-                    #     current_year_value= re.sub(r'\([^)]*\)', '', current_year_value)
-                    #     previous_year_value = re.sub(r'\([^)]*\)', '', previous_year_value)
-                    #     values.append(current_year_value)
-                    #     values.append(previous_year_value)
-                    else:
-                        value_previous_year = None
-                        value_current_year = None
-                        #logging.info("Going for breaks")
-                        if not header_found:
-                            if row[0] == target_header:
-                                header_found = True
-                            else:
-                                continue
-                        if header is None and any(math.isnan(x) for x in row[1:] if isinstance(x, (float, int))):
-                            header = row[0]
-                            #logging.info(header)
-                        elif header is not None and isinstance(row[0], (float, int)) and math.isnan(row[0]):
+                        if row[0] == target_header and len(row_values) > 1:
+                            print("Going Straight")
+                            # current_year_value = row[1]
+                            # logging.info(current_year_value)
                             row_values = [value for i, value in enumerate(row) if (
-                                        (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
-                                            isinstance(row[i], str) and row[i] != "NaN"))]
-                            #logging.info(row_values)
-                            value_current_year = row_values[0]
-                            value_previous_year = row_values[1]
-                            value_current_year = re.sub(r'\([^)]*\)', '', str(value_current_year))
-                            value_previous_year = re.sub(r'\([^)]*\)', '', str(value_previous_year))
-                            # if row[1] is not None:
-                            #     value_current_year = row[1]
-                            #     logging.info(value_current_year)
-                            #     if len(row) > 2 and row[2] is not None:
-                            #         value_previous_year = row[2]
-                            #         logging.info(previous_year_value)
-                            #     value_current_year = re.sub(r'\([^)]*\)', '', value_current_year)
-                            #     value_previous_year = re.sub(r'\([^)]*\)', '', value_previous_year)
-                            # elif row[2] is not None:
-                            #     value_current_year = row[2]
-                            #     logging.info(value_current_year)
-                            #     if len(row) > 3 and row[3] is not None:
-                            #         value_previous_year = row[3]
-                            #         logging.info(previous_year_value)
-                            #     value_current_year = re.sub(r'\([^)]*\)', '', value_current_year)
-                            #     value_previous_year = re.sub(r'\([^)]*\)', '', value_previous_year)
-                            # elif row[3] is not None:
-                            #     value_current_year = row[3]
-                            #     logging.info(value_current_year)
-                            #     if len(row) > 4 and row[4] is not None:
-                            #         value_previous_year = row[4]
-                            #         logging.info(previous_year_value)
-                            #     value_current_year = re.sub(r'\([^)]*\)', '', value_current_year)
-                            #     value_previous_year = re.sub(r'\([^)]*\)', '', value_previous_year)
-                            # else:
-
+                                    (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
+                                    isinstance(row[i], str) and row[i] != "NaN"))]
+                            current_year_value = row_values[1]
+                            try:
+                                previous_year_value = row_values[2]
+                            except Exception as e:
+                                print(f"Exception in straight values {e} for {target_header}")
+                                next_row = table_data[r + 1]
+                                print(next_row)
+                                if str(next_row[0]).lower() == 'nan':
+                                    try:
+                                        if str(next_row[1]).lower() != 'nan':
+                                            previous_year_value = next_row[1]
+                                        else:
+                                            previous_year_value = next_row[2]
+                                        print(f"Have taken previous year value from next row {previous_year_value}")
+                                    except Exception as e:
+                                        previous_year_value = None
+                                else:
+                                    previous_year_value = None
+                            current_year_value = re.sub(r'\([^)]*\)', '', str(current_year_value))
+                            previous_year_value = re.sub(r'\([^)]*\)', '', str(previous_year_value))
+                            values.append(current_year_value)
+                            values.append(previous_year_value)
+                            print(values)
                             value_found = True
-                            values.append(value_current_year)
-                            values.append(value_previous_year)
-                            header_found = False
                         else:
-                            logging.info("Breaks header not found")
-                            continue
-                except Exception as e:
-                    logging.info(f"Main Exception in straight values {e} for {target_header}")
-                    exc_type, exc_value, exc_traceback = sys.exc_info()
-
-                    # Get the formatted traceback as a string
-                    traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
-
-                    # logging.info the traceback details
-                    for line in traceback_details:
-                        logging.info(line.strip())
-                    continue
-                if value_found:
-                    break
+                            value_previous_year = None
+                            value_current_year = None
+                            # logging.info("Going for breaks")
+                            if not header_found:
+                                if row[0] == target_header:
+                                    header_found = True
+                                else:
+                                    continue
+                            if header is None and any(math.isnan(x) for x in row[1:] if isinstance(x, (float, int))):
+                                header = row[0]
+                                # logging.info(header)
+                            elif header is not None and isinstance(row[0], (float, int)) and math.isnan(row[0]):
+                                row_values = [value for i, value in enumerate(row) if (
+                                        (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
+                                        isinstance(row[i], str) and row[i] != "NaN"))]
+                                # logging.info(row_values)
+                                value_current_year = row_values[0]
+                                value_previous_year = row_values[1]
+                                value_current_year = re.sub(r'\([^)]*\)', '', str(value_current_year))
+                                value_previous_year = re.sub(r'\([^)]*\)', '', str(value_previous_year))
+                                value_found = True
+                                values.append(value_current_year)
+                                values.append(value_previous_year)
+                                header_found = False
+                    except:
+                        continue
+                    if value_found:
+                        break
+            else:
+                continue
             if value_found:
                 break
-
-    # logging.info the results
-    # if current_year_value is not None:
-    #     logging.info(f"Current Year Value for '{target_header}': {current_year_value}")
-    #     if previous_year_value is not None:
-    #         logging.info(f"Previous Year Value for '{target_header}': {previous_year_value}")
-    #     else:
-    #         logging.info(f"Previous Year Value for '{target_header}': Not available")
-    # else:
-    #     logging.info(f"'{target_header}' not found in any table.")
-
+            else:
+                table_counter += 1
+                print("Not found in this table so going to next table")
+                table_found = True
+                if table_counter == 2:
+                    print("Values not found in next table also so breaking")
+                    values = [None, None]
+                    break
+                else:
+                    continue
+        if value_found:
+            break
     for item in data:
         plain_text_by_page = item.get("plain_text_by_page", [])
         if len(plain_text_by_page) != 0:
@@ -474,6 +432,7 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
             column_name = str(row.iloc[8]).strip()
             column_json_node = str(row.iloc[9]).strip()
             year_category = str(row.iloc[5]).strip()
+            table_column_check = str(row.iloc[11]).strip()
 
             if parent_node == config_dict['Formula_Keyword']:
                 continue
@@ -496,7 +455,7 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
             #     else:
             #         single_df.at[index, 'Value'] = None
             if parent_node == config_dict['Straight_Keyword']:
-                values = JSONtoDB_AOC_XBRL_straight(cin_column_value,company_name,json_file_path,child_nodes)
+                values = JSONtoDB_AOC_XBRL_straight(cin_column_value,company_name,json_file_path,child_nodes,table_column_check)
                 logging.info(f"{child_nodes}:{values}")
                 million_keyword = 'Millions of INR'
                 crores_keyword = 'Crores of INR'
@@ -835,7 +794,15 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                 df.to_excel(writer, sheet_name='Sheet1', index=False, startrow=row_index)
                 row_index += len(df.index) + 2
     except Exception as e:
-        logging.info(f"Exception occured while inserting into DB for AOC XBRL")
+        logging.info(f"Exception occured while inserting into DB for AOC XBRL {e}")
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+
+        # Get the formatted traceback as a string
+        traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+        # logging.info the traceback details
+        for line in traceback_details:
+            logging.info(line.strip())
         return False
     else:
         return True
@@ -921,13 +888,13 @@ def aoc_xbrl_db_update(db_config,config_dict,cin,company_name,xml_file_path,file
         return True
 
 
-# config_excel_path = r"C:\MCA Portal\Config.xlsx"
+# config_excel_path = r"C:\Users\BRADSOL123\Documents\Python\Config\Config_Python.xlsx"
 # config_sheet_name = 'AOC XBRL'
 # config_dict_xbrl,status = create_main_config_dictionary(config_excel_path,config_sheet_name)
 # map_file_path = config_dict_xbrl['mapping file path']
 # map_sheet_name = config_dict_xbrl['mapping file sheet name']
-# json_file_path = r"C:\Users\BRADSOL123\Desktop\XBRL financial statements duly authenticated as per section 134 (including Board's report,auditor's report and other documents)-26112019.json"
-# output_file_path = r"C:\Users\BRADSOL123\Desktop\XBRL financial statements duly authenticated as per section 134 (including Board's report,auditor's report and other documents)-26112019.xlsx"
+# json_file_path = r"C:\Users\BRADSOL123\Desktop\XBRL\Real Ispat Files\XBRL financial statements duly authenticated as per section 134 (including Board's report,auditor's report and other documents)-24042018.json"
+# output_file_path = r"C:\Users\BRADSOL123\Desktop\XBRL\Real Ispat Files\XBRL financial statements duly authenticated as per section 134 (including Board's report,auditor's report and other documents)-24042018.xlsx"
 # db_config = {
 #     "host": "162.241.123.123",
 #     "user": "classle3_deal_saas",
@@ -936,4 +903,5 @@ def aoc_xbrl_db_update(db_config,config_dict,cin,company_name,xml_file_path,file
 # }
 # cin = 'U45201RJ2014PTC044956'
 # company = 'JCC INFRAPROJECTS PRIVATE LIMITED'
-# AOC_XBRL_JSON_to_db(db_config,config_dict_xbrl,map_file_path,map_sheet_name,json_file_path,output_file_path,cin,company,True)
+# file_name = "XBRL financial statements duly authenticated as per section 134 (including Board's report,auditor's report and other documents)-26102023"
+# AOC_XBRL_JSON_to_db(db_config,config_dict_xbrl,map_file_path,map_sheet_name,json_file_path,output_file_path,cin,company,True,file_name)
