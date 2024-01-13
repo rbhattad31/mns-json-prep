@@ -50,6 +50,8 @@ from Form18_xml_to_db import form_18_xml_to_db
 from FreshCertificateOpenAI import fresh_name_main
 from DIR_11_xml_to_db import dir11_main
 from DIR2PDFToDB import dir2_main
+
+
 def sign_out(driver,config_dict,CinData):
     try:
         sign_out_button = driver.find_element(By.XPATH, '//a[@id="loginAnchor" and text()="Signout"]')
@@ -449,7 +451,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                         map_file_path_CHG = config_dict_CHG['mapping_file_path']
                         print("new file")
                     map_sheet_name_CHG = config_dict_CHG['mapping_file_sheet_name']
-                    chg_db_insertion = chg1_xml_to_db(db_config,config_dict_CHG,map_file_path_CHG,map_sheet_name_CHG,xml_file_path,output_excel_path,Cin,CompanyName,date)
+                    chg_db_insertion = chg1_xml_to_db(db_config,config_dict_CHG,map_file_path_CHG,map_sheet_name_CHG,xml_file_path,output_excel_path,Cin,CompanyName,date,file_name)
                     if chg_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                 elif 'XBRL document in respect Consolidated'.lower() in str(file_name).lower() or 'XBRL financial statements'.lower() in str(file_name).lower():
@@ -541,14 +543,14 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     map_file_path_Form8 = config_dict_form8_charge['Form8_Config']
                     map_sheet_name_Form8 = config_dict_form8_charge['mapping_file_sheet_name']
                     form8_charge_db_insertion = chg1_xml_to_db(db_config, config_dict_form8_charge, map_file_path_Form8, map_sheet_name_Form8,
-                                                      xml_file_path, output_excel_path, Cin, CompanyName, date)
+                                                      xml_file_path, output_excel_path, Cin, CompanyName, date,file_name)
                     if form8_charge_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                     else:
                         logging.info("Going to Form 8 other type")
                         map_file_path_form8_other_type = config_dict_form8_charge['form8_other_type_config']
                         form8_other_type = chg1_xml_to_db(db_config, config_dict_form8_charge, map_file_path_form8_other_type, map_sheet_name_Form8,
-                                                      xml_file_path, output_excel_path, Cin, CompanyName, date)
+                                                      xml_file_path, output_excel_path, Cin, CompanyName, date,file_name)
                         if form8_other_type:
                             update_db_insertion_status(Cin, file_name, config_dict, 'Success')
 

@@ -105,7 +105,7 @@ def update_datatable_single_value(db_config, table_name, cin_column_name, cin_va
 
 
 def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
-              output_file_path, cin_column_value, company_name, filing_date):
+              output_file_path, cin_column_value, company_name, filing_date,file_name):
 
     db_connection = mysql.connector.connect(**db_config)
     db_cursor = db_connection.cursor()
@@ -195,9 +195,30 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                     logging.info(f"Excpetion occured for date conversion to dd/mm/yyyy \n {e}")
         # logging.info(field_name)
         if field_name == 'holder_name':
-            if value is None:
-                name_child_node = 'NAME_CHARGE_HOLD'
-                value = get_single_value_from_xml(xml_root,parent_node,name_child_node)
+            digit_count = sum(c.isdigit() for c in file_name)
+            print(digit_count)
+            if digit_count == 7:
+                if 'CHG-1'.lower() in str(file_name).lower():
+                    if value is not None:
+                        if value == '' or str(value).lower() == 'none':
+                            name_child_node = 'cdt:ChrgHldrName'
+                            value = get_single_value_from_xml(xml_root,parent_node,name_child_node)
+                            logging.info(f"Value taken from different node for old file {value}")
+                    else:
+                        name_child_node = 'cdt:ChrgHldrName'
+                        value = get_single_value_from_xml(xml_root, parent_node, name_child_node)
+                        logging.info(f"Value taken from different node for old file {value}")
+            else:
+                if 'CHG-1'.lower() in str(file_name).lower():
+                    if value is not None:
+                        if value == '' or str(value).lower() == 'none':
+                            name_child_node = 'NAME_CHARGE_HOLD'
+                            value = get_single_value_from_xml(xml_root, parent_node, name_child_node)
+                            logging.info(f"Value taken from different node {value}")
+                    else:
+                        name_child_node = 'NAME_CHARGE_HOLD'
+                        value = get_single_value_from_xml(xml_root, parent_node, name_child_node)
+                        logging.info(f"Value taken from different node {value}")
         try:
             value = str(value).replace("\n", "")
         except:
@@ -504,11 +525,11 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
 
 def chg1_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
-                   output_file_path, cin_column_value, company_name, filing_date):
+                   output_file_path, cin_column_value, company_name, filing_date,file_name):
     try:
         setup_logging()
         xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
-                  output_file_path, cin_column_value, company_name, filing_date)
+                  output_file_path, cin_column_value, company_name, filing_date,file_name)
     except Exception as e:
         logging.info("Below Exception occurred while processing mgt7 file: \n ", e)
         # Get the current exception information
