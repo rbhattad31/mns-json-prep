@@ -85,9 +85,9 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,tabl
     # Search for the target header in the JSON data
     for item in data:
         for table_name, table_data in item.items():
-            print(table_data)
+            #print(table_data)
             if any(table_check_element in sublist for sublist in table_data) or table_found:
-                print('found')
+                logging.info('found')
                 for r, row in enumerate(table_data):
                     try:
                         row_values = [value for i, value in enumerate(row) if (
@@ -95,7 +95,7 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,tabl
                                 isinstance(row[i], str) and row[i] != "NaN"))]
                         if field_name == 'total_changes_in_inventories_or_finished_goods' and (row[0] == 'Changes in inventories of finished goods, work-in-progress and' or row[0] == 'Changes in inventories of finished goods, work-in-progress and stock-in-trade'):
                             if len(row_values) > 1:
-                                print("Going Straight")
+                                logging.info("Going straight for inventories or finished goods")
                                 # current_year_value = row[1]
                                 # logging.info(current_year_value)
                                 row_values = [value for i, value in enumerate(row) if (
@@ -128,29 +128,42 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,tabl
                             else:
                                 value_previous_year = None
                                 value_current_year = None
-                                # logging.info("Going for breaks")
-                                if not header_found:
-                                    if row[0] == target_header:
-                                        header_found = True
-                                    else:
-                                        continue
-                                if header is None and any(
-                                        math.isnan(x) for x in row[1:] if isinstance(x, (float, int))):
-                                    header = row[0]
-                                    # logging.info(header)
-                                elif header is not None and isinstance(row[0], (float, int)) and math.isnan(row[0]):
-                                    row_values = [value for i, value in enumerate(row) if (
-                                            (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
-                                            isinstance(row[i], str) and row[i] != "NaN"))]
-                                    # logging.info(row_values)
-                                    value_current_year = row_values[0]
-                                    value_previous_year = row_values[1]
-                                    value_current_year = re.sub(r'\([^)]*\)', '', str(value_current_year))
-                                    value_previous_year = re.sub(r'\([^)]*\)', '', str(value_previous_year))
+                                logging.info("Going for breaks for inventories or finished goods")
+                                # if not header_found:
+                                #     if row[0] == target_header:
+                                #         header_found = True
+                                #     else:
+                                #         continue
+                                # if header is None and any(
+                                #         math.isnan(x) for x in row[1:] if isinstance(x, (float, int))):
+                                #     header = row[0]
+                                #     # logging.info(header)
+                                # elif header is not None and isinstance(row[0], (float, int)) and math.isnan(row[0]):
+                                #     row_values = [value for i, value in enumerate(row) if (
+                                #             (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
+                                #             isinstance(row[i], str) and row[i] != "NaN"))]
+                                #     # logging.info(row_values)
+                                #     value_current_year = row_values[0]
+                                #     value_previous_year = row_values[1]
+                                #     value_current_year = re.sub(r'\([^)]*\)', '', str(value_current_year))
+                                #     value_previous_year = re.sub(r'\([^)]*\)', '', str(value_previous_year))
+                                #     value_found = True
+                                #     values.append(value_current_year)
+                                #     values.append(value_previous_year)
+                                #     header_found = False
+                                next_row = table_data[r + 1]
+                                if str(next_row[0]).lower() == 'nan':
+                                    row_values = [value for i, value in enumerate(next_row) if (
+                                            (isinstance(next_row[i], (float, int)) and not math.isnan(next_row[i])) or (
+                                            isinstance(next_row[i], str) and next_row[i] != "NaN"))]
+                                    current_year_value = row_values[0]
+                                    previous_year_value = row_values[1]
+                                    value_current_year = re.sub(r'\([^)]*\)', '', str(current_year_value))
+                                    value_previous_year = re.sub(r'\([^)]*\)', '', str(previous_year_value))
                                     value_found = True
                                     values.append(value_current_year)
                                     values.append(value_previous_year)
-                                    header_found = False
+
                         else:
                             if row[0] == target_header and len(row_values) > 1 and field_name != 'total_changes_in_inventories_or_finished_goods':
                                 print("Going Straight")
@@ -954,15 +967,15 @@ def aoc_xbrl_db_update(db_config,config_dict,cin,company_name,xml_file_path,file
 # config_dict_xbrl,status = create_main_config_dictionary(config_excel_path,config_sheet_name)
 # map_file_path = config_dict_xbrl['mapping file path']
 # map_sheet_name = config_dict_xbrl['mapping file sheet name']
-# json_file_path = r"C:\Users\BRADSOL123\Desktop\Real Ispat Files\XBRL financial statements duly authenticated as per section 134 (including Board's report,auditor's report and other documents)-31032022.json"
-# output_file_path = r"C:\Users\BRADSOL123\Desktop\Real Ispat Files\XBRL financial statements duly authenticated as per section 134 (including Board's report,auditor's report and other documents)-31032022.xlsx"
+# json_file_path = r"C:\Users\BRADSOL123\Desktop\Real Ispat Files\XBRL financial statements duly authenticated as per section 134 (including Board's report,auditor's report and other documents)-24042019.json"
+# output_file_path = r"C:\Users\BRADSOL123\Desktop\Real Ispat Files\XBRL financial statements duly authenticated as per section 134 (including Board's report,auditor's report and other documents)-24042019.xlsx"
 # db_config = {
 #     "host": "162.241.123.123",
 #     "user": "classle3_deal_saas",
 #     "password": "o2i=hi,64u*I",
 #     "database": "classle3_mns_credit",
 # }
-# cin = 'U26999DL2021PTC375821'
-# company = 'GOLD PLUS FLOAT GLASS PRIVATE LIMITED'
-# file_name = "XBRL document in respect Consolidated financial statement-15062020"
+# cin = 'U27107CT1999PLC013773'
+# company = 'REAL ISPAT AND POWER LIMITED'
+# file_name = "XBRL financial statements duly authenticated as per section 134 (including Board's report,auditor's report and other documents)-24042019"
 # AOC_XBRL_JSON_to_db(db_config,config_dict_xbrl,map_file_path,map_sheet_name,json_file_path,output_file_path,cin,company,True,file_name)
