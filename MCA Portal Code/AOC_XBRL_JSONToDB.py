@@ -586,7 +586,10 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                         except Exception as e:
                             single_df.at[index,'Value'] = values[0]
                     elif year_category == config_dict['Financial_Parameter_Keyword']:
+                        logging.info("Going for financial parameter")
+                        logging.info(values[0])
                         if field_name == 'proposed_dividend':
+                            logging.info("Going for proposed dividend")
                             if values[0] == 0 or values[0] == 0.00 or values[0] == '0' or values[0] == '0.00' or values[0] == 0.0 or values[0] == '0.0':
                                 dividend_value = 'No'
                             else:
@@ -634,7 +637,16 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                         if year_category == 'Previous':
                             single_df.at[index,'Value'] = previous_year_value_para
                         else:
-                            single_df.at[index, 'Value'] = current_year_value_para
+                            if field_name == 'proposed_dividend':
+                                logging.info("Going for proposed dividend")
+                                if current_year_value_para == 0 or current_year_value_para == 0.00 or current_year_value_para == '0' or current_year_value_para == '0.00' or \
+                                        current_year_value_para == 0.0 or current_year_value_para == '0.0':
+                                    dividend_value = 'No'
+                                else:
+                                    dividend_value = 'Yes'
+                                single_df.at[index, 'Value'] = dividend_value
+                            else:
+                                single_df.at[index, 'Value'] = current_year_value_para
                     except Exception as e:
                         logging.info(f"Going to next due to {e}")
                         continue
@@ -962,20 +974,20 @@ def aoc_xbrl_db_update(db_config,config_dict,cin,company_name,xml_file_path,file
         return True
 
 
-# config_excel_path = r"C:\Users\BRADSOL123\Documents\Python\Config\Config_Python.xlsx"
-# config_sheet_name = 'AOC XBRL'
-# config_dict_xbrl,status = create_main_config_dictionary(config_excel_path,config_sheet_name)
-# map_file_path = config_dict_xbrl['mapping file path']
-# map_sheet_name = config_dict_xbrl['mapping file sheet name']
-# json_file_path = r"C:\Users\BRADSOL123\Desktop\Real Ispat Files\XBRL financial statements duly authenticated as per section 134 (including Board's report,auditor's report and other documents)-24042019.json"
-# output_file_path = r"C:\Users\BRADSOL123\Desktop\Real Ispat Files\XBRL financial statements duly authenticated as per section 134 (including Board's report,auditor's report and other documents)-24042019.xlsx"
-# db_config = {
-#     "host": "162.241.123.123",
-#     "user": "classle3_deal_saas",
-#     "password": "o2i=hi,64u*I",
-#     "database": "classle3_mns_credit",
-# }
-# cin = 'U27107CT1999PLC013773'
-# company = 'REAL ISPAT AND POWER LIMITED'
-# file_name = "XBRL financial statements duly authenticated as per section 134 (including Board's report,auditor's report and other documents)-24042019"
-# AOC_XBRL_JSON_to_db(db_config,config_dict_xbrl,map_file_path,map_sheet_name,json_file_path,output_file_path,cin,company,True,file_name)
+config_excel_path = r"C:\Users\BRADSOL123\Documents\Python\Config\Config_Python.xlsx"
+config_sheet_name = 'AOC XBRL'
+config_dict_xbrl,status = create_main_config_dictionary(config_excel_path,config_sheet_name)
+map_file_path = config_dict_xbrl['mapping file path']
+map_sheet_name = config_dict_xbrl['mapping file sheet name']
+json_file_path = r"C:\Users\BRADSOL123\Desktop\Real Ispat Files\XBRL financial statements duly authenticated as per section 134 (including Board's report,auditor's report and other documents)-24042019.json"
+output_file_path = r"C:\Users\BRADSOL123\Desktop\Real Ispat Files\XBRL financial statements duly authenticated as per section 134 (including Board's report,auditor's report and other documents)-24042019.xlsx"
+db_config = {
+    "host": "162.241.123.123",
+    "user": "classle3_deal_saas",
+    "password": "o2i=hi,64u*I",
+    "database": "classle3_mns_credit",
+}
+cin = 'U27107CT1999PLC013773'
+company = 'REAL ISPAT AND POWER LIMITED'
+file_name = "XBRL financial statements duly authenticated as per section 134 (including Board's report,auditor's report and other documents)-24042019"
+AOC_XBRL_JSON_to_db(db_config,config_dict_xbrl,map_file_path,map_sheet_name,json_file_path,output_file_path,cin,company,True,file_name)
