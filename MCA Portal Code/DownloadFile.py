@@ -369,30 +369,42 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath,options
                 else:
                     download_retry += 1
                     if download_retry > 5:
-                        connection = mysql.connector.connect(**dbconfig)
-                        cursor = connection.cursor()
-                        Check_download_files_query = "select * from documents where cin=%s and company=%s and Download_Status='Downloaded' and form_data_extraction_needed='Y'"
-                        Download_Check_Values = (Cin, CompanyName)
-                        logging.info(Check_download_files_query % Download_Check_Values)
-                        cursor.execute(Check_download_files_query, Download_Check_Values)
-                        Downloaded_Files = cursor.fetchall()
-                        cursor.close()
-                        connection.close()
+                        j = j + 1
                         try:
-                            back_xpath = '//input[@type="submit" and @value="Back"]'
-                            back_button = driver.find_element(By.XPATH, back_xpath)
-                            back_button.click()
-                            logging.info("Clicked on back button")
+                            next_button_download = driver.find_element(By.XPATH, '//span[@id="next"]')
+                            time.sleep(2)
+                            next_button_download.click()
+                            logging.info("Next Button clicked")
                         except NoSuchElementException:
-                            back_xpath = '//input[@type="submit" and @value="Back"]'
-                            back_button = driver.find_element(By.XPATH, back_xpath)
-                            back_button.click()
-                            logging.info("Trying to click but not clicking")
-                        if len(Downloaded_Files) > 0:
-                            logging.info("Exception occured but we got the required files")
-                            return True
-                        else:
-                            return False
+                            next_button_download = driver.find_element(By.XPATH, '//span[@id="next"]')
+                            time.sleep(2)
+                            next_button_download.click()
+                            logging.info("Next Button not clicking")
+                            pass
+                        # connection = mysql.connector.connect(**dbconfig)
+                        # cursor = connection.cursor()
+                        # Check_download_files_query = "select * from documents where cin=%s and company=%s and Download_Status='Downloaded' and form_data_extraction_needed='Y'"
+                        # Download_Check_Values = (Cin, CompanyName)
+                        # logging.info(Check_download_files_query % Download_Check_Values)
+                        # cursor.execute(Check_download_files_query, Download_Check_Values)
+                        # Downloaded_Files = cursor.fetchall()
+                        # cursor.close()
+                        # connection.close()
+                        # try:
+                        #     back_xpath = '//input[@type="submit" and @value="Back"]'
+                        #     back_button = driver.find_element(By.XPATH, back_xpath)
+                        #     back_button.click()
+                        #     logging.info("Clicked on back button")
+                        # except NoSuchElementException:
+                        #     back_xpath = '//input[@type="submit" and @value="Back"]'
+                        #     back_button = driver.find_element(By.XPATH, back_xpath)
+                        #     back_button.click()
+                        #     logging.info("Trying to click but not clicking")
+                        # if len(Downloaded_Files) > 0:
+                        #     logging.info("Exception occured but we got the required files")
+                        #     return True
+                        # else:
+                        #     return False
                     else:
                         continue
             except Exception as e:
