@@ -38,7 +38,7 @@ def update_value_in_db(db_config,din,address,cin):
 
 
 def image_to_text(image_path):
-    # pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+    pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
     return pytesseract.image_to_string(Image.open(image_path), lang='eng')
 
 
@@ -158,3 +158,16 @@ def mgt_address_main(db_config,config_dict,output_directory,pdf_path,cin):
     else:
         return True
 
+# pdf_path = r"C:\Users\BRADSOL123\Documents\Python\Form MGT-7A-26122023_signed.pdf"
+# excel_path = r"C:\Users\BRADSOL123\Documents\Python\Config\Config_Python.xlsx"
+# sheet_name = 'OpenAI'
+# config_dict,status = create_main_config_dictionary(excel_path,sheet_name)
+# db_config = {
+# "host": "162.241.123.123",
+# "user": "classle3_deal_saas",
+# "password": "o2i=hi,64u*I",
+# "database": "classle3_mns_credit",
+# }
+# cin = 'U18101KA2006PTC040895'
+# output_directory = r"C:\Users\BRADSOL123\Documents\Python"
+# mgt_address_main(db_config,config_dict,output_directory,pdf_path,cin)

@@ -93,7 +93,7 @@ def update_value_in_db(db_config, DIN, PAN, MobileNumber, Email, CIN):
 
 
 def image_to_text(image_path):
-    # pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+    pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
     return pytesseract.image_to_string(Image.open(image_path), lang='eng')
 
 
@@ -177,27 +177,28 @@ def MGT_director_shareholdings_pdf_to_db(pdf_path, config_dict, db_config, cin):
         total_text = ''
         text = ''
         pdf_reader = PdfReader(pdf_path)
-        for page in pdf_reader.pages:
-            text += page.extract_text()
-        total_text = text
-        if (total_text == ''):
-            for page_num in range(pdf_document.page_count):
-                page = pdf_document.load_page(page_num)
-                for img_index, image in enumerate(page.get_images(full=True)):
-                    try:
-                        xref = image[0]
-                        base_image = pdf_document.extract_image(xref)
-                        image_data = base_image["image"]
+        for page_num in range(pdf_document.page_count):
+            page = pdf_document.load_page(page_num)
+            for img_index, image in enumerate(page.get_images(full=True)):
+                try:
+                    xref = image[0]
+                    base_image = pdf_document.extract_image(xref)
+                    image_data = base_image["image"]
 
-                        with open(f"temp_image_{img_index}.png", "wb") as img_file:
-                            img_file.write(image_data)
-                        text = image_to_text(f"temp_image_{img_index}.png")
-                        total_text += text
-                    except Exception as e:
-                        logging.info(f"Exception Occurred while converting image to text{e}")
-                    else:
-                        os.remove(f"temp_image_{img_index}.png")
-        logging.info(f"OCR Captured text: {total_text}")
+                    with open(f"temp_image_{img_index}.png", "wb") as img_file:
+                        img_file.write(image_data)
+                    text = image_to_text(f"temp_image_{img_index}.png")
+                    total_text += text
+                except Exception as e:
+                    logging.info(f"Exception Occurred while converting image to text{e}")
+                else:
+                    os.remove(f"temp_image_{img_index}.png")
+        logging.info(f"OCR Captured text {total_text}")
+        if total_text == '':
+            for page in pdf_reader.pages:
+                text += page.extract_text()
+            total_text = text
+            logging.info(f"Plain Captured text: {total_text}")
         shareholders_details = fetch_address_din_using_open_ai(total_text, config_dict)
         # print(shareholders_details)
         shareholders_details = eval(shareholders_details)
@@ -246,9 +247,9 @@ def dir2_main(db_config, config_dict, output_directory, pdf_path, cin):
         return True
 
 
-# Cin = 'U27310DL2006PTC147173'
-# output = r"C:\Users\BRADSOL123\Desktop\XBRL\Semco Dir"
-# pdf = r"C:\Users\BRADSOL123\Desktop\XBRL\Semco Dir\DIR-2 Consent.pdf"
+# Cin = 'U51505DL2004PTC222553'
+# output = r"C:\Users\BRADSOL123\Documents\Python"
+# pdf = r"C:\Users\BRADSOL123\Documents\Python\DIR-2.pdf"
 # main_dict = create_main_config_dictionary(r"C:\Users\BRADSOL123\Documents\Python\Config\Config_Python.xlsx",
 #                                           'OpenAI')
 # config_dict = main_dict[0]
