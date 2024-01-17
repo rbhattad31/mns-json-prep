@@ -118,7 +118,7 @@ def update_database_single_value(db_config, config_dict, table_name, cin_column_
 
 
 def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
-              output_file_path, cin,xml_hidden_file_path):
+              output_file_path, cin,xml_hidden_file_path,file_name):
     config_dict_keys = ['single_type_indicator', 'group_type_indicator', 'cin_column_name',
                         'field_name_index', 'type_index',
                         'parent_node_index',
@@ -204,6 +204,12 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 pass
         else:
             value = get_single_value_from_xml(xml_root, parent_node, child_nodes)
+
+        if field_name == 'address_line' and 'inc-22' in str(file_name).lower():
+            if value is None:
+                address_parent_node = 'xfa:data/frm:Form18_Dtls'
+                address_child_node = 'CompanyAdd_C'
+                value = get_single_value_from_xml(xml_root,address_parent_node,address_child_node)
         try:
             value = value.strip()
         except Exception as e:
@@ -329,9 +335,9 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
 
 def form_18_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
-                      output_file_path, cin,xml_hidden_file_path):
+                      output_file_path, cin,xml_hidden_file_path,file_name):
     try:
-        xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, output_file_path, cin,xml_hidden_file_path)
+        xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, output_file_path, cin,xml_hidden_file_path,file_name)
     except Exception as e:
         print("Below Exception occurred while processing Form 11 file: \n ", e)
         exc_type, exc_value, exc_traceback = sys.exc_info()

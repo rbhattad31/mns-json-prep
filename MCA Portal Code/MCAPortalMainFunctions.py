@@ -108,7 +108,7 @@ def Login_and_Download(config_dict,CinData):
                 logging.info("Successfully Logged in")
                 last_logged_in_user = User
             else:
-                update_status(User, "Login Failed", db_config,Cin)
+                # update_status(User, "Login Failed", db_config,Cin)
                 return False,None,exception_message
         else:
             logging.info("Already Logged in so carrying on with the same credentials")
@@ -574,7 +574,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     else:
                         map_file_path_form18 = None
                     map_sheet_name_form18 = config_dict_form18['mapping file sheet name']
-                    form18_db_insertion = form_18_xml_to_db(db_config,config_dict_form18,map_file_path_form18,map_sheet_name_form18,xml_file_path,output_excel_path,Cin,xml_hidden_file_path)
+                    form18_db_insertion = form_18_xml_to_db(db_config,config_dict_form18,map_file_path_form18,map_sheet_name_form18,xml_file_path,output_excel_path,Cin,xml_hidden_file_path,file_name)
                     if form18_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                     else:
@@ -583,7 +583,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                             map_file_path_form18_old = config_dict_form18['form18_old_files_config']
                             form18_old_db_insertion = form_18_xml_to_db(db_config, config_dict_form18, map_file_path_form18_old,
                                                                     map_sheet_name_form18, xml_file_path,
-                                                                    output_excel_path, Cin,xml_hidden_file_path)
+                                                                    output_excel_path, Cin,xml_hidden_file_path,file_name)
                             if form18_old_db_insertion:
                                 update_db_insertion_status(Cin, file_name, config_dict, 'Success')
 
@@ -683,27 +683,30 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
         except Exception as e:
             logging.info(f"Exception occured while inserting for Dir 11 {e}")
 
-        try:
-            gst_connection = mysql.connector.connect(**db_config)
-            gst_cursor = gst_connection.cursor()
-            gst_query = """SELECT * FROM orders
-                           WHERE MONTH(created_date) = MONTH(CURRENT_DATE())
-                            AND YEAR(created_date) = YEAR(CURRENT_DATE()) AND cin=%s AND gst_status='Y'"""
-            cin_value = (Cin,)
-            print(gst_query % cin_value)
-            gst_cursor.execute(gst_query,cin_value)
-            gst_result = gst_cursor.fetchall()
-            gst_cursor.close()
-            gst_connection.close()
-            if len(gst_result) == 0:
-                sheet_name_gst = 'GST'
-                config_dict_GST,status = create_main_config_dictionary(excel_file,sheet_name_gst)
-                root_path = config_dict['Root path']
-                gst = insert_gst_number(db_config,config_dict_GST,Cin,CompanyName,root_path)
-                if gst:
-                    print("Successfully inserted for GST")
-        except Exception as e:
-            print(f"Exception occured while inserting GST {e}")
+        for _ in range(0,3):
+            try:
+                gst_connection = mysql.connector.connect(**db_config)
+                gst_cursor = gst_connection.cursor()
+                gst_query = """SELECT * FROM orders
+                               WHERE MONTH(created_date) = MONTH(CURRENT_DATE())
+                                AND YEAR(created_date) = YEAR(CURRENT_DATE()) AND cin=%s AND gst_status='Y'"""
+                cin_value = (Cin,)
+                print(gst_query % cin_value)
+                gst_cursor.execute(gst_query,cin_value)
+                gst_result = gst_cursor.fetchall()
+                gst_cursor.close()
+                gst_connection.close()
+                if len(gst_result) == 0:
+                    sheet_name_gst = 'GST'
+                    config_dict_GST,status = create_main_config_dictionary(excel_file,sheet_name_gst)
+                    root_path = config_dict['Root path']
+                    gst = insert_gst_number(db_config,config_dict_GST,Cin,CompanyName,root_path)
+                    if gst:
+                        print("Successfully inserted for GST")
+                        break
+            except Exception as e:
+                print(f"Exception occured while inserting GST {e}")
+                continue
         try:
             sheet_name = 'OpenAI'
             config_dict_openai,status = create_main_config_dictionary(excel_file,sheet_name)
