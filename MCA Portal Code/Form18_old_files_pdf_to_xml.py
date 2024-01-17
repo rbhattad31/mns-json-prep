@@ -45,9 +45,9 @@ def extract_form_data(pdf_path, output_xml_path):
                         field_element = ET.SubElement(root, sanitized_name)
                         if field_value == '0' or field_value == '1':
                             if field_name == 'Form8_Dtls[0].page1[0].Form_for_R[0]':
-                                if field_value == '1':
+                                if field_value == '0':
                                     field_element.text = 'CRTN'
-                                elif field_value == '0':
+                                elif field_value == '1':
                                     field_element.text = 'MDFN'
                                 else:
                                     field_element.text = ''

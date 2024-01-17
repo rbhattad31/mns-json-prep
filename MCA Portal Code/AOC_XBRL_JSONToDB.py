@@ -662,6 +662,10 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
             elif parent_node == config_dict['Auditor_Keyword']:
                 auditor_complete_sentence = capture_values_from_text(json_file_path, None, None,nature)
                 auditor_value = Auditor_information(auditor_complete_sentence,child_nodes)
+                try:
+                    auditor_value = str(auditor_value).replace('\"', '')
+                except Exception as e:
+                    pass
                 logging.info(f"{field_name}:{auditor_value}")
                 single_df.at[index, 'Value'] = auditor_value
         logging.info(single_df)
