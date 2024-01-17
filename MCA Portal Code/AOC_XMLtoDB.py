@@ -32,7 +32,7 @@ def get_single_value_from_xml(xml_root, parent_node, child_node):
         logging.info(f"An error occurred: {e}")
         return None
 
-def update_database_single_value_AOC(db_config, table_name, cin_column_name, cin_value,company_name_column_name,company_name, column_name, column_value,year):
+def update_database_single_value_AOC(db_config, table_name, cin_column_name, cin_value,company_name_column_name,company_name, column_name, column_value,year,nature):
     setup_logging()
     db_connection = mysql.connector.connect(**db_config)
     db_cursor = db_connection.cursor()
@@ -51,7 +51,7 @@ def update_database_single_value_AOC(db_config, table_name, cin_column_name, cin
         column_value = json.dumps(json_dict)
 
     # check if there is already entry with cin
-    query = "SELECT * FROM {} WHERE {} = '{}' and {}='{}' and {}='{}'".format(table_name, cin_column_name, cin_value,company_name_column_name,company_name,'year',year)
+    query = "SELECT * FROM {} WHERE {} = '{}' and {}='{}' and {}='{}' and {} = '{}'".format(table_name, cin_column_name, cin_value,company_name_column_name,company_name,'year',year,'nature',nature)
     logging.info(query)
     try:
         db_cursor.execute(query)
@@ -62,25 +62,29 @@ def update_database_single_value_AOC(db_config, table_name, cin_column_name, cin
 
     # if cin value already exists
     if len(result) > 0:
-        update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}' AND {}='{}'".format(table_name, column_name,
+        update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}' AND {}='{}' AND {} = '{}'".format(table_name, column_name,
                                                                                       column_value, cin_column_name,
                                                                                       cin_value,
                                                                                       company_name_column_name,
                                                                                       company_name,
                                                                                       'Year',
-                                                                                      year)
+                                                                                      year,
+                                                                                      'nature',
+                                                                                       nature)
         logging.info(update_query)
         db_cursor.execute(update_query)
         logging.info("Updating")
 
     # if cin value doesn't exist
     else:
-        insert_query = "INSERT INTO {} ({}, {}, {}) VALUES ('{}', '{}', '{}')".format(table_name, cin_column_name,
+        insert_query = "INSERT INTO {} ({}, {}, {},{}) VALUES ('{}', '{}', '{}','{}')".format(table_name, cin_column_name,
                                                                                       company_name_column_name,
                                                                                       column_name,
+                                                                                      'nature',
                                                                                       cin_value,
                                                                                       company_name,
-                                                                                      column_value)
+                                                                                      column_value,
+                                                                                      nature)
         logging.info(insert_query)
         db_cursor.execute(insert_query)
         logging.info("Inserting")
@@ -377,6 +381,9 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
         #     raise Exception(f"Exception occurred while extracting year value {previous_year} from previous year data")
         # if not AOC_4_first_file_found:
         #     single_df_list.append(current_year_df)
+        natures = []
+        previous_year_nature = previous_year_df[previous_year_df['Field_Name'] == 'nature']['Value'].values[0]
+        current_year_nature = current_year_df[current_year_df['Field_Name'] == 'nature']['Value'].values[0]
         db_connection = mysql.connector.connect(**db_config)
         db_cursor = db_connection.cursor()
         previous_year_check_query = "select * from financials where year = %s and cin =%s"
@@ -392,10 +399,12 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
         if len(current_year_result) == 0:
             single_df_list.append(current_year_df)
             years.append(current_year)
+            natures.append(current_year_nature)
             logging.info("Current year not found so inserting")
         if len(previous_year_result) == 0:
             single_df_list.append(previous_year_df)
             years.append(previous_year)
+            natures.append(previous_year_nature)
             logging.info("Previous year not found so inserting")
         db_cursor.close()
         db_connection.close()
@@ -420,6 +429,7 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
             sql_tables_list = df[df.columns[7]].unique()
             logging.info(sql_tables_list)
             year_value = df[df['Field_Name'] == 'year']['Value'].values[0]
+            nature_value = df[df['Field_Name'] == 'nature']['Value'].values[0]
             logging.info(year_value)
             for table_name in sql_tables_list:
                 table_df = df[df[df.columns[7]] == table_name]
@@ -438,7 +448,7 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                     try:
                         update_database_single_value_AOC(db_config, table_name, Cin_Column_Name, cin_column_value,
                                                          Company_column_name, company_name, column_name, json_string,
-                                                         year_value)
+                                                         year_value,nature_value)
                     except Exception as e:
                         logging.info(f"Exception {e} occurred while updating data in dataframe for {table_name} "
                               f"with data {json_string}")
@@ -515,7 +525,7 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                 common_json_string = json.dumps(common_json_dict)
                 logging.info(common_json_string)
                 logging.info(years)
-                for year in years:
+                for year,nature in zip(years,natures):
                     if year is None or year == '':
                         continue
                     try:
@@ -523,7 +533,7 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                                                          cin_column_value,
                                                          Company_column_name, company_name, common_column_name,
                                                          common_json_string,
-                                                         year)
+                                                         year,nature)
                     except Exception as e:
                         logging.info(f"Exception {e} occurred while updating data in dataframe for {common_table_name} "
                               f"with data {common_json_string}")
@@ -589,8 +599,8 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                     
                     auditor_json = json.dumps(row_dict)
                 group_df.at[index, 'Value'] = auditor_json
-                for year in years:
-                    update_database_single_value_AOC(db_config,sql_table_name, Cin_Column_Name, cin_column_value,Company_column_name, company_name, column_names,auditor_json, year)
+                for year,nature in zip(years,natures):
+                    update_database_single_value_AOC(db_config,sql_table_name, Cin_Column_Name, cin_column_value,Company_column_name, company_name, column_names,auditor_json, year,nature)
                 if len(table_df.index) > 1:
                     try:
                         remaining_row_df = table_df.iloc[1:]

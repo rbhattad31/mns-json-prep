@@ -365,7 +365,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     msme_db_insertion = msme_xml_to_db(db_config,config_dict_MSME,map_file_path_MSME,map_sheet_name_MSME,xml_file_path,output_excel_path,Cin,CompanyName)
                     if msme_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
-                elif 'AOC-4'.lower() in str(file_name).lower() and 'AOC-4(XBRL)'.lower() not in str(file_name).lower():
+                elif 'AOC'.lower() in str(file_name).lower() and 'AOC-4(XBRL)'.lower() not in str(file_name).lower():
                     if 'AOC-4 NBFC'.lower() in str(path).lower():
                         Sheet_name = "AOC NBFC"
                         config_dict_AOC_NBFC, config_status = create_main_config_dictionary(excel_file, Sheet_name)
@@ -396,7 +396,8 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                             AOC_4_NBFC_first_file_found = True
                     elif 'AOC-4 CSR'.lower() in str(file_name).lower():
                         continue
-                    elif 'AOC - 4 CFS'.lower() in str(file_name).lower():
+                    elif 'CFS'.lower() in str(file_name).lower():
+                        logging.info("Going to AOC 4 CFS")
                         Sheet_name = "AOC-4-CFS"
                         config_dict_cfs,config_status = create_main_config_dictionary(excel_file,Sheet_name)
                         map_file_path_cfs = config_dict_cfs['mapping file path']
@@ -420,6 +421,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                             print(f"Excpetion occured while processing AOC-4 {e}")
                         else:
                             AOC_4_first_file_found = True
+
                 elif 'CHANGE OF NAME'.lower() in str(file_name).lower():
                     Sheet_name = "Change of name"
                     config_dict_Change_of_name,config_status = create_main_config_dictionary(excel_file,Sheet_name)

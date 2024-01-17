@@ -573,6 +573,7 @@ def AOC_cfs_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name
                 logging.info(f'Exception {e} occurred while extracting data from xml for table {table_node_name}')
                 continue
             table_df = pd.DataFrame(table_in_list)
+            table_df.dropna(how='all', inplace=True)
             # table_df.dropna(inplace=True)
             logging.info(table_df)
             if field_name == 'financials_auditor':
