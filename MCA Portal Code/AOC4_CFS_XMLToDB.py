@@ -11,6 +11,7 @@ import traceback
 import logging
 from logging_config import setup_logging
 
+
 def get_single_value_from_xml(xml_root, parent_node, child_node):
     try:
         setup_logging()
@@ -32,7 +33,9 @@ def get_single_value_from_xml(xml_root, parent_node, child_node):
         logging.info(f"An error occurred: {e}")
         return None
 
-def update_database_single_value_AOC(db_config, table_name, cin_column_name, cin_value,company_name_column_name,company_name, column_name, column_value,year):
+
+def update_database_single_value_AOC(db_config, table_name, cin_column_name, cin_value, company_name_column_name,
+                                     company_name, column_name, column_value, year,nature):
     setup_logging()
     db_connection = mysql.connector.connect(**db_config)
     db_cursor = db_connection.cursor()
@@ -51,7 +54,9 @@ def update_database_single_value_AOC(db_config, table_name, cin_column_name, cin
         column_value = json.dumps(json_dict)
 
     # check if there is already entry with cin
-    query = "SELECT * FROM {} WHERE {} = '{}' and {}='{}' and {}='{}'".format(table_name, cin_column_name, cin_value,company_name_column_name,company_name,'year',year)
+    query = "SELECT * FROM {} WHERE {} = '{}' and {}='{}' and {}='{}' and {} = '{}'".format(table_name, cin_column_name, cin_value,
+                                                                              company_name_column_name, company_name,
+                                                                              'year', year,'nature',nature)
     logging.info(query)
     try:
         db_cursor.execute(query)
@@ -62,25 +67,31 @@ def update_database_single_value_AOC(db_config, table_name, cin_column_name, cin
 
     # if cin value already exists
     if len(result) > 0:
-        update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}' AND {}='{}'".format(table_name, column_name,
-                                                                                      column_value, cin_column_name,
-                                                                                      cin_value,
-                                                                                      company_name_column_name,
-                                                                                      company_name,
-                                                                                      'Year',
-                                                                                      year)
+        update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}' AND {}='{}' AND {} = '{}'".format(table_name,
+                                                                                                  column_name,
+                                                                                                  column_value,
+                                                                                                  cin_column_name,
+                                                                                                  cin_value,
+                                                                                                  company_name_column_name,
+                                                                                                  company_name,
+                                                                                                  'Year',
+                                                                                                  year,
+                                                                                                  'nature',
+                                                                                                   nature)
         logging.info(update_query)
         db_cursor.execute(update_query)
         logging.info("Updating")
 
     # if cin value doesn't exist
     else:
-        insert_query = "INSERT INTO {} ({}, {}, {}) VALUES ('{}', '{}', '{}')".format(table_name, cin_column_name,
+        insert_query = "INSERT INTO {} ({}, {}, {},{}) VALUES ('{}', '{}', '{}','{}')".format(table_name, cin_column_name,
                                                                                       company_name_column_name,
                                                                                       column_name,
+                                                                                      'nature',
                                                                                       cin_value,
                                                                                       company_name,
-                                                                                      column_value)
+                                                                                      column_value,
+                                                                                      nature)
         logging.info(insert_query)
         db_cursor.execute(insert_query)
         logging.info("Inserting")
@@ -89,7 +100,8 @@ def update_database_single_value_AOC(db_config, table_name, cin_column_name, cin
     db_connection.close()
 
 
-def insert_datatable_with_table(db_config, sql_table_name, column_names_list, df_row,cin_column_name,cin_value,company_column_name,compnay_value,year):
+def insert_datatable_with_table(db_config, sql_table_name, column_names_list, df_row, cin_column_name, cin_value,
+                                company_column_name, compnay_value, year):
     setup_logging()
     db_connection = mysql.connector.connect(**db_config)
     db_cursor = db_connection.cursor()
@@ -154,7 +166,14 @@ def extract_table_values_from_xml(xml_root, table_node_name, child_nodes):
     return data_list
 
 
-def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,output_file_path, cin_column_value, company_name,AOC_4_first_file_found):
+def output_File(data,excel_file_path):
+    # excel_file_path = r'C:\Users\BRADSOL\Documents\python\MCA_AOC4CFS\Ouput\Output.xlsx'
+    # Save the DataFrame to Excel
+    data.to_excel(excel_file_path, index=False)
+
+
+def AOC_cfs_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, output_file_path,
+                  cin_column_value, company_name):
     try:
         setup_logging()
         config_dict_keys = []
@@ -162,6 +181,7 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
         Cin_Column_Name = config_dict['cin_column_name_in_db']
         Company_column_name = config_dict['company_name_column_name_in_db']
         years = []
+        natures = []
         if missing_keys:
             raise KeyError(f"The following keys are missing in config file: {', '.join(missing_keys)}")
         # initializing empty list to save all the result dataframes for saving to output excel
@@ -181,6 +201,7 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
 
         # creating new filtered dataframes for single and group values
         single_df = df_map[df_map[df_map.columns[2]] == config_dict['single_type_indicator']]
+
         group_df = df_map[df_map[df_map.columns[2]] == config_dict['group_type_indicator']]
 
         if not os.path.exists(xml_file_path):
@@ -202,7 +223,8 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
         # extract single values
         previous_year_df = single_df[single_df[single_df.columns[5]] == config_dict['Previous_year_keyword']]
         current_year_df = single_df[single_df[single_df.columns[5]] == config_dict['Current_year_keyword']]
-        Financial_Parameter_df = single_df[single_df[single_df.columns[5]] == config_dict['Financial_Parameter_Keyword']]
+        Financial_Parameter_df = single_df[
+            single_df[single_df.columns[5]] == config_dict['Financial_Parameter_Keyword']]
         common_df = single_df[single_df[single_df.columns[5]] == config_dict['Common_Keyword']]
         single_df_list = []
         for index, row in common_df.iterrows():
@@ -221,9 +243,11 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
             if parent_node == config_dict['constant_keyword']:
                 continue
             value_common = get_single_value_from_xml(xml_root, parent_node, child_nodes)
+            print(value_common)
             # logging.info(value)
             common_df.at[index, 'Value'] = value_common
             results_common.append([field_name, value_common, sql_table_name, column_name, column_json_node])
+        output_File(Financial_Parameter_df,output_file_path)
         for index, row in Financial_Parameter_df.iterrows():
             field_name = str(row.iloc[0]).strip()
             parent_node = str(row.iloc[3]).strip()
@@ -234,13 +258,14 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
             value_financial_parameter = get_single_value_from_xml(xml_root, parent_node, child_nodes)
             # logging.info(value)
             if field_name == 'year':
-                try:
-                    datetime_object = datetime.fromisoformat(value_financial_parameter)
-                except ValueError:
-                    datetime_object = datetime.strptime(value_financial_parameter, "%Y-%m-%d")
-                value_financial_parameter = str(datetime_object.year)
-                logging.info(value_financial_parameter)
-                Financial_Parameter_df.at[index, 'Value'] = value_financial_parameter
+                if value_financial_parameter is not None:
+                    try:
+                        datetime_object = datetime.fromisoformat(value_financial_parameter)
+                    except ValueError:
+                        datetime_object = datetime.strptime(value_financial_parameter, "%Y-%m-%d")
+                    value_financial_parameter = str(datetime_object.year)
+                    # logging.info(value_financial_parameter)
+                    Financial_Parameter_df.at[index, 'Value'] = value_financial_parameter
             elif field_name == 'proposed_dividend':
                 if value_financial_parameter == 0 or value_financial_parameter == 0.00 or value_financial_parameter == '0' or value_financial_parameter == '0.00':
                     dividend_value = 'No'
@@ -248,16 +273,12 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                     dividend_value = 'Yes'
                 Financial_Parameter_df.at[index, 'Value'] = dividend_value
             elif field_name == 'nature':
-                if value_financial_parameter.lower() == 'no':
-                    value_financial_parameter = 'Standalone'
-                elif value_financial_parameter.lower() == 'yes':
-                    value_financial_parameter = 'Consolidated'
-                else:
-                    pass
+                value_financial_parameter = 'Standalone'
                 Financial_Parameter_df.at[index, 'Value'] = value_financial_parameter
             else:
                 Financial_Parameter_df.at[index, 'Value'] = value_financial_parameter
-            results_financial_parameter.append([field_name, value_financial_parameter, sql_table_name, column_name, column_json_node])
+            results_financial_parameter.append(
+                [field_name, value_financial_parameter, sql_table_name, column_name, column_json_node])
         for index, row in previous_year_df.iterrows():
             field_name = str(row.iloc[0]).strip()
             parent_node = str(row.iloc[3]).strip()
@@ -287,12 +308,7 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                         pass
                 logging.info(value_previous_year)
             elif field_name == 'nature':
-                if value_previous_year.lower() == 'no':
-                    value_previous_year = 'Standalone'
-                elif value_previous_year.lower() == 'yes':
-                    value_previous_year = 'Consolidated'
-                else:
-                    pass
+                value_previous_year = 'Standalone'
             try:
                 value_previous_year = float(value_previous_year)
             except Exception as e:
@@ -301,6 +317,7 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
             results_previous_year.append(
                 [field_name, value_previous_year, sql_table_name, column_name, column_json_node])
         previous_year_formula_df = previous_year_df[previous_year_df[previous_year_df.columns[3]] == config_dict['Formula_Keyword']]
+        #previous_year_formula_df = previous_year_df[previous_year_df['Parent_Node'] == config_dict['Formula_Keyword']]
         for _, row in previous_year_formula_df.iterrows():
             previous_formula = row['Child_Nodes']
             previous_formula_field_name = row['Field_Name']
@@ -315,10 +332,13 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                 if 'None' in previous_formula:
                     previous_formula = previous_formula.replace('None', '0')
                 # Calculate the value using the provided formula and insert it
-                previous_year_df.at[previous_year_df[previous_year_df['Field_Name'] == previous_formula_field_name].index[0], 'Value'] = round(eval(previous_formula),2)
+                previous_year_df.at[
+                    previous_year_df[previous_year_df['Field_Name'] == previous_formula_field_name].index[
+                        0], 'Value'] = round(eval(previous_formula), 2)
             except (NameError, SyntaxError):
                 # Handle the case where the formula is invalid or contains a missing field name
                 logging.info(f"Invalid formula for {previous_formula_field_name}: {previous_formula}")
+
         for index, row in current_year_df.iterrows():
             field_name = str(row.iloc[0]).strip()
             parent_node = str(row.iloc[3]).strip()
@@ -331,19 +351,15 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
             value_current_year = get_single_value_from_xml(xml_root, parent_node, child_nodes)
             # logging.info(value)
             if field_name == 'year':
-                try:
-                    datetime_object = datetime.fromisoformat(value_current_year)
-                except ValueError:
-                    datetime_object = datetime.strptime(value_current_year, "%Y-%m-%d")
-                value_current_year = str(datetime_object.date())
-                logging.info(value_current_year)
+                if value_current_year is not None:
+                    try:
+                        datetime_object = datetime.fromisoformat(value_current_year)
+                    except ValueError:
+                        datetime_object = datetime.strptime(value_current_year, "%Y-%m-%d")
+                    value_current_year = str(datetime_object.date())
+                # logging.info(value_current_year)
             elif field_name == 'nature':
-                if value_current_year.lower() == 'no':
-                    value_current_year = 'Standalone'
-                elif value_current_year.lower() == 'yes':
-                    value_current_year = 'Consolidated'
-                else:
-                    pass
+                value_current_year = 'Standalone'
             try:
                 value_current_year = float(value_current_year)
             except Exception as e:
@@ -351,52 +367,62 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
             current_year_df.at[index, 'Value'] = value_current_year
             results_current_year.append([field_name, value_current_year, sql_table_name, column_name, column_json_node])
 
-        current_year_formula_df = current_year_df[current_year_df[current_year_df.columns[3]] == config_dict['Formula_Keyword']]
+        current_year_formula_df = current_year_df[
+            current_year_df[current_year_df.columns[3]] == config_dict['Formula_Keyword']]
+
         for _, row in current_year_formula_df.iterrows():
             current_formula = row['Child_Nodes']
             current_formula_field_name = row['Field_Name']
             for field_name in current_year_df['Field_Name']:
                 pattern = r'\b' + re.escape(field_name) + r'\b'
                 # current_formula = current_formula.replace(field_name, str(current_year_df[current_year_df['Field_Name'] == field_name]['Value'].values[0]))
-                current_formula = re.sub(pattern, str(current_year_df[current_year_df['Field_Name'] == field_name]['Value'].values[0]), current_formula)
+                current_formula = re.sub(pattern, str(
+                    current_year_df[current_year_df['Field_Name'] == field_name]['Value'].values[0]), current_formula)
             logging.info(current_formula_field_name + ":" + current_formula)
             try:
                 # Calculate the value using the provided formula and insert it
                 if 'None' in current_formula:
                     current_formula = current_formula.replace('None', '0')
-                current_year_df.at[current_year_df[current_year_df['Field_Name'] == current_formula_field_name].index[0], 'Value'] = round(eval(current_formula),2)
+                current_year_df.at[current_year_df[current_year_df['Field_Name'] == current_formula_field_name].index[
+                                       0], 'Value'] = round(eval(current_formula), 2)
             except (NameError, SyntaxError):
                 # Handle the case where the formula is invalid or contains a missing field name
                 logging.info(f"Invalid formula for {current_formula_field_name}: {current_formula}")
-        logging.info(current_year_df)
         current_year = current_year_df[current_year_df['Field_Name'] == 'year']['Value'].values[0]
+
         if current_year is None:
-            raise Exception(f"Exception occurred while extracting year value {current_year} from current year data")
+            pass
+            # raise Exception(f"Exception occurred while extracting year value {current_year} from current year data")
         previous_year = previous_year_df[previous_year_df['Field_Name'] == 'year']['Value'].values[0]
+
         # if previous_year is None:
         #     raise Exception(f"Exception occurred while extracting year value {previous_year} from previous year data")
         # if not AOC_4_first_file_found:
         #     single_df_list.append(current_year_df)
+        previous_year_nature = previous_year_df[previous_year_df['Field_Name'] == 'nature']['Value'].values[0]
+        current_year_nature = current_year_df[current_year_df['Field_Name'] == 'nature']['Value'].values[0]
         db_connection = mysql.connector.connect(**db_config)
         db_cursor = db_connection.cursor()
-        previous_year_check_query = "select * from financials where year = %s and cin =%s"
-        previous_year_values = (previous_year, cin_column_value)
+        previous_year_check_query = "select * from financials where year = %s and cin =%s and nature = %s"
+        previous_year_values = (previous_year, cin_column_value,previous_year_nature)
         logging.info(previous_year_check_query % previous_year_values)
         db_cursor.execute(previous_year_check_query, previous_year_values)
         previous_year_result = db_cursor.fetchall()
-        current_year_check_query = "select * from financials where year = %s and cin =%s"
-        current_year_values = (current_year, cin_column_value)
+        current_year_check_query = "select * from financials where year = %s and cin =%s and nature = %s"
+        current_year_values = (current_year, cin_column_value,current_year_nature)
         logging.info(current_year_check_query, current_year_values)
         db_cursor.execute(current_year_check_query, current_year_values)
         current_year_result = db_cursor.fetchall()
         if len(current_year_result) == 0:
             single_df_list.append(current_year_df)
             years.append(current_year)
-            logging.info("Current year not found so inserting")
+            natures.append(current_year_nature)
+            # logging.info("Current year not found so inserting")
         if len(previous_year_result) == 0:
             single_df_list.append(previous_year_df)
             years.append(previous_year)
-            logging.info("Previous year not found so inserting")
+            natures.append(previous_year_nature)
+            # logging.info("Previous year not found so inserting")
         db_cursor.close()
         db_connection.close()
         single_df_list.append(Financial_Parameter_df)
@@ -415,11 +441,13 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
         output_dataframes_list.append(Previous_Year_output_df)
         output_dataframes_list.append(common_output_df)
         output_dataframes_list.append(Financial_output_df)
+
         for df in single_df_list:
             logging.info(df)
             sql_tables_list = df[df.columns[7]].unique()
             logging.info(sql_tables_list)
             year_value = df[df['Field_Name'] == 'year']['Value'].values[0]
+            nature_value = df[df['Field_Name'] == 'nature']['Value'].values[0]
             logging.info(year_value)
             for table_name in sql_tables_list:
                 table_df = df[df[df.columns[7]] == table_name]
@@ -438,10 +466,10 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                     try:
                         update_database_single_value_AOC(db_config, table_name, Cin_Column_Name, cin_column_value,
                                                          Company_column_name, company_name, column_name, json_string,
-                                                         year_value)
+                                                         year_value,nature_value)
                     except Exception as e:
                         logging.info(f"Exception {e} occurred while updating data in dataframe for {table_name} "
-                              f"with data {json_string}")
+                                     f"with data {json_string}")
         common_sql_tables_list = common_df[common_df.columns[7]].unique()
         logging.info(common_sql_tables_list)
         # if AOC_4_first_file_found:
@@ -467,7 +495,7 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                 logging.info(common_column_df)
                 if common_column_name == config_dict['auditor_comments_column_name']:
                     auditor_comments_row_index = common_column_df[common_column_df[common_column_df.columns[8]] ==
-                                                       config_dict['auditor_comments_column_name']].index[0]
+                                                                  config_dict['auditor_comments_column_name']].index[0]
                     if auditor_comments_row_index is not None:
                         comment_value = common_column_df.loc[auditor_comments_row_index, 'Value']
                         logging.info(f'{comment_value=}')
@@ -478,10 +506,12 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                             logging.info(report_value)
                             auditor_report_row_index = common_table_df[common_table_df[common_table_df.columns[8]] ==
                                                                        config_dict[
-                                                                           'disclosures_auditor_report_column_name']].index[0]
+                                                                           'disclosures_auditor_report_column_name']].index[
+                                0]
                             director_report_row_index = common_table_df[common_table_df[common_table_df.columns[8]] ==
                                                                         config_dict[
-                                                                            'disclosures_director_report_column_name']].index[0]
+                                                                            'disclosures_director_report_column_name']].index[
+                                0]
                             if auditor_report_row_index is not None:
                                 common_df.loc[auditor_report_row_index, 'Value'] = report_value
                             if director_report_row_index is not None:
@@ -515,7 +545,7 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                 common_json_string = json.dumps(common_json_dict)
                 logging.info(common_json_string)
                 logging.info(years)
-                for year in years:
+                for year,nature in zip(years,natures):
                     if year is None or year == '':
                         continue
                     try:
@@ -523,10 +553,10 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                                                          cin_column_value,
                                                          Company_column_name, company_name, common_column_name,
                                                          common_json_string,
-                                                         year)
+                                                         year,nature)
                     except Exception as e:
                         logging.info(f"Exception {e} occurred while updating data in dataframe for {common_table_name} "
-                              f"with data {common_json_string}")
+                                     f"with data {common_json_string}")
         for index, row in group_df.iterrows():
             field_name = str(row.iloc[0]).strip()
             parent_node = str(row.iloc[3]).strip()
@@ -543,7 +573,7 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                 logging.info(f'Exception {e} occurred while extracting data from xml for table {table_node_name}')
                 continue
             table_df = pd.DataFrame(table_in_list)
-            table_df.dropna(how='all', inplace=True)
+            # table_df.dropna(inplace=True)
             logging.info(table_df)
             if field_name == 'financials_auditor':
                 column_json_node_list = [x.strip() for x in column_json_node.split(',')]
@@ -558,7 +588,6 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                 # Convert each dictionary to a JSON string
                 auditor_json = None
                 for row_dict in row_dicts:
-                    # row_dict["address"] = row_dict.pop("ADDRESS_LINE_I") + ", " + row_dict.pop("ADDRESS_LINE_II") + ", " + row_dict.pop("CITY") + ", " + row_dict.pop("STATE") + ", " + row_dict.pop("COUNTRY") + ", " + row_dict.pop("PIN_CODE")
                     row_dict["address"] = (
                             str(row_dict.pop("ADDRESS_LINE_I", "")) +
                             ", " +
@@ -572,6 +601,9 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                             ", " +
                             str(row_dict.pop("PIN_CODE", ""))
                     )
+                    # row_dict["address"] = row_dict.pop("ADDRESS_LINE_I") + ", " + row_dict.pop(
+                    #     "ADDRESS_LINE_II") + ", " + row_dict.pop("CITY") + ", " + row_dict.pop(
+                    #     "STATE") + ", " + row_dict.pop("COUNTRY") + ", " + row_dict.pop("PIN_CODE")
                     # row_dict["ADDRESS"] = {
                     #     "ADDRESS_LINE_I": row_dict.pop("ADDRESS_LINE_I"),
                     #     "ADDRESS_LINE_II": row_dict.pop("ADDRESS_LINE_II"),
@@ -580,17 +612,19 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                     #     "COUNTRY": row_dict.pop("COUNTRY"),
                     #     "PIN_CODE": row_dict.pop("PIN_CODE")
                     # }
-                   
+
                     row_dict["auditor_name"] = row_dict.pop("NAME_OF_MEMBER")
                     row_dict["auditor_firm_name"] = row_dict.pop("NAME_AUDT_AUDTRF")
                     row_dict["pan"] = row_dict.pop("IT_PAN")
                     row_dict["membership_number"] = row_dict.pop("MEMBERSHIP_NUMBR")
                     row_dict["firm_registration_number"] = row_dict.pop("MEMBERSHIP_NUM_A")
-                    
+
                     auditor_json = json.dumps(row_dict)
                 group_df.at[index, 'Value'] = auditor_json
-                for year in years:
-                    update_database_single_value_AOC(db_config,sql_table_name, Cin_Column_Name, cin_column_value,Company_column_name, company_name, column_names,auditor_json, year)
+                for year,nature in zip(years,natures):
+                    update_database_single_value_AOC(db_config, sql_table_name, Cin_Column_Name, cin_column_value,
+                                                     Company_column_name, company_name, column_names, auditor_json,
+                                                     year,nature)
                 if len(table_df.index) > 1:
                     try:
                         remaining_row_df = table_df.iloc[1:]
@@ -610,9 +644,12 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                             row_dict_remaining["pan"] = row_dict_remaining.pop("IT_PAN")
                             row_dict_remaining["membership_number"] = row_dict_remaining.pop("MEMBERSHIP_NUMBR")
                             row_dict_remaining["firm_registration_number"] = row_dict_remaining.pop("MEMBERSHIP_NUM_A")
-                            # row_dict_remaining["address"] = row_dict_remaining.pop("ADDRESS_LINE_I") + ", " + row_dict_remaining.pop(
-                            #     "ADDRESS_LINE_II") + ", " + row_dict_remaining.pop("CITY") + ", " + row_dict_remaining.pop(
-                            #     "STATE") + ", " + row_dict_remaining.pop("COUNTRY") + ", " + row_dict_remaining.pop("PIN_CODE")
+                            # row_dict_remaining["address"] = row_dict_remaining.pop(
+                            #     "ADDRESS_LINE_I") + ", " + row_dict_remaining.pop(
+                            #     "ADDRESS_LINE_II") + ", " + row_dict_remaining.pop(
+                            #     "CITY") + ", " + row_dict_remaining.pop(
+                            #     "STATE") + ", " + row_dict_remaining.pop("COUNTRY") + ", " + row_dict_remaining.pop(
+                            #     "PIN_CODE")
                             row_dict_remaining["address"] = (
                                     str(row_dict_remaining.pop("ADDRESS_LINE_I", "")) +
                                     ", " +
@@ -634,7 +671,10 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
                                 # logging.info(df_row)
                                 # logging.info(table_df.columns)
                                 try:
-                                    insert_datatable_with_table(db_config, config_dict['Additional_Auditor_Table_Name'], remaining_row_df_new.columns, df_row,Cin_Column_Name,cin_column_value,Company_column_name,company_name,year)
+                                    insert_datatable_with_table(db_config, config_dict['Additional_Auditor_Table_Name'],
+                                                                remaining_row_df_new.columns, df_row, Cin_Column_Name,
+                                                                cin_column_value, Company_column_name, company_name,
+                                                                year)
                                 except Exception as e:
                                     logging.info(
                                         f'Exception {e} occurred while inserting below table row in table {sql_table_name}- \n',
@@ -664,15 +704,17 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
         #             update_database_single_value_AOC(db_config, group_table, Cin_Column_Name, cin_column_value,
         #                                              Company_column_name, company_name, group_column_name,
         #                                              group_json_string, year)
-                    # if group_table == 'financial_parameters':
-                    #     break
-
-        with pd.ExcelWriter(output_file_path, engine='xlsxwriter') as writer:
-            row_index = 0
-            for dataframe in output_dataframes_list:
-                # logging.info(dataframe)
-                dataframe.to_excel(writer, sheet_name='Sheet1', index=False, startrow=row_index)
-                row_index += len(dataframe.index) + 2
+        # if group_table == 'financial_parameters':
+        #     break
+        try:
+            with pd.ExcelWriter(output_file_path, engine='xlsxwriter') as writer:
+                row_index = 0
+                for dataframe in output_dataframes_list:
+                    # logging.info(dataframe)
+                    dataframe.to_excel(writer, sheet_name='Sheet1', index=False, startrow=row_index)
+                    row_index += len(dataframe.index) + 2
+        except Exception as e:
+            print(e)
 
         output_dataframes_list.clear()
 
@@ -691,5 +733,18 @@ def AOC_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
         return True
 
 
-
-
+# Cin = 'U01210MH1999PTC119449'
+# Company = 'Tata Capital'
+# output = r'C:\Users\BRADSOL\Documents\python\MCA_AOC4CFS\Ouput\Form AOC - 4 CFS-23112021_signed_values.xlsx'
+# xml = r'C:\Users\BRADSOL\Documents\python\MCA_AOC4CFS\XML_Files\Form AOC - 4 CFS-23112021_signed.xml'
+# main_dict = create_main_config_dictionary(r'C:\Users\BRADSOL\Documents\python\MCA_AOC4CFS\Config_Python.xlsx',
+#                                           'AOC CFS')
+# config_dict = main_dict[0]
+# aoc_config = r'C:\Users\BRADSOL\Documents\python\MCA_AOC4CFS\AOC-4_CFS_nodes_seperated_config 1 1.xlsx'
+# db_config = {
+#     "host": "localhost",
+#     "user": "root",
+#     "password": "",
+#     "database": "classle3_mns_credit",
+# }
+# print(AOC_xml_to_db(db_config, config_dict, aoc_config, "Sheet1", xml, output, Cin, Company))

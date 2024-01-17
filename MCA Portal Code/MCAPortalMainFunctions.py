@@ -50,7 +50,7 @@ from Form18_xml_to_db import form_18_xml_to_db
 from FreshCertificateOpenAI import fresh_name_main
 from DIR_11_xml_to_db import dir11_main
 from DIR2PDFToDB import dir2_main
-
+from AOC4_CFS_XMLToDB import AOC_cfs_xml_to_db
 
 def sign_out(driver,config_dict,CinData):
     try:
@@ -396,6 +396,17 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                             AOC_4_NBFC_first_file_found = True
                     elif 'AOC-4 CSR'.lower() in str(file_name).lower():
                         continue
+                    elif 'AOC - 4 CFS'.lower() in str(file_name).lower():
+                        Sheet_name = "AOC-4-CFS"
+                        config_dict_cfs,config_status = create_main_config_dictionary(excel_file,Sheet_name)
+                        map_file_path_cfs = config_dict_cfs['mapping file path']
+                        map_sheet_cfs = config_dict_cfs['mapping file sheet name']
+                        try:
+                            aoc_cfs_insertion = AOC_cfs_xml_to_db(db_config,config_dict_cfs,map_file_path_cfs,map_sheet_cfs,xml_file_path,output_excel_path,Cin,CompanyName)
+                            if aoc_cfs_insertion:
+                                update_db_insertion_status(Cin, file_name, config_dict, 'Success')
+                        except Exception as e:
+                            logging.info(f"Excpetion {e} occured while inserting for AOC CFS")
                     else:
                         Sheet_name = "AOC"
                         config_dict_AOC, config_status = create_main_config_dictionary(excel_file, Sheet_name)
