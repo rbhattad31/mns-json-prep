@@ -192,12 +192,12 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         if parent_node == 'Split':
             continue
         if child_nodes == 'Hidden':
-            with open(xml_hidden_file_path, 'r') as file:
-                xml_content = file.read()
-                # Parse the XML content using BeautifulSoup
-            soup = BeautifulSoup(xml_content, 'xml')
-            values = Get_MultipleFields(soup,parent_node)
             try:
+                with open(xml_hidden_file_path, 'r') as file:
+                    xml_content = file.read()
+                    # Parse the XML content using BeautifulSoup
+                soup = BeautifulSoup(xml_content, 'xml')
+                values = Get_MultipleFields(soup, parent_node)
                 value = values[0]
             except Exception as e:
                 value = None
