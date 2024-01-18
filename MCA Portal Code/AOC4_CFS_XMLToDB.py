@@ -167,8 +167,6 @@ def extract_table_values_from_xml(xml_root, table_node_name, child_nodes):
 
 
 def output_File(data,excel_file_path):
-    # excel_file_path = r'C:\Users\BRADSOL\Documents\python\MCA_AOC4CFS\Ouput\Output.xlsx'
-    # Save the DataFrame to Excel
     data.to_excel(excel_file_path, index=False)
 
 
@@ -317,7 +315,6 @@ def AOC_cfs_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name
             results_previous_year.append(
                 [field_name, value_previous_year, sql_table_name, column_name, column_json_node])
         previous_year_formula_df = previous_year_df[previous_year_df[previous_year_df.columns[3]] == config_dict['Formula_Keyword']]
-        #previous_year_formula_df = previous_year_df[previous_year_df['Parent_Node'] == config_dict['Formula_Keyword']]
         for _, row in previous_year_formula_df.iterrows():
             previous_formula = row['Child_Nodes']
             previous_formula_field_name = row['Field_Name']
@@ -375,7 +372,6 @@ def AOC_cfs_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name
             current_formula_field_name = row['Field_Name']
             for field_name in current_year_df['Field_Name']:
                 pattern = r'\b' + re.escape(field_name) + r'\b'
-                # current_formula = current_formula.replace(field_name, str(current_year_df[current_year_df['Field_Name'] == field_name]['Value'].values[0]))
                 current_formula = re.sub(pattern, str(
                     current_year_df[current_year_df['Field_Name'] == field_name]['Value'].values[0]), current_formula)
             logging.info(current_formula_field_name + ":" + current_formula)
@@ -392,13 +388,7 @@ def AOC_cfs_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name
 
         if current_year is None:
             pass
-            # raise Exception(f"Exception occurred while extracting year value {current_year} from current year data")
         previous_year = previous_year_df[previous_year_df['Field_Name'] == 'year']['Value'].values[0]
-
-        # if previous_year is None:
-        #     raise Exception(f"Exception occurred while extracting year value {previous_year} from previous year data")
-        # if not AOC_4_first_file_found:
-        #     single_df_list.append(current_year_df)
         previous_year_nature = previous_year_df[previous_year_df['Field_Name'] == 'nature']['Value'].values[0]
         current_year_nature = current_year_df[current_year_df['Field_Name'] == 'nature']['Value'].values[0]
         db_connection = mysql.connector.connect(**db_config)
@@ -602,18 +592,6 @@ def AOC_cfs_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name
                             ", " +
                             str(row_dict.pop("PIN_CODE", ""))
                     )
-                    # row_dict["address"] = row_dict.pop("ADDRESS_LINE_I") + ", " + row_dict.pop(
-                    #     "ADDRESS_LINE_II") + ", " + row_dict.pop("CITY") + ", " + row_dict.pop(
-                    #     "STATE") + ", " + row_dict.pop("COUNTRY") + ", " + row_dict.pop("PIN_CODE")
-                    # row_dict["ADDRESS"] = {
-                    #     "ADDRESS_LINE_I": row_dict.pop("ADDRESS_LINE_I"),
-                    #     "ADDRESS_LINE_II": row_dict.pop("ADDRESS_LINE_II"),
-                    #     "CITY": row_dict.pop("CITY"),
-                    #     "STATE": row_dict.pop("STATE"),
-                    #     "COUNTRY": row_dict.pop("COUNTRY"),
-                    #     "PIN_CODE": row_dict.pop("PIN_CODE")
-                    # }
-
                     row_dict["auditor_name"] = row_dict.pop("NAME_OF_MEMBER")
                     row_dict["auditor_firm_name"] = row_dict.pop("NAME_AUDT_AUDTRF")
                     row_dict["pan"] = row_dict.pop("IT_PAN")
@@ -631,26 +609,11 @@ def AOC_cfs_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name
                         remaining_row_df = table_df.iloc[1:]
                         rows_dicts_remaining = remaining_row_df.to_dict(orient='records')
                         for row_dict_remaining in rows_dicts_remaining:
-                            # row_dict_remaining["ADDRESS"] = {
-                            #     "ADDRESS_LINE_I": row_dict_remaining.pop("ADDRESS_LINE_I"),
-                            #     "ADDRESS_LINE_II": row_dict_remaining.pop("ADDRESS_LINE_II"),
-                            #     "CITY": row_dict_remaining.pop("CITY"),
-                            #     "STATE": row_dict_remaining.pop("STATE"),
-                            #     "COUNTRY": row_dict_remaining.pop("COUNTRY"),
-                            #     "PIN_CODE": row_dict_remaining.pop("PIN_CODE")
-                            # }
-
                             row_dict_remaining["auditor_name"] = row_dict_remaining.pop("NAME_OF_MEMBER")
                             row_dict_remaining["auditor_firm_name"] = row_dict_remaining.pop("NAME_AUDT_AUDTRF")
                             row_dict_remaining["pan"] = row_dict_remaining.pop("IT_PAN")
                             row_dict_remaining["membership_number"] = row_dict_remaining.pop("MEMBERSHIP_NUMBR")
                             row_dict_remaining["firm_registration_number"] = row_dict_remaining.pop("MEMBERSHIP_NUM_A")
-                            # row_dict_remaining["address"] = row_dict_remaining.pop(
-                            #     "ADDRESS_LINE_I") + ", " + row_dict_remaining.pop(
-                            #     "ADDRESS_LINE_II") + ", " + row_dict_remaining.pop(
-                            #     "CITY") + ", " + row_dict_remaining.pop(
-                            #     "STATE") + ", " + row_dict_remaining.pop("COUNTRY") + ", " + row_dict_remaining.pop(
-                            #     "PIN_CODE")
                             row_dict_remaining["address"] = (
                                     str(row_dict_remaining.pop("ADDRESS_LINE_I", "")) +
                                     ", " +
@@ -686,27 +649,6 @@ def AOC_cfs_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name
         logging.info(group_df)
         output_dataframes_list.append(group_df)
 
-        # group_sql_tables = group_df[group_df.columns[7]].unique()
-        # for group_table in group_sql_tables:
-        #     group_table_df = group_df[group_df[group_df.columns[7]] == group_table]
-        #     group_columns_list = group_table_df[group_table_df.columns[8]].unique()
-        #     for group_column_name in group_columns_list:
-        #         logging.info(group_column_name)
-        #         # filter table df with only column value
-        #         group_column_df = group_table_df[group_table_df[group_table_df.columns[8]] == group_column_name]
-        #         logging.info(group_column_df)
-        #         # create json dict with keys of field name and values for the same column name entries
-        #         group_json_dict = group_column_df.set_index(group_table_df.columns[0])['Value'].to_dict()
-        #         # Convert the dictionary to a JSON string
-        #         group_json_string = json.dumps(group_json_dict)
-        #         logging.info(group_json_string)
-        #         logging.info(years)
-        #         for year in years:
-        #             update_database_single_value_AOC(db_config, group_table, Cin_Column_Name, cin_column_value,
-        #                                              Company_column_name, company_name, group_column_name,
-        #                                              group_json_string, year)
-        # if group_table == 'financial_parameters':
-        #     break
         try:
             with pd.ExcelWriter(output_file_path, engine='xlsxwriter') as writer:
                 row_index = 0
@@ -732,20 +674,3 @@ def AOC_cfs_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name
         return False
     else:
         return True
-
-
-# Cin = 'U01210MH1999PTC119449'
-# Company = 'Tata Capital'
-# output = r'C:\Users\BRADSOL\Documents\python\MCA_AOC4CFS\Ouput\Form AOC - 4 CFS-23112021_signed_values.xlsx'
-# xml = r'C:\Users\BRADSOL\Documents\python\MCA_AOC4CFS\XML_Files\Form AOC - 4 CFS-23112021_signed.xml'
-# main_dict = create_main_config_dictionary(r'C:\Users\BRADSOL\Documents\python\MCA_AOC4CFS\Config_Python.xlsx',
-#                                           'AOC CFS')
-# config_dict = main_dict[0]
-# aoc_config = r'C:\Users\BRADSOL\Documents\python\MCA_AOC4CFS\AOC-4_CFS_nodes_seperated_config 1 1.xlsx'
-# db_config = {
-#     "host": "localhost",
-#     "user": "root",
-#     "password": "",
-#     "database": "classle3_mns_credit",
-# }
-# print(AOC_xml_to_db(db_config, config_dict, aoc_config, "Sheet1", xml, output, Cin, Company))

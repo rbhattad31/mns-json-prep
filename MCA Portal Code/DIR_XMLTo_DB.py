@@ -596,14 +596,6 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             value = event_dict.get(value,value)
         single_df.at[index, 'Value'] = value
     logging.info(single_df)
-    # if 'Form 32'.lower() in str(file_name).lower():
-    #     designation = single_df[single_df['Field_Name'] == 'designation']['Value'].values[0]
-    #     age_index = single_df[single_df[single_df.columns[field_name_index]] ==
-    #                                           'age'].index[0]
-    #     if age_index is not None:
-    #         date_of_birth = single_df[single_df['Field_Name'] == 'date_of_birth']['Value'].values[0]
-    #         age = Get_Age(date_of_birth)
-    #         single_df.loc[age_index,'Value'] = age
 
     no_of_directors_row_index = single_df[single_df[single_df.columns[field_name_index]] ==
                                           config_dict['no_of_directors_field_name']].index[0]
@@ -611,81 +603,20 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
     logging.info(digit_count)
     try:
         no_of_directors_value = single_df[single_df['Field_Name'] == 'No_of_directors']['Value'].values[0]
-        if no_of_directors_value == 0 or no_of_directors_value is None or no_of_directors_value == '' or no_of_directors_value == 'None':
-            logging.info("Found Null directors so going to other directors program")
-            if 'Form 32'.lower() in str(file_name).lower():
-                logging.info("Going to Form 32 other director program")
-                other_director_map_file_path = config_dict['Form32_other_directors_config']
-            else:
-                if digit_count == 8:
-                    other_director_map_file_path = config_dict['DIR12_old_date_config_other_directors']
-                else:
-                    logging.info("Going to DIR other director program")
-                    other_director_map_file_path = config_dict['DIR12_other_directors_config']
-            other_than_director_xml_to_db(db_config, config_dict, other_director_map_file_path, map_file_sheet_name,
-                                          xml_file_path, output_file_path, cin_column_value, filing_date, file_name)
-            # raise Exception(f"Number of Directors = '{no_of_directors_value}' found in xml is not greater than zero."
-            #                 f"Hence skipping processing directors program")
-            return []
+        if 'Form 32'.lower() in str(file_name).lower():
+            logging.info("Going to Form 32 other director program")
+            other_director_map_file_path = config_dict['Form32_other_directors_config']
         else:
-            logging.info("Going with same dir program")
-            pass
+            if digit_count == 8:
+                other_director_map_file_path = config_dict['DIR12_old_date_config_other_directors']
+            else:
+                logging.info("Going to DIR other director program")
+                other_director_map_file_path = config_dict['DIR12_other_directors_config']
+        other_than_director_xml_to_db(db_config, config_dict, other_director_map_file_path, map_file_sheet_name,
+                                      xml_file_path, output_file_path, cin_column_value, filing_date, file_name)
     except Exception as e:
         logging.info(f"Exception occured while going for other directors {e}")
-    # if no_of_directors_row_index is not None:
-    #     no_of_directors_value = single_df.loc[no_of_directors_row_index, 'Value']
-    #     logging.info(f'{no_of_directors_value=}')
-    #     try:
-    #         if int(no_of_directors_value) == 0 or no_of_directors_value is None or no_of_directors_value == '' or no_of_directors_value == 'None':
-    #             logging.info("Found Null directors so going to other directors program")
-    #             if 'Form 32'.lower() in str(file_name).lower():
-    #                 logging.info("Going to Form 32 other director program")
-    #                 other_director_map_file_path = config_dict['Form32_other_directors_config']
-    #             else:
-    #                 logging.info("Going to DIR other director program")
-    #                 other_director_map_file_path = config_dict['DIR12_other_directors_config']
-    #             other_than_director_xml_to_db(db_config, config_dict, other_director_map_file_path, map_file_sheet_name,
-    #                                           xml_file_path, output_file_path, cin_column_value, filing_date, file_name)
-    #             # raise Exception(f"Number of Directors = '{no_of_directors_value}' found in xml is not greater than zero."
-    #             #                 f"Hence skipping processing directors program")
-    #             return []
-    #         else:
-    #             logging.info("Going with same dir program")
-    #             pass
-    #     except Exception as e:
-    #         pass
-    # else:
-    #     raise Exception("Number of Directors field is not found in director mapping file.")
-
-    # extract group values
     din_list = []
-    # if 'Form 32'.lower() in str(file_name).lower() or digit_count == 8:
-    #     sql_tables_list = single_df[single_df.columns[table_name_index]].unique()
-    #     logging.info(sql_tables_list)
-    #     din_value = single_df[single_df['Field_Name'] == 'din']['Value'].values[0]
-    #     designation = single_df[single_df['Field_Name'] == 'designation']['Value'].values[0]
-    #     logging.info(din_value)
-    #     for table_name in sql_tables_list:
-    #         table_df = single_df[single_df[single_df.columns[table_name_index]] == table_name]
-    #         columns_list = table_df[table_df.columns[column_name_index]].unique()
-    #         logging.info(columns_list)
-    #         for column_name in columns_list:
-    #             logging.info(column_name)
-    #             # filter table df with only column value
-    #             column_df = table_df[table_df[table_df.columns[column_name_index]] == column_name]
-    #             logging.info(column_df)
-    #             # create json dict with keys of field name and values for the same column name entries
-    #             json_dict = column_df.set_index(table_df.columns[0])['Value'].to_dict()
-    #             # Convert the dictionary to a JSON string
-    #             json_string = json.dumps(json_dict)
-    #             logging.info(json_string)
-    #             try:
-    #                 update_database_single_value(db_config, table_name, cin_column_name_in_db, cin_column_value
-    #                                                  , column_name, json_string,
-    #                                                  din_value,designation)
-    #             except Exception as e:
-    #                 logging.info(f"Exception {e} occurred while updating data in dataframe for {table_name} "
-    #                              f"with data {json_string}")
     for index, row in group_df.iterrows():
         xml_type = str(row.iloc[xml_type_index])
         parent_node = str(row.iloc[parent_node_index]).strip()
@@ -711,18 +642,6 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
         elif xml_type == config_dict['hidden_xml_type_indicator']:
             continue
-            # try:
-            #     logging.info(table_node_name)
-            #     logging.info(child_nodes)
-            #     table_in_list = extract_table_values_from_hidden_xml(hidden_xml_root, table_node_name, child_nodes)
-            #     table_df_hidden = pd.DataFrame(table_in_list)
-            #     table_df_hidden.columns = column_names_list
-            #     logging.info(table_df_hidden)
-            # except Exception as e:
-            #     logging.info(f'Exception {e} occurred while extracting data from xml for table {table_node_name} at line'
-            #           f' number ')
-            #     traceback.logging.info_exc()
-            #     continue
         else:
             continue
 

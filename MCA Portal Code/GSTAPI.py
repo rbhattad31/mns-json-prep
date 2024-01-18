@@ -241,7 +241,7 @@ def fetch_gst_details(config_dict,gst_number,status):
 #         "password": "o2i=hi,64u*I",
 #         "database": "classle3_mns_credit",
 #     }
-# excel_path = r"C:\MCA Portal\Config.xlsx"
+# excel_path = r"C:\Users\BRADSOL123\Documents\Python\Config\Config_Python.xlsx"
 # sheet_name = 'GST'
 # config_dict,status = create_main_config_dictionary(excel_path,sheet_name)
-# insert_gst_number(db_config,config_dict,'U45201RJ2014PTC044956','JCC INFRAPROJECTS PRIVATE LIMITED',"C:\MCA Portal")
+# insert_gst_number(db_config,config_dict,'U28920MH1996PTC101738','VISHVAS POWER ENGINEERING SERVICESPRIVATE LIMITED',"C:\MCA Portal")

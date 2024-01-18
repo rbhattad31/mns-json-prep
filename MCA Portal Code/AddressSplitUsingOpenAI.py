@@ -65,15 +65,3 @@ def split_address(cin,config_dict,db_config):
             cursor.execute(update_query,address_values)
             cursor.close()
             connection.close()
-
-
-#db_config = {
-        #"host": "162.241.123.123",
-        #"user": "classle3_deal_saas",
-        #"password": "o2i=hi,64u*I",
-        #"database": "classle3_mns_credit",
-    #}
-#excel_path = r"C:\Users\mns-admin\Documents\Python\Config\Config_Python.xlsx"
-#sheet_name = 'OpenAI'
-#config_dict,status = create_main_config_dictionary(excel_path,sheet_name)
-#split_address('U74110DL2007FTC166838',config_dict,db_config)

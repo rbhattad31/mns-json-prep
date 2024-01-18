@@ -56,7 +56,7 @@ def get_embedded_pdfs(input_pdf_path, output_path,file_name_hidden_pdf,db_config
             cursor.execute(check_query,values)
             result = cursor.fetchall()
             if len(result) == 0:
-                if 'DIR_2'.lower() in file_name.lower() or 'DIR-2'.lower() in file_name.lower() or 'DIR 2'.lower() in file_name.lower():
+                if 'DIR_2'.lower() in file_name.lower() or 'DIR-2'.lower() in file_name.lower() or 'DIR 2'.lower() in file_name.lower() or 'dir2' in str(file_name).lower():
                     logging.info("Inserting hidden attachment into db for DIR 2")
                     query = "Insert into documents(cin,company,Category,document,form_data_extraction_status,created_date,created_by,form_data_extraction_needed,Download_Status,DB_insertion_status,document_download_path) Values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
                     values = (cin, company_name, 'Hidden Attachment', file_name, 'Success', current_date, user_name, 'Y',
@@ -182,7 +182,7 @@ def PDFtoXML(pdf_path,file_name):
     # file_names = [file.name for file in folder_path.iterdir() if file.is_file()]
     setup_logging()
     try:
-        if 'DIR_2'.lower() in file_name.lower() or 'DIR-2'.lower() in file_name.lower() or 'DIR 2'.lower() in file_name.lower():
+        if 'DIR_2'.lower() in file_name.lower() or 'DIR-2'.lower() in file_name.lower() or 'DIR 2'.lower() in file_name.lower() or 'dir2' in file_name.lower():
             DIR_XML_File_Path,DIR_2_Status = DIR2_pdf_to_xml(pdf_path)
             if DIR_2_Status:
                 return DIR_XML_File_Path,True
