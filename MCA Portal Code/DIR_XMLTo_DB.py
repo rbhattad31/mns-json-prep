@@ -798,17 +798,6 @@ def other_than_dir_xml_to_db(db_config, config_dict, map_file_path, map_file_she
     logging.info(single_df)
     no_of_directors_row_index = single_df[single_df[single_df.columns[field_name_index]] ==
                                           config_dict['no_of_directors_field_name']].index[0]
-    if no_of_directors_row_index is not None:
-        no_of_directors_value = single_df.loc[no_of_directors_row_index, 'Value']
-        logging.info(f'{no_of_directors_value=}')
-        if no_of_directors_value is None or int(no_of_directors_value) <= 0:
-            pass
-        else:
-            raise Exception(f"Number of Directors = '{no_of_directors_value}' is found in xml."
-                            f"Hence skipping processing program for 'other than directors'")
-    else:
-        raise Exception("Number of Directors field is not found in director mapping file for 'other than"
-                        " directors program'")
 
     # extract group values
     for index, row in group_df.iterrows():
