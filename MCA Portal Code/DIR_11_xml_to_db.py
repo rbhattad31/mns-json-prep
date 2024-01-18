@@ -68,36 +68,25 @@ def update_database_single_value(db_config, table_name, cin_column_name, cin_val
     # logging.info(result)
 
     # if cin value already exists
-    if len(result) == 0:
-        insert_query = "INSERT INTO {} ({},{},{},{},{}) VALUES ('{}', '{}','{}','{}','{}')".format(table_name, cin_column_name,
-                                                                                           'din',
-                                                                                           'designation',
-                                                                                           'event',
-                                                                                           column_name,
-                                                                                           cin_value,
-                                                                                           din,
-                                                                                           designation,'cessation',column_value)
-        print(insert_query)
-        logging.info(insert_query)
-        db_cursor.execute(insert_query)
-        logging.info("Inserting")
-    # if cin value doesn't exist
-    else:
-        update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}' AND LOWER({}) = '{}' AND LOWER({}) = '{}'".format(table_name,
-                                                                                                           column_name,
-                                                                                                           column_value,
-                                                                                                           cin_column_name,
-                                                                                                           cin_value,
-                                                                                                           'din',
-                                                                                                           din,
-                                                                                                           'designation',
-                                                                                                           str(designation).lower(),
-                                                                                                           'event',
-                                                                                                           'cessation')
+    if len(result) != 0:
+        update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}' AND LOWER({}) = '{}' AND LOWER({}) = '{}'".format(
+            table_name,
+            column_name,
+            column_value,
+            cin_column_name,
+            cin_value,
+            'din',
+            din,
+            'designation',
+            str(designation).lower(),
+            'event',
+            'cessation')
         logging.info(update_query)
         db_cursor.execute(update_query)
         logging.info("Updating")
         print(update_query)
+    # if cin value doesn't exist
+
 
     db_connection.commit()
     db_cursor.close()
@@ -221,18 +210,3 @@ def dir11_main(db_config, config_dict, map_file_path, map_file_sheet_name, xml_f
         return False
     else:
         return True
-# main_dict = create_main_config_dictionary(r"C:\Users\BRADSOL123\Documents\Python\Config\Config_Python.xlsx",
-#                                           'DIR')
-# config_dict = main_dict[0]
-# db_config = {
-#         "host": "162.241.123.123",
-#         "user": "classle3_deal_saas",
-#         "password": "o2i=hi,64u*I",
-#         "database": "classle3_mns_credit",
-#     }
-# map_file_path = r"C:\Users\BRADSOL123\Documents\Python\Config\DIR-11config.xlsx"
-# map_file_sheet_name = 'Sheet1'
-# xml_file_path = r"C:\Users\BRADSOL123\Downloads\Form DIR-11-02092017_signed (1).xml"
-# cin_column_name_in_db = 'cin'
-# cin = 'U27107CT1999PLC013773'
-# print(xml_to_db(db_config,config_dict,map_file_path,map_file_sheet_name,xml_file_path,cin_column_name_in_db,cin))
