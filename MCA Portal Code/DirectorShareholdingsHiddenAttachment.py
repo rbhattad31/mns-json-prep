@@ -12,10 +12,12 @@ from Config import create_main_config_dictionary
 import PyPDF2
 from PyPDF2 import PdfReader
 import re
+from CaptureTextUsingOCR import extract_text_from_pdf
 
 
 def update_value_in_db(db_config,name,no_of_shares,cin):
     try:
+        setup_logging()
         db_connection = mysql.connector.connect(**db_config)
         db_cursor = db_connection.cursor()
         db_connection.autocommit = True
@@ -134,6 +136,7 @@ def get_hidden_attachment(input_pdf_path, output_path,file_name_hidden_pdf):
 
 def fetch_address_din_using_open_ai(text,config_dict):
     try:
+        setup_logging()
         url = config_dict['url']
         prompt = text + ' ' + config_dict['MGT_director_shareholdings_prompt']
         logging.info(prompt)
@@ -160,52 +163,38 @@ def fetch_address_din_using_open_ai(text,config_dict):
         response = requests.request("POST", url, headers=headers, data=payload)
 
         json_response = response.json()
-        print(json_response)
+        logging.info(json_response)
         content = json_response[config_dict['choices_keyword']][0][config_dict['message_keyword']][
             config_dict['content_keyword']]
         logging.info(content)
         return content
     except Exception as e:
-        print(f"Exception occured in fetching address from OpenAI{e}")
+        logging.info(f"Exception occured in fetching address from OpenAI{e}")
         return []
 
 
 def MGT_director_shareholdings_pdf_to_db(pdf_path,config_dict,db_config,cin):
     try:
+        setup_logging()
         pdf_document = fitz.open(pdf_path)
         xml_path = str(pdf_path).replace('.pdf','.xml')
 
         with open(xml_path, "w", encoding="utf-8") as xml_file:
             xml_file.write("<?xml version='1.0' encoding='utf-8'?>\n")
             xml_file.write("<PDFData>\n")
-        total_text = ''
         text = ''
-        pdf_reader = PdfReader(pdf_path)
-        for page in pdf_reader.pages:
-            logging.info("Taking text using normal approach")
-            text += page.extract_text()
-        total_text = text
-        if total_text == '':
-            logging.info("Taking text using ocr")
-            for page_num in range(pdf_document.page_count):
-                page = pdf_document.load_page(page_num)
-                for img_index, image in enumerate(page.get_images(full=True)):
-                    try:
-                        xref = image[0]
-                        base_image = pdf_document.extract_image(xref)
-                        image_data = base_image["image"]
-
-                        with open(f"temp_image_{img_index}.png", "wb") as img_file:
-                            img_file.write(image_data)
-                        text = image_to_text(f"temp_image_{img_index}.png")
-                        total_text += text
-                    except Exception as e:
-                        print(f"Exception Occured while converting image to text{e}")
-                    else:
-                        os.remove(f"temp_image_{img_index}.png")
-        print(total_text)
+        bucket_name = config_dict['bucket_name']
+        total_text = extract_text_from_pdf(pdf_path, bucket_name, pdf_path, config_dict)
+        logging.info(f"OCR Captured text {total_text}")
+        if total_text is None:
+            pdf_reader = PdfReader(pdf_path)
+            for page in pdf_reader.pages:
+                logging.info("Taking text using normal approach")
+                text += page.extract_text()
+            total_text = text
+            logging.info(total_text)
         shareholders_details = fetch_address_din_using_open_ai(total_text,config_dict)
-        print(shareholders_details)
+        logging.info(shareholders_details)
         shareholders_details = eval(shareholders_details)
         salutation_list = str(config_dict['salutation_list']).split(',')
         salutation_list = [str(x).strip() for x in salutation_list]
@@ -226,7 +215,7 @@ def MGT_director_shareholdings_pdf_to_db(pdf_path,config_dict,db_config,cin):
                 logging.info(no_of_shares)
                 update_value_in_db(db_config,name,no_of_shares,cin)
     except Exception as e:
-        print(f"Exception in finding address in MGT{e}")
+        logging.info(f"Exception in finding address in MGT{e}")
         return False
     else:
         return True
@@ -234,26 +223,13 @@ def MGT_director_shareholdings_pdf_to_db(pdf_path,config_dict,db_config,cin):
 
 def mgt_director_shareholdings_main(db_config,config_dict,output_directory,pdf_path,cin):
     try:
+        setup_logging()
         hidden_attachment = get_hidden_attachment(pdf_path,output_directory,None)
         if hidden_attachment is not None:
             address = MGT_director_shareholdings_pdf_to_db(hidden_attachment,config_dict,db_config,cin)
             if address:
                 return True
     except Exception as e:
-        print(f"Exception in fetching address from MGT {e}")
+        logging.info(f"Exception in fetching address from MGT {e}")
     else:
         return True
-
-# pdf_path = r"C:\Users\BRADSOL123\Documents\Form MGT-7A-25112023_signed.pdf"
-# excel_path = r"C:\Users\BRADSOL123\Documents\Python\Config\Config_Python.xlsx"
-# sheet_name = 'OpenAI'
-# config_dict,status = create_main_config_dictionary(excel_path,sheet_name)
-# db_config = {
-# "host": "162.241.123.123",
-# "user": "classle3_deal_saas",
-# "password": "o2i=hi,64u*I",
-# "database": "classle3_mns_credit",
-# }
-# cin = 'U52609PN2016PTC166537'
-# output_directory = r"C:\Users\BRADSOL123\Documents\Python"
-# mgt_director_shareholdings_main(db_config,config_dict,output_directory,pdf_path,cin)

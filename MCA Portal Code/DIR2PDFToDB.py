@@ -16,6 +16,8 @@ import mysql.connector
 from Config import create_main_config_dictionary
 import sys
 import traceback
+from CaptureTextUsingOCR import extract_text_from_pdf
+
 
 def update_value_in_db(db_config, DIN, PAN, MobileNumber, Email, CIN):
     try:
@@ -93,7 +95,7 @@ def update_value_in_db(db_config, DIN, PAN, MobileNumber, Email, CIN):
 
 
 def image_to_text(image_path):
-    pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+    # pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
     return pytesseract.image_to_string(Image.open(image_path), lang='eng')
 
 
@@ -169,38 +171,18 @@ def MGT_director_shareholdings_pdf_to_db(pdf_path, config_dict, db_config, cin):
     setup_logging()
     try:
         pdf_document = fitz.open(pdf_path)
-        # xml_path = str(pdf_path).replace('.pdf', '.xml')
-        #
-        # with open(xml_path, "w", encoding="utf-8") as xml_file:
-        #     xml_file.write("<?xml version='1.0' encoding='utf-8'?>\n")
-        #     xml_file.write("<PDFData>\n")
-        total_text = ''
         text = ''
         pdf_reader = PdfReader(pdf_path)
-        for page_num in range(pdf_document.page_count):
-            page = pdf_document.load_page(page_num)
-            for img_index, image in enumerate(page.get_images(full=True)):
-                try:
-                    xref = image[0]
-                    base_image = pdf_document.extract_image(xref)
-                    image_data = base_image["image"]
-
-                    with open(f"temp_image_{img_index}.png", "wb") as img_file:
-                        img_file.write(image_data)
-                    text = image_to_text(f"temp_image_{img_index}.png")
-                    total_text += text
-                except Exception as e:
-                    logging.info(f"Exception Occurred while converting image to text{e}")
-                else:
-                    os.remove(f"temp_image_{img_index}.png")
+        bucket_name = config_dict['bucket_name']
+        total_text = extract_text_from_pdf(pdf_path,bucket_name,pdf_path,config_dict)
         logging.info(f"OCR Captured text {total_text}")
-        if total_text == '':
+        if total_text is None:
             for page in pdf_reader.pages:
                 text += page.extract_text()
             total_text = text
             logging.info(f"Plain Captured text: {total_text}")
         shareholders_details = fetch_address_din_using_open_ai(total_text, config_dict)
-        # print(shareholders_details)
+        logging.info(shareholders_details)
         shareholders_details = eval(shareholders_details)
         if len(shareholders_details) != 0:
             for shareholder in shareholders_details:
@@ -246,17 +228,3 @@ def dir2_main(db_config, config_dict, output_directory, pdf_path, cin):
     else:
         return True
 
-
-# Cin = 'U51505DL2004PTC222553'
-# output = r"C:\Users\BRADSOL123\Documents\Python"
-# pdf = r"C:\Users\BRADSOL123\Documents\Python\DIR-2.pdf"
-# main_dict = create_main_config_dictionary(r"C:\Users\BRADSOL123\Documents\Python\Config\Config_Python.xlsx",
-#                                           'OpenAI')
-# config_dict = main_dict[0]
-# db_config = {
-# "host": "162.241.123.123",
-# "user": "classle3_deal_saas",
-# "password": "o2i=hi,64u*I",
-# "database": "classle3_mns_credit",
-# }
-# dir2_main(db_config, config_dict, output, pdf, Cin)
