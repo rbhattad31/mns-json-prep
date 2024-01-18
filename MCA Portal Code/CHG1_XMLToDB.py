@@ -252,6 +252,23 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         logging.info(f'{status_row_index=}')
         if status_row_index is not None:
             status_value = single_df.loc[status_row_index, 'Value']
+            if status_value is not None:
+                if status_value == '' or str(status_value).lower() == 'none':
+                    if charge_id is not None:
+                        if charge_id == '' or charge_id == '-' or charge_id == 0 or charge_id == '0' or charge_id == 'None':
+                            status_value = 'CRTN'
+                        else:
+                            status_value = 'MDFN'
+                    else:
+                        status_value = 'CRTN'
+            else:
+                if charge_id is not None:
+                    if charge_id == '' or charge_id == '-' or charge_id == 0 or charge_id == '0' or charge_id == 'None':
+                        status_value = 'CRTN'
+                    else:
+                        status_value = 'MDFN'
+                else:
+                    status_value = 'CRTN'
             logging.info(f'{status_value=}')
             single_df.loc[status_row_index, 'Value'] = status_dict.get(status_value, "Status Not Found")
         status = single_df.loc[single_df['Field_Name'] == 'status', 'Value'].values[0]

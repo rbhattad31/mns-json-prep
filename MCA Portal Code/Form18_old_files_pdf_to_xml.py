@@ -44,15 +44,8 @@ def extract_form_data(pdf_path, output_xml_path):
                         # Create a new XML element for the field
                         field_element = ET.SubElement(root, sanitized_name)
                         if field_value == '0' or field_value == '1':
-                            if field_name == 'Form8_Dtls[0].page1[0].Form_for_R[0]':
-                                if field_value == '0':
-                                    field_element.text = 'CRTN'
-                                elif field_value == '1':
-                                    field_element.text = 'MDFN'
-                                else:
-                                    field_element.text = ''
-                            elif field_name == 'Form8_Dtls[0].page1[0].Wheconfininvolved[0]' or field_name == 'Form8_Dtls[0].page1[0].Jointch_involved[0]' or field_name == 'Form8_Dtls[0].page2[0].Form_for_involved[0]':
-                                if str(field_value).lower() == '1':
+                            if field_name == 'Form8_Dtls[0].page1[0].Wheconfininvolved[0]' or field_name == 'Form8_Dtls[0].page1[0].Jointch_involved[0]' or field_name == 'Form8_Dtls[0].page2[0].Form_for_involved[0]':
+                                if str(field_value).lower() == '1' or str(field_value).lower() == 'no':
                                     field_element.text = 'No'
                                 else:
                                     field_element.text = 'Yes'
@@ -82,13 +75,3 @@ def extract_form_data(pdf_path, output_xml_path):
         return False
     else:
         return True
-
-# # Example usage
-#
-# # Replace 'your_pdf_file.pdf' with the path to your PDF file
-# pdf_path = r"C:\Users\BRADSOL123\Documents\Form 8-130707-ChargeId-10058187.PDF"
-#
-# # Replace 'output.xml' with the desired output XML file path
-# output_xml_path = r"C:\Users\BRADSOL123\Documents\Form 8-130707-ChargeId-10058187.xml"
-#
-# extract_form_data(pdf_path, output_xml_path)
