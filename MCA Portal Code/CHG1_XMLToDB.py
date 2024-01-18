@@ -305,7 +305,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 db_connection = mysql.connector.connect(**db_config)
                 db_cursor = db_connection.cursor()
                 db_connection.autocommit = True
-                charge_id_check_query = "select id from open_charges where {} = '{}' and REPLACE({},',','') = '{}' and {}='{}' and {} = '{}'".format(cin_column_name_in_db,cin_column_value,amount_column_name,amount,date_column,date,type_column,status)
+                charge_id_check_query = "select id from open_charges where {} = '{}' and REPLACE({},',','') = '{}' and {}='{}' and LOWER({}) = '{}'".format(cin_column_name_in_db,cin_column_value,amount_column_name,amount,date_column,date,type_column,str(status).lower())
                 logging.info(charge_id_check_query)
                 db_cursor.execute(charge_id_check_query)
                 charge_id = db_cursor.fetchone()[0]
@@ -321,9 +321,9 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             db_connection = mysql.connector.connect(**db_config)
             db_cursor = db_connection.cursor()
             db_connection.autocommit = True
-            charge_id_check_query = "select id from open_charges where {} = '{}' and REPLACE({},',','') = '{}' and {}='{}' and {} = '{}'".format(
+            charge_id_check_query = "select id from open_charges where {} = '{}' and REPLACE({},',','') = '{}' and {}='{}' and LOWER({}) = '{}'".format(
                 cin_column_name_in_db, cin_column_value, amount_column_name, amount, date_column, date, type_column,
-                status)
+                str(status).lower())
             logging.info(charge_id_check_query)
             db_cursor.execute(charge_id_check_query)
             charge_id = db_cursor.fetchone()[0]
