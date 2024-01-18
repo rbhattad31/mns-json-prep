@@ -297,7 +297,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             date_column = 'date_of_satisfaction'
         else:
             date_column = 'date'
-        #type_column = config_dict['type_column_name']
+        type_column = config_dict['type_column_name']
         holder_column = config_dict['holder_name_column_name']
         amount_column_name = config_dict['amount_column_name']
         if charge_id is not None:
@@ -305,7 +305,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 db_connection = mysql.connector.connect(**db_config)
                 db_cursor = db_connection.cursor()
                 db_connection.autocommit = True
-                charge_id_check_query = "select id from open_charges where {} = '{}' and REPLACE({},',','') = '{}' and {}='{}' and {} = '{}'".format(cin_column_name_in_db,cin_column_value,amount_column_name,amount,date_column,date,holder_column,holder_name)
+                charge_id_check_query = "select id from open_charges where {} = '{}' and REPLACE({},',','') = '{}' and {}='{}' and {} = '{}'".format(cin_column_name_in_db,cin_column_value,amount_column_name,amount,date_column,date,type_column,status)
                 logging.info(charge_id_check_query)
                 db_cursor.execute(charge_id_check_query)
                 charge_id = db_cursor.fetchone()[0]
@@ -322,8 +322,8 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             db_cursor = db_connection.cursor()
             db_connection.autocommit = True
             charge_id_check_query = "select id from open_charges where {} = '{}' and REPLACE({},',','') = '{}' and {}='{}' and {} = '{}'".format(
-                cin_column_name_in_db, cin_column_value, amount_column_name, amount, date_column, date, holder_column,
-                holder_name)
+                cin_column_name_in_db, cin_column_value, amount_column_name, amount, date_column, date, type_column,
+                status)
             logging.info(charge_id_check_query)
             db_cursor.execute(charge_id_check_query)
             charge_id = db_cursor.fetchone()[0]
@@ -399,20 +399,6 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         if sql_table_name == config_dict['charge_sequence_table_name']:
             logging.info(table_df)
             logging.info(f'{sql_table_name=}')
-            # status_abbreviation_list = [x.strip() for x in config_dict['status_abbreviation_list'].split(',')]
-            # status_list = [x.strip() for x in config_dict['status_list'].split(',')]
-            # status_dict = dict(zip(status_abbreviation_list, status_list))
-            # logging.info(f'{status_dict=}')
-            # try:
-            #     status_row_index = table_df[table_df['Column_Name'] == config_dict['status_column_name']].index[0]
-            # except IndexError as index_error:
-            #     raise (f"Below Exception occurred while getting status row details of charge sequence table - "
-            #            f"\n {index_error}")
-            # logging.info(f'{status_row_index=}')
-            # if status_row_index is not None:
-            #     status_value = table_df.loc[status_row_index, 'Value']
-            #     logging.info(f'{status_value=}')
-            #     table_df.loc[status_row_index, 'Value'] = status_dict.get(status_value, "Status Not Found")
             logging.info(table_df)
             charge_id = table_df.loc[table_df['Column_Name'] == config_dict['charge_id_column_name'], 'Value'].values[0]
             date = table_df.loc[table_df['Column_Name'] == config_dict['date_column_name'], 'Value'].values[0]
@@ -562,20 +548,3 @@ def chg1_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, x
     else:
         return True
 
-# db_config = {
-# "host": "162.241.123.123",
-# "user": "classle3_deal_saas",
-# "password": "o2i=hi,64u*I",
-# "database": "classle3_mns_credit",
-# }
-# excel_path = r"C:\Users\BRADSOL123\Documents\Python\Config\Config_Python.xlsx"
-# sheet_name = 'CHG1'
-# config_dict,status = create_main_config_dictionary(excel_path,sheet_name)
-# map_file_path = r"C:\Users\BRADSOL123\Documents\Python\Config\FORM8_otherthanxfa_nodes_config_old_files.xlsx"
-# map_file_sheet = 'Sheet1'
-# xml_file_path = r"C:\Users\BRADSOL123\Documents\Form 8-250407.xml"
-# output_file_path = r"C:\Users\BRADSOL123\Documents\Form 8-250407.xlsx"
-# cin = 'U25112MP1992PTC007003'
-# company_name = 'ARUN TYRES PVT LTD'
-# filing_date = '25-04-2007'
-# chg1_xml_to_db(db_config,config_dict,map_file_path,map_file_sheet,xml_file_path,output_file_path,cin,company_name,filing_date)
