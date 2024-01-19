@@ -138,7 +138,7 @@ def fetch_address_din_using_open_ai(text,config_dict):
     try:
         setup_logging()
         url = config_dict['url']
-        prompt = text + ' ' + config_dict['MGT_director_shareholdings_prompt']
+        prompt = text + '\n' + '-------------------' + '\n' + config_dict['MGT_director_shareholdings_prompt']
         logging.info(prompt)
         payload = json.dumps({
             "model": "gpt-3.5-turbo",
