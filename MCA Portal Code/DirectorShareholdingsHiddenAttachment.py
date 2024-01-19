@@ -210,6 +210,11 @@ def MGT_director_shareholdings_pdf_to_db(pdf_path,config_dict,db_config,cin):
                         break
                 no_of_shares = shareholder['numberofsharesheld']
                 no_of_shares = str(no_of_shares).replace(',','')
+                if no_of_shares is not None:
+                    if no_of_shares == '':
+                        no_of_shares = 0
+                else:
+                    no_of_shares = 0
                 no_of_shares = float(no_of_shares)
                 logging.info(name)
                 logging.info(no_of_shares)
