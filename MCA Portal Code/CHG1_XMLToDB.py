@@ -41,7 +41,7 @@ def get_single_value_from_xml(xml_root, parent_node, child_node):
 def update_datatable_single_value(db_config, table_name, cin_column_name, cin_value,
                                   company_name_column_name,
                                   company_name, column_name, column_value, charge_id, date, charge_id_column_name,
-                                  date_column_name,amount_column_name,amount):
+                                  date_column_name,amount_column_name,amount,config_dict):
     setup_logging()
     db_connection = mysql.connector.connect(**db_config)
     db_cursor = db_connection.cursor()
@@ -86,20 +86,23 @@ def update_datatable_single_value(db_config, table_name, cin_column_name, cin_va
         logging.info("Updated entry")
     # if cin value doesn't exist
     else:
-        insert_query = 'INSERT INTO {} ({}, {}, {},{},{},{}) VALUES ("{}", "{}", "{}","{}","{}","{}")'.format(table_name,
-                                                                                                      cin_column_name,
-                                                                                                      company_name_column_name,
-                                                                                                      column_name,
-                                                                                                      charge_id_column_name,
-                                                                                                      date_column_name,
-                                                                                                     amount_column_name,
-                                                                                                      cin_value,
-                                                                                                      company_name,
-                                                                                                      column_value,
-                                                                                                      charge_id, date,amount)
-        logging.info(insert_query)
-        db_cursor.execute(insert_query)
-        logging.info("inserted entry")
+        if table_name == config_dict['charge_sequence_table_name']:
+            insert_query = 'INSERT INTO {} ({}, {}, {},{},{},{}) VALUES ("{}", "{}", "{}","{}","{}","{}")'.format(table_name,
+                                                                                                          cin_column_name,
+                                                                                                          company_name_column_name,
+                                                                                                          column_name,
+                                                                                                          charge_id_column_name,
+                                                                                                          date_column_name,
+                                                                                                         amount_column_name,
+                                                                                                          cin_value,
+                                                                                                          company_name,
+                                                                                                          column_value,
+                                                                                                          charge_id, date,amount)
+            logging.info(insert_query)
+            db_cursor.execute(insert_query)
+            logging.info("inserted entry for charge sequence")
+        else:
+            logging.info(f"Not inserting as table is {table_name}")
     db_cursor.close()
     db_connection.close()
 
@@ -496,7 +499,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                                               cin_column_value,
                                               company_name_column_name_in_db,
                                               company_name, column_name,
-                                              json_string,charge_id,date,charge_id_column_name,date_column_name,amount_column_name,amount)
+                                              json_string,charge_id,date,charge_id_column_name,date_column_name,amount_column_name,amount,config_dict)
             except Exception as e:
                 logging.info(f"Exception {e} occurred while updating data in dataframe for {sql_table_name} "
                       f"with data {json_string}")
