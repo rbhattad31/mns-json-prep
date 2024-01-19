@@ -212,11 +212,11 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 if 'CHG-1'.lower() in str(file_name).lower():
                     if value is not None:
                         if value == '' or str(value).lower() == 'none':
-                            name_child_node = 'NAME_CHARGE_HOLD'
+                            name_child_node = 'NAME'
                             value = get_single_value_from_xml(xml_root, parent_node, name_child_node)
                             logging.info(f"Value taken from different node {value}")
                     else:
-                        name_child_node = 'NAME_CHARGE_HOLD'
+                        name_child_node = 'NAME'
                         value = get_single_value_from_xml(xml_root, parent_node, name_child_node)
                         logging.info(f"Value taken from different node {value}")
         try:
