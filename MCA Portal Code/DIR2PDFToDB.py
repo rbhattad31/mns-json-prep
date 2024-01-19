@@ -31,7 +31,7 @@ def update_value_in_db(db_config, DIN, PAN, MobileNumber, Email, CIN):
             # Authorized_Signatures
             DIN_Query = "select * from authorized_signatories where din = %s and cin = %s"
             values = (DIN, CIN)
-            print(DIN_Query % values)
+            logging.info(DIN_Query % values)
             db_cursor.execute(DIN_Query, values)
             DIN_Result = db_cursor.fetchall()
 
@@ -39,7 +39,7 @@ def update_value_in_db(db_config, DIN, PAN, MobileNumber, Email, CIN):
                 # update Query:
                 update_query = "UPDATE authorized_signatories set pan = %s,phone_number = %s,email = %s where din = %s and cin = %s"
                 update_values = (PAN, MobileNumber, Email, DIN, CIN)
-                print(update_query % update_values)
+                logging.info(update_query % update_values)
                 db_cursor.execute(update_query, update_values)
             # else:
             #     # Insert Query:
@@ -51,7 +51,7 @@ def update_value_in_db(db_config, DIN, PAN, MobileNumber, Email, CIN):
             # director_network
             DirectorNetwork_query = "select * from director_network where din = %s and cin = %s"
             values = (DIN, CIN)
-            print(DirectorNetwork_query % values)
+            logging.info(DirectorNetwork_query % values)
             db_cursor.execute(DirectorNetwork_query, values)
             DirectorNetwork_result = db_cursor.fetchall()
 
@@ -59,7 +59,7 @@ def update_value_in_db(db_config, DIN, PAN, MobileNumber, Email, CIN):
                 # update Query:
                 update_query = "UPDATE director_network set pan = %s where din = %s and cin = %s"
                 update_values = (PAN, DIN, CIN)
-                print(update_query % update_values)
+                logging.info(update_query % update_values)
                 db_cursor.execute(update_query, update_values)
             # else:
             #     # Insert Query:
@@ -71,7 +71,7 @@ def update_value_in_db(db_config, DIN, PAN, MobileNumber, Email, CIN):
         else:
             PAN_Query = "select * from authorized_signatories where pan = %s and cin = %s"
             values = (PAN, CIN)
-            print(PAN_Query % values)
+            logging.info(PAN_Query % values)
             db_cursor.execute(PAN_Query, values)
             PAN_Result = db_cursor.fetchall()
 
@@ -79,7 +79,7 @@ def update_value_in_db(db_config, DIN, PAN, MobileNumber, Email, CIN):
                 # update Query:
                 update_query = "UPDATE authorized_signatories set phone_number = %s,email = %s where pan = %s and cin = %s"
                 update_values = (MobileNumber, Email, PAN, CIN)
-                print(update_query % update_values)
+                logging.info(update_query % update_values)
                 db_cursor.execute(update_query, update_values)
             # else:
             #     # Insert Query:
