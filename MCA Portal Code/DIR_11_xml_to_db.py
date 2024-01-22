@@ -12,11 +12,14 @@ import traceback
 
 def get_single_value_from_xml(xml_root, parent_node, child_node):
     try:
+        namespaces = {'xfa': 'http://www.xfa.org/schema/xfa-data/1.0/',
+                      'frm': 'http://www.mit.gov.in/eGov/BackOffice/schema/Form',
+                      'cdt': 'http://www.mit.gov.in/eGov/BackOffice/schema/ComplexDataTypes'}
         if child_node == 'nan':
             elements = xml_root.findall(f'.//{parent_node}')
 
         else:
-            elements = xml_root.findall(f'.//{parent_node}//{child_node}')
+            elements = xml_root.findall(f'.//{parent_node}//{child_node}',namespaces)
 
         for element in elements:
             if element.text is None:
@@ -33,7 +36,7 @@ def get_single_value_from_xml(xml_root, parent_node, child_node):
 
 
 def update_database_single_value(db_config, table_name, cin_column_name, cin_value, column_name, column_value, din,
-                                 designation):
+                                 designation,filing_date):
     setup_logging()
     db_connection = mysql.connector.connect(**db_config)
     db_cursor = db_connection.cursor()
@@ -86,7 +89,23 @@ def update_database_single_value(db_config, table_name, cin_column_name, cin_val
         logging.info("Updating")
         print(update_query)
     # if cin value doesn't exist
-
+    else:
+        insert_query = "INSERT INTO {} ({},{},{},{},{},{}) VALUES ('{}', '{}','{}','{}','{}','{}')".format(table_name,
+                                                                                                   cin_column_name,
+                                                                                                   'din',
+                                                                                                   'designation',
+                                                                                                   'event',
+                                                                                                   'filing_date',
+                                                                                                   column_name,
+                                                                                                   cin_value,
+                                                                                                   din,
+                                                                                                   designation,
+                                                                                                   'cessation',
+                                                                                                   filing_date,
+                                                                                                   column_value)
+        logging.info(insert_query)
+        db_cursor.execute(insert_query)
+        logging.info("Inserting")
 
     db_connection.commit()
     db_cursor.close()
@@ -94,7 +113,7 @@ def update_database_single_value(db_config, table_name, cin_column_name, cin_val
 
 
 def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, cin_column_name_in_db,
-              cin_column_value):
+              cin_column_value,filing_date):
     setup_logging()
     field_name_index = config_dict['field_name_index']
     xml_type_index = config_dict['xml_type_index']
@@ -186,18 +205,18 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             try:
                 if column_name.strip() != 'nan' and column_name != '' and column_name is not None:
                     update_database_single_value(db_config, table_name, cin_column_name_in_db, cin_column_value,
-                                                 column_name, json_string, din_value, designation)
+                                                 column_name, json_string, din_value, designation,filing_date)
             except Exception as e:
                 logging.info(f"Exception {e} occurred while updating data in dataframe for {table_name} "
                              f"with data {json_string}")
 
 
 def dir11_main(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, cin_column_name_in_db,
-              cin_column_value):
+              cin_column_value,filing_date):
     try:
         setup_logging()
         xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, cin_column_name_in_db,
-              cin_column_value)
+              cin_column_value,filing_date)
     except Exception as e:
         logging.info(f"Exception occured while inserting for dir 11")
         exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -210,3 +229,4 @@ def dir11_main(db_config, config_dict, map_file_path, map_file_sheet_name, xml_f
         return False
     else:
         return True
+

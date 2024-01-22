@@ -690,7 +690,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                 xml_file_path = str(path).replace('.pdf', '.xml')
                 output_excel_path = str(path).replace('.pdf', '.xlsx')
                 cin_column_name = 'cin'
-                dir11 = dir11_main(db_config,config_dict_dir11,map_file_path_dir11,map_file_sheet_name,xml_file_path,cin_column_name,Cin)
+                dir11 = dir11_main(db_config,config_dict_dir11,map_file_path_dir11,map_file_sheet_name,xml_file_path,cin_column_name,Cin,date)
                 if dir11:
                     update_db_insertion_status(Cin, file_name, config_dict, 'Success')
         except Exception as e:

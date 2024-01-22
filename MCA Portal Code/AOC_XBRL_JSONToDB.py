@@ -1100,3 +1100,4 @@ def aoc_xbrl_db_update(db_config,config_dict,cin,company_name,xml_file_path,file
         return False
     else:
         return True
+
