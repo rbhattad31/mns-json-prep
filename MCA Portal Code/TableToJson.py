@@ -29,6 +29,7 @@ def extract_tables_to_temp_pdf(input_pdf, temp_pdf):
         pdf_writer.write(temp_pdf_file)
     return True
 
+
 def json_generation(pdf_file, json_file_path):
     try:
         setup_logging()
@@ -46,6 +47,10 @@ def json_generation(pdf_file, json_file_path):
 
         for table_num, df in enumerate(tables):
             table_data = df.values.tolist()
+            headers = df.columns.tolist()
+            if not isinstance(table_data, list):
+                table_data = [table_data]
+            table_data = [headers] + table_data
             table_dict = {
                 f"table_{table_num}": table_data
             }
@@ -79,4 +84,3 @@ def json_generation(pdf_file, json_file_path):
         return False
     else:
         return True
-

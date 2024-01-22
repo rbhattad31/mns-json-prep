@@ -15,6 +15,39 @@ import re
 from CaptureTextUsingOCR import extract_text_from_pdf
 
 
+def check_name_probability(db_config,cin,input_name):
+    setup_logging()
+    connection = mysql.connector.connect(**db_config)
+    cursor = connection.cursor()
+    director_query = "select name,din,designation from authorized_signatories where cin = %s and extracted_from = 'Master Data'"
+    value = (cin,)
+    logging.info(director_query % value)
+    cursor.execute(director_query,value)
+    directors = cursor.fetchall()
+    for director in directors:
+        dbname = director[0]
+        din = director[1]
+        designation = director[2]
+        # Convert names to lowercase
+        input_name = input_name.lower()
+        dbname = dbname.lower()
+
+        # Find intersection and union
+        intersection = set(input_name) & set(dbname)
+        union = set(input_name) | set(dbname)
+
+        # Calculate Jaccard similarity coefficient
+        jaccard_similarity = len(intersection) / len(union)
+
+        # Convert to percentage
+        percentage_match = jaccard_similarity * 100
+
+        # Output the result as a number
+        logging.info(percentage_match)
+        if percentage_match > 75:
+            return dbname,din,designation,director
+
+
 def update_value_in_db(db_config,name,no_of_shares,cin):
     try:
         setup_logging()
@@ -31,8 +64,15 @@ def update_value_in_db(db_config,name,no_of_shares,cin):
         except Exception as e:
             return
         logging.info(name_result)
-        din = name_result[4]
-        designation = name_result[6]
+        if name_result is None or len(name_result) == 0:
+            logging.info("Going for name percentage check")
+            updated_name,din,designation,updated_director_list = check_name_probability(db_config,cin,name)
+            logging.info(updated_name)
+            name = updated_name
+        else:
+            din = name_result[4]
+            designation = name_result[6]
+            updated_director_list = []
         shareholdings_query = "select * from director_shareholdings where cin = %s and LOWER(full_name) = %s"
         values = (cin, str(name).lower())
         logging.info(shareholdings_query % values)
@@ -64,7 +104,7 @@ def update_value_in_db(db_config,name,no_of_shares,cin):
             year = ''
             financial_year = ''
 
-        if len(name_result) != 0:
+        if name_result is not None or updated_director_list is not None or len(name_result) != 0 or len(updated_director_list) != 0:
             if len(shareholdings_result) != 0:
                 update_query = "UPDATE director_shareholdings set no_of_shares = %s where cin = %s and LOWER(full_name) = %s"
                 update_values = (no_of_shares,cin,str(name).lower())
@@ -154,6 +194,7 @@ def fetch_address_din_using_open_ai(text,config_dict):
             "frequency_penalty": 0,
             "presence_penalty": 0
         })
+        print(payload)
         headers = {
             'Authorization': config_dict['api_key'],
             'Content-Type': 'application/json',
