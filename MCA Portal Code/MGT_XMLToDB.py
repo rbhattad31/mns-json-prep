@@ -8,7 +8,10 @@ import os
 import mysql.connector
 import logging
 from logging_config import setup_logging
+from Config import create_main_config_dictionary
 pd.set_option('display.max_columns', None)
+
+
 def get_single_value_from_xml(xml_root, parent_node, child_node):
     try:
         setup_logging()
@@ -159,7 +162,8 @@ def insert_datatable_with_table(db_config, sql_table_name, column_names_list, df
     # Create a dictionary from the list of tuples
     result_dict = dict(combined)
     # logging.info(result_dict)
-
+    cin_column_name = 'cin'
+    cin = result_dict[cin_column_name]
     where_clause = f'SELECT * FROM {sql_table_name} WHERE '
     for key, value in result_dict.items():
         if value is not None:
@@ -186,6 +190,11 @@ def insert_datatable_with_table(db_config, sql_table_name, column_names_list, df
         # logging.info(f"Data row values are saved in table {sql_table_name} with \n {df_row}")
     else:
         logging.info(f"Entry with values already exists in table {sql_table_name}")
+        update_query = f"""UPDATE {sql_table_name}
+                                                SET {', '.join([f"{col} = '{str(result_dict[col])}'" for col in column_names_list])} 
+                                                WHERE {cin_column_name} = '{cin}'"""
+        logging.info(update_query)
+        db_cursor.execute(update_query)
     db_cursor.close()
     db_connection.close()
 
@@ -773,3 +782,4 @@ def mgt7_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, x
         return False
     else:
         return True
+

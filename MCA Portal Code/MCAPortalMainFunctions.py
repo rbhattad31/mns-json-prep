@@ -79,6 +79,8 @@ def sign_out(driver,config_dict,CinData):
             pass
         username = CinData[15]
         update_logout_status(username, db_config)
+
+
 def Login_and_Download(config_dict,CinData):
     try:
         setup_logging()
@@ -171,19 +173,6 @@ def Login_and_Download(config_dict,CinData):
     except Exception as e:
         print(f"Exception Occured in downloading Main {e}")
         return False, driver, e
-        # connection = mysql.connector.connect(**db_config)
-        # cursor = connection.cursor()
-        # Check_download_files_query = "select * from documents where cin=%s and company=%s and Download_Status='Downloaded' and form_data_extraction_needed='Y'"
-        # Download_Check_Values = (Cin, CompanyName)
-        # print(Check_download_files_query % Download_Check_Values)
-        # cursor.execute(Check_download_files_query, Download_Check_Values)
-        # Downloaded_Files = cursor.fetchall()
-        # cursor.close()
-        # connection.close()
-        # if len(Downloaded_Files) > 0:
-        #     return True, driver,None
-        # else:
-        #     return False, None,e
     else:
         return True,driver,None
 
@@ -210,30 +199,6 @@ def XMLGeneration(db_config,CinData,config_dict):
                         continue
                     folder_path = os.path.dirname(pdf_path)
                     xml_file_path, PDF_to_XML = PDFtoXML(pdf_path, file_name)
-                    # if 'AOC-4(XBRL)'.lower() in str(pdf_path).lower():
-                    #     try:
-                    #         connection = mysql.connector.connect(**db_config)
-                    #         cursor = connection.cursor()
-                    #         update_query_xbrl = "update documents set form_data_extraction_needed = 'N' where cin=%s and (document like '%%XBRL document in respect Consolidated%%'  or document like '%%XBRL financial statements%%') and Category = 'Other Attachments'"
-                    #         values = (Cin,)
-                    #         print(update_query_xbrl % values)
-                    #         cursor.execute(update_query_xbrl, values)
-                    #         connection.commit()
-                    #         cursor.close()
-                    #         connection.close()
-                    #         XBRL_db_update = aoc_xbrl_db_update(db_config, config_dict, Cin, CompanyName, xml_file_path,
-                    #                                             file_date)
-                    #         connection = mysql.connector.connect(**db_config)
-                    #         cursor = connection.cursor()
-                    #         update_query_aoc_xbrl = "update documents set form_data_extraction_needed = 'N' where cin=%s and document like '%%AOC-4(XBRL)%%' and Category = 'Annual Returns and Balance Sheet eForms'"
-                    #         values = (Cin,)
-                    #         print(update_query_aoc_xbrl % values)
-                    #         cursor.execute(update_query_aoc_xbrl, values)
-                    #         connection.commit()
-                    #         cursor.close()
-                    #         connection.close()
-                    #     except Exception as e:
-                    #         logging.info(f"Error in XBRL DB Update {e}")
                     if PDF_to_XML:
                         update_xml_extraction_status(Cin, file_name, config_dict, 'Success')
                         hidden_attachments = CheckHiddenAttachemnts(xml_file_path, folder_path, pdf_path, file_name,db_config,Cin,CompanyName)
@@ -317,6 +282,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                 xml_file_path = str(path).replace('.pdf', '.xml')
                 output_excel_path = str(path).replace('.pdf', '.xlsx')
                 if 'MGT'.lower() in str(file_name).lower():
+                    logging.info(f"Going to extract for {file_name}")
                     Sheet_name = "MGT"
                     config_dict_MGT, config_status = create_main_config_dictionary(excel_file, Sheet_name)
                     if 'MGT-7A' in path:
@@ -357,6 +323,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     db_cursor.close()
                     db_connection.close()
                 elif 'MSME'.lower() in str(file_name).lower():
+                    logging.info(f"Going to extract for {file_name}")
                     Sheet_name = "MSME"
                     config_dict_MSME, config_status = create_main_config_dictionary(excel_file, Sheet_name)
                     map_file_path_MSME = config_dict_MSME['mapping_file_path']
@@ -366,6 +333,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     if msme_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                 elif 'AOC'.lower() in str(file_name).lower() and 'AOC-4(XBRL)'.lower() not in str(file_name).lower():
+                    logging.info(f"Going to extract for {file_name}")
                     if 'AOC-4 NBFC'.lower() in str(path).lower():
                         Sheet_name = "AOC NBFC"
                         config_dict_AOC_NBFC, config_status = create_main_config_dictionary(excel_file, Sheet_name)
@@ -423,6 +391,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                             AOC_4_first_file_found = True
 
                 elif 'CHANGE OF NAME'.lower() in str(file_name).lower():
+                    logging.info(f"Going to extract for {file_name}")
                     Sheet_name = "Change of name"
                     config_dict_Change_of_name,config_status = create_main_config_dictionary(excel_file,Sheet_name)
                     if 'Fresh Certificate of Incorporation'.lower() in str(path).lower():
@@ -441,6 +410,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                         if change_of_name_db_insertion:
                             update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                 elif 'CERTIFICATE OF INCORPORATION CONSEQUENT'.lower() in str(file_name).lower() and 'FRESH'.lower() not in str(file_name).lower():
+                    logging.info(f"Going to extract for {file_name}")
                     logging.info("Going to Certificate of incorporation")
                     Sheet_name = "Change of name"
                     config_dict_certificate, config_status = create_main_config_dictionary(excel_file, Sheet_name)
@@ -453,6 +423,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     if certificate_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                 elif 'CHG'.lower() in str(file_name).lower():
+                    logging.info(f"Going to extract for {file_name}")
                     Sheet_name = "CHG1"
                     config_dict_CHG,config_status = create_main_config_dictionary(excel_file,Sheet_name)
                     digit_count = sum(c.isdigit() for c in file_name)
@@ -468,6 +439,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     if chg_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                 elif 'XBRL document in respect Consolidated'.lower() in str(file_name).lower() or 'XBRL financial statements'.lower() in str(file_name).lower():
+                    logging.info(f"Going to extract for {file_name}")
                     Sheet_name = "AOC XBRL"
                     config_dict_Xbrl, config_status = create_main_config_dictionary(excel_file, Sheet_name)
                     output_json_path = str(path).replace('.pdf', '.json')
@@ -488,12 +460,6 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                         logging.info("Going to extract for Dir-2 hidden attachment")
                         Sheet_name = "OpenAI"
                         config_dict_dir, config_status = create_main_config_dictionary(excel_file, Sheet_name)
-                        # map_file_path_dir2 = config_dict_dir['DIR2_map_file_path']
-                        # map_file_sheet_name = config_dict_dir['mapping file sheet name']
-                        # output_excel_path = str(file_name).replace('.xml', '.xlsx')
-                        # dir_hidden_xml = dir_attachment_xml_to_db(db_config, config_dict_dir, map_file_path_dir2,
-                        #                                           map_file_sheet_name, file_name, output_excel_path,
-                        #                                           Cin)
                         dir2 = dir2_main(db_config, config_dict_dir, None, path, Cin)
                         if dir2:
                             update_db_insertion_status(Cin, file_name, config_dict, 'Success')
@@ -517,6 +483,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                         if dir_db_insertion:
                             update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                 elif 'Form8'.lower() in str(file_name).lower():
+                    logging.info(f"Going to extract for {file_name}")
                     Sheet_name = 'Form_8_annual'
                     config_dict_form8,config_status = create_main_config_dictionary(excel_file,Sheet_name)
                     map_file_path_form8 = config_dict_form8['mapping file path']
@@ -533,6 +500,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     if form8_interim_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                 elif 'Form11'.lower() in str(file_name).lower():
+                    logging.info(f"Going to extract for {file_name}")
                     sheet_name_form11 = 'Form_11'
                     config_dict_form11,config_status = create_main_config_dictionary(excel_file,sheet_name_form11)
                     map_file_path_form11 = config_dict_form11['mapping file path']
@@ -542,6 +510,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     if form11_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                 elif 'FiLLiP'.lower() in str(file_name).lower():
+                    logging.info(f"Going to extract for {file_name}")
                     sheet_name_fillip = 'Form_Fillip'
                     config_dict_fillip,config_status = create_main_config_dictionary(excel_file,sheet_name_fillip)
                     map_file_path_fillip = config_dict_fillip['mapping file path']
@@ -551,6 +520,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
 
                 elif 'Form 8'.lower() in str(file_name).lower():
+                    logging.info(f"Going to extract for {file_name}")
                     Sheet_name = "CHG1"
                     config_dict_form8_charge, config_status = create_main_config_dictionary(excel_file, Sheet_name)
                     map_file_path_Form8 = config_dict_form8_charge['Form8_Config']
@@ -568,6 +538,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                             update_db_insertion_status(Cin, file_name, config_dict, 'Success')
 
                 elif 'Form 18'.lower() in str(file_name).lower() or 'INC-22'.lower() in str(file_name).lower():
+                    logging.info(f"Going to extract for {file_name}")
                     sheet_name = 'Form18'
                     config_dict_form18,config_status = create_main_config_dictionary(excel_file,sheet_name)
                     xml_hidden_file_path = xml_file_path.replace('.xml', '_hidden.xml')
@@ -613,18 +584,6 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                                                      xml_file_path, xml_hidden_file_path, output_excel_path, Cin, date,file_name)
                     if form32_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
-                # elif 'DIR_2'.lower() in file_name.lower() or 'DIR-2'.lower() in file_name.lower() or 'DIR 2'.lower() in file_name.lower() or 'DIR-2-'.lower() in file_name.lower():
-                #     Sheet_name = "OpenAI"
-                #     config_dict_dir, config_status = create_main_config_dictionary(excel_file, Sheet_name)
-                #     map_file_path_dir2 = config_dict_dir['DIR2_map_file_path']
-                #     map_file_sheet_name = config_dict_dir['mapping file sheet name']
-                #     output_excel_path = str(file_name).replace('.xml', '.xlsx')
-                #     # dir_hidden_xml = dir_attachment_xml_to_db(db_config, config_dict_dir, map_file_path_dir2,
-                #     #                                           map_file_sheet_name, file_name, output_excel_path,
-                #     #                                           Cin)
-                #     dir2 = dir2_main(db_config,config_dict_dir,None,path,Cin)
-                #     if dir2:
-                #         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
             except Exception as e:
                 print(f"Exception occured while inserting into DB {e}")
                 continue
@@ -682,11 +641,18 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
             for dir11 in dir11_result:
                 Sheet_name = "DIR"
                 config_dict_dir11, config_status = create_main_config_dictionary(excel_file, Sheet_name)
-                map_file_path_dir11 = config_dict_dir11['DIR11_config']
                 map_file_sheet_name = config_dict_dir11['mapping file sheet name']
                 path = dir11[8]
                 date = dir11[5]
                 file_name = dir11[4]
+                digit_count = sum(c.isdigit() for c in file_name)
+                logging.info(digit_count)
+                if digit_count == 10:
+                    logging.info("Going to extract for new DIR 11 files")
+                    map_file_path_dir11 = config_dict_dir11['DIR11_config']
+                else:
+                    logging.info("Going to extract for old DIR 11 files")
+                    map_file_path_dir11 = config_dict_dir11['DIR11_config_old']
                 xml_file_path = str(path).replace('.pdf', '.xml')
                 output_excel_path = str(path).replace('.pdf', '.xlsx')
                 cin_column_name = 'cin'

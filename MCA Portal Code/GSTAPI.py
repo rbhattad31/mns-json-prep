@@ -233,15 +233,3 @@ def fetch_gst_details(config_dict,gst_number,status):
             return df_map
     except Exception as e:
         logging.error(f"Error in fetching GST Details {e}")
-
-
-# db_config = {
-#         "host": "162.241.123.123",
-#         "user": "classle3_deal_saas",
-#         "password": "o2i=hi,64u*I",
-#         "database": "classle3_mns_credit",
-#     }
-# excel_path = r"C:\Users\BRADSOL123\Documents\Python\Config\Config_Python.xlsx"
-# sheet_name = 'GST'
-# config_dict,status = create_main_config_dictionary(excel_path,sheet_name)
-# insert_gst_number(db_config,config_dict,'U28920MH1996PTC101738','VISHVAS POWER ENGINEERING SERVICESPRIVATE LIMITED',"C:\MCA Portal")

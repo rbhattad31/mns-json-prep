@@ -82,6 +82,7 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,tabl
     value_found = False
     table_found = False
     header_found = False
+    last_row = False
     # Search for the target header in the JSON data
     for item in data:
         for table_name, table_data in item.items():
@@ -92,7 +93,7 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,tabl
                     try:
                         row_values = [value for i, value in enumerate(row) if (
                                 (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
-                                isinstance(row[i], str) and row[i] != "NaN"))]
+                                isinstance(row[i], str) and (row[i] != "NaN" or 'Unnamed' not in row[i])))]
                         if field_name == 'total_changes_in_inventories_or_finished_goods' and (row[0] == 'Changes in inventories of finished goods, work-in-progress and' or row[0] == 'Changes in inventories of finished goods, work-in-progress and stock-in-trade'):
                             if len(row_values) > 1:
                                 logging.info("Going straight for inventories or finished goods")
@@ -104,7 +105,7 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,tabl
                                     if str(row[1]).lower() == 'nan' and str(next_row[0]).lower() == 'nan':
                                         row_values = [value for i, value in enumerate(row) if (
                                                 (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
-                                                isinstance(row[i], str) and row[i] != "NaN"))]
+                                                isinstance(row[i], str) and (row[i] != "NaN" and 'Unnamed' not in row[i])))]
                                         previous_year_value = row_values[1]
                                         try:
                                             current_year_value = row_values[2]
@@ -126,7 +127,7 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,tabl
                                     else:
                                         row_values = [value for i, value in enumerate(row) if (
                                                 (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
-                                                isinstance(row[i], str) and row[i] != "NaN"))]
+                                                isinstance(row[i], str) and (row[i] != "NaN" and 'Unnamed' not in row[i])))]
                                         current_year_value = row_values[1]
                                         try:
                                             previous_year_value = row_values[2]
@@ -163,7 +164,7 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,tabl
                                 if str(next_row[0]).lower() == 'nan':
                                     row_values = [value for i, value in enumerate(next_row) if (
                                             (isinstance(next_row[i], (float, int)) and not math.isnan(next_row[i])) or (
-                                            isinstance(next_row[i], str) and next_row[i] != "NaN"))]
+                                            isinstance(next_row[i], str) and (next_row[i] != "NaN" and 'Unnamed' not in next_row[i])))]
                                     current_year_value = row_values[0]
                                     previous_year_value = row_values[1]
                                     value_current_year = re.sub(r'\([^)]*\)', '', str(current_year_value))
@@ -186,7 +187,7 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,tabl
                                         logging.info("As present value not there taking previous value first and gping for present value")
                                         row_values = [value for i, value in enumerate(row) if (
                                                 (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
-                                                isinstance(row[i], str) and row[i] != "NaN"))]
+                                                isinstance(row[i], str) and (row[i] != "NaN" and 'Unnamed' not in row[i])))]
                                         previous_year_value = row_values[1]
                                         try:
                                             next_row = table_data[r + 1]
@@ -222,7 +223,7 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,tabl
                                     else:
                                         row_values = [value for i, value in enumerate(row) if (
                                                 (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
-                                                isinstance(row[i], str) and row[i] != "NaN"))]
+                                                isinstance(row[i], str) and (row[i] != "NaN" and 'Unnamed' not in row[i])))]
                                         current_year_value = row_values[1]
                                         try:
                                             previous_year_value = row_values[2]
@@ -258,7 +259,7 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,tabl
                                 if str(next_row[0]).lower() == 'nan':
                                     row_values = [value for i, value in enumerate(next_row) if (
                                             (isinstance(next_row[i], (float, int)) and not math.isnan(next_row[i])) or (
-                                            isinstance(next_row[i], str) and next_row[i] != "NaN"))]
+                                            isinstance(next_row[i], str) and (next_row[i] != "NaN" or 'Unnamed' not in next_row[i])))]
                                     current_year_value = row_values[0]
                                     previous_year_value = row_values[1]
                                     value_current_year = re.sub(r'\([^)]*\)', '', str(current_year_value))
@@ -275,11 +276,12 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,tabl
                                         next_row = table_data[r + 1]
                                     except Exception as e:
                                         next_row = ['nan','nan','nan']
-                                    if str(row[1]).lower() == 'nan' and str(next_row[0]).lower() == 'nan':
+                                        last_row = True
+                                    if str(row[1]).lower() == 'nan' and str(next_row[0]).lower() == 'nan' and not last_row:
                                         logging.info("As present value not there taking previous value first and gping for present value")
                                         row_values = [value for i, value in enumerate(row) if (
                                                 (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
-                                                isinstance(row[i], str) and row[i] != "NaN"))]
+                                                isinstance(row[i], str) and (row[i] != "NaN" and 'Unnamed' not in row[i])))]
                                         previous_year_value = row_values[1]
                                         try:
                                             next_row = table_data[r + 1]
@@ -314,7 +316,7 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,tabl
                                     else:
                                         row_values = [value for i, value in enumerate(row) if (
                                                 (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
-                                                isinstance(row[i], str) and row[i] != "NaN"))]
+                                                isinstance(row[i], str) and (row[i] != "NaN" and 'Unnamed' not in row[i])))]
                                         current_year_value = row_values[1]
                                         try:
                                             previous_year_value = row_values[2]
@@ -358,7 +360,7 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,tabl
                                     elif header is not None and isinstance(row[0], (float, int)) and math.isnan(row[0]):
                                         row_values = [value for i, value in enumerate(row) if (
                                                 (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
-                                                isinstance(row[i], str) and row[i] != "NaN"))]
+                                                isinstance(row[i], str) and (row[i] != "NaN" and 'Unnamed' not in row[i])))]
                                         # logging.info(row_values)
                                         value_current_year = row_values[0]
                                         value_previous_year = row_values[1]
@@ -472,20 +474,6 @@ def capture_values_from_text(json_file_path,input_sentence,field_name,nature):
                     value = match.group(1)
                     return value
             elif field_name == 'companies_caro_applicable':
-                # keyword_position = complete_sentence.find(input_sentence)
-                # sentence_part = complete_sentence[keyword_position + len(input_sentence):]
-                # # Split the sentence part into words and capture the next two words
-                # words = re.findall(r'\S+', sentence_part)
-                # if len(words) >= 2:
-                #     next_two_words = " ".join(words[:2])
-                #     logging.info(f"Next Two Words: {next_two_words}")
-                #     if 'not' in next_two_words.lower():
-                #         next_two_words = 'Not Applicable'
-                #     elif 'not' not in next_two_words.lower():
-                #         next_two_words = 'Applicable'
-                #     else:
-                #         pass
-                #     return next_two_words
                 print(nature)
                 print(field_name)
                 if nature == 'Standalone':
@@ -525,11 +513,6 @@ def update_database_single_value_AOC(db_config, table_name, cin_column_name, cin
     db_cursor = db_connection.cursor()
     json_dict = json.loads(column_value)
     num_elements = len(json_dict)
-    # if column_name == "financials_auditor" and num_elements == 1:
-    #     first_key = next(iter(json_dict))
-    #     first_value_json_list = json_dict[first_key]
-    #     json_string = json.dumps(first_value_json_list)
-    #     column_value = json_string
     if num_elements == 1:
         if column_name == 'financials_pnl_revenue_breakup' and filing_standard == 'IND_AS_Taxonomy':
             column_value = json.dumps(json_dict)
@@ -1052,22 +1035,6 @@ def aoc_xbrl_db_update(db_config,config_dict,cin,company_name,xml_file_path,file
             print(update_query_xbrl % values)
             cursor.execute(update_query_xbrl, values)
             connection.commit()
-        # update_query_xbrl_no = """UPDATE documents SET form_data_extraction_needed = 'N'
-        #                                                 WHERE category = 'Other Attachments' AND
-        #                                                       document LIKE '%%XBRL financial statements%%' AND
-        #                                                       cin = %s AND company = %s"""
-        # logging.info(update_query_xbrl_no % values)
-        # cursor.execute(update_query_xbrl_no,values)
-        # connection.commit()
-        # update_query_xbrl = """UPDATE documents
-        #                                         SET form_data_extraction_needed = 'Y'
-        #                                         WHERE document_date_year = %s AND
-        #                                               category = 'Other Attachments' AND
-        #                                               document LIKE '%%XBRL financial statements%%' AND
-        #                                               cin = %s AND company = %s"""
-        # logging.info(update_query_xbrl % values_xbrl)
-        # cursor.execute(update_query_xbrl,values_xbrl)
-        # connection.commit()
         consolidated_status = get_single_value_from_xml(xml_root,parent_node,child_node)
         if consolidated_status == 'Yes':
             update_query_consolidated = """UPDATE documents
@@ -1100,4 +1067,3 @@ def aoc_xbrl_db_update(db_config,config_dict,cin,company_name,xml_file_path,file
         return False
     else:
         return True
-
