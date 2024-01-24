@@ -130,11 +130,9 @@ def Login_and_Download(config_dict,CinData):
                     else:
                         continue
                     if download_status:
-                        update_extraction_status = update_form_extraction_status(db_config, Cin, CompanyName)
+                        insertion_counter += 1
                     else:
                         continue
-                    if update_extraction_status:
-                        insertion_counter +=1
                 except Exception as e:
                     print(f"Exception Occured for category {item}{e}")
                     continue
@@ -143,6 +141,9 @@ def Login_and_Download(config_dict,CinData):
                 update_download_insertion_status(db_config,Cin)
             else:
                 raise Exception(f"Download Insertion failed for {Cin}")
+            update_extraction_status = update_form_extraction_status(db_config, Cin, CompanyName)
+            if update_extraction_status:
+                logging.info("Successfully changed form extraction status")
         for category in category_list:
             try:
                 category_selection = select_category(category, driver)
