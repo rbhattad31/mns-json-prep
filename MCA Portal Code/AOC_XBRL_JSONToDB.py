@@ -732,31 +732,8 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                     else:
                         single_df.at[index, 'Value'] = None
                 else:
-                    try:
-                        logging.info("Going to capture value from para")
-                        input_text = capture_values_from_text(json_file_path, None, None, None)
-                        current_year_value_para, previous_year_value_para = find_term_and_numbers(input_text,
-                                                                                                  child_nodes)
-                        current_year_value_para = current_year_value_para.replace(',', '')
-                        previous_year_value_para = previous_year_value_para.replace(',', '')
-                        current_year_value_para = float(current_year_value_para)
-                        previous_year_value_para = float(previous_year_value_para)
-                        if year_category == 'Previous':
-                            single_df.at[index,'Value'] = previous_year_value_para
-                        else:
-                            if field_name == 'proposed_dividend':
-                                logging.info("Going for proposed dividend")
-                                if current_year_value_para == 0 or current_year_value_para == 0.00 or current_year_value_para == '0' or current_year_value_para == '0.00' or \
-                                        current_year_value_para == 0.0 or current_year_value_para == '0.0':
-                                    dividend_value = 'No'
-                                else:
-                                    dividend_value = 'Yes'
-                                single_df.at[index, 'Value'] = dividend_value
-                            else:
-                                single_df.at[index, 'Value'] = current_year_value_para
-                    except Exception as e:
-                        logging.info(f"Going to next due to {e}")
-                        continue
+                    single_df.at[index, 'Value'] = None
+                    continue
             elif parent_node == config_dict['Constant_Keyword']:
                 if field_name == 'filing_standard':
                     value = filing_standard
