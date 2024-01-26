@@ -24,7 +24,8 @@ from MCAPortalMainFunctions import update_download_status
 from TransactionalLog import generate_transactional_log
 from DBFunctions import fetch_download_status
 from DBFunctions import fetch_order_download_data_from_table
-
+from DBFunctions import update_locked_by
+from DBFunctions import update_modified_date
 
 def main():
     excel_file = os.environ.get("MCA_Config")
@@ -62,11 +63,15 @@ def main():
                                 logging.info("Downloaded Successfully")
                                 # update_status(user,'XML_Pending',db_config,cin)
                                 update_download_status(db_config, cin)
+                                update_locked_by_empty(db_config,cin)
+                                update_modified_date(db_config,cin)
                             else:
                                 logging.info("Not Downloaded")
+                                update_locked_by_empty(db_config, cin)
+                                update_modified_date(db_config, cin)
                                 raise Exception(f"Download failed for {cin} {exception_message}")
                     except Exception as e:
-                        logging.info(f"Error in downloading")
+                        logging.info(f"Error in downloading{e}")
                 connection, cursor = connect_to_database(db_config)
                 columnnames,CinDBData , CinFetchStatus = fetch_order_data_from_table(connection)
                 if len(CinDBData) < 1:
@@ -90,6 +95,7 @@ def main():
                             emails = config_dict['to_email']
                             emails = str(emails).split(',')
                             if workflow_status == 'XML_Pending' and download_status == 'Y':
+                                update_locked_by(db_config, cin)
                                 XML_Generation, hidden_attachments = XMLGeneration(db_config, CinData, config_dict)
                                 if XML_Generation:
                                     logging.info("XML Generated successfully")
@@ -135,6 +141,7 @@ def main():
                                 pass
                         except Exception as e:
                             logging.info(f"Exception occured for cin {cin} {e}")
+                            update_locked_by_empty(db_config, cin)
                             exc_type, exc_value, exc_traceback = sys.exc_info()
 
                             # Get the formatted traceback as a string

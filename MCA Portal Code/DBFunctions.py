@@ -4,6 +4,8 @@ import os
 from logging_config import setup_logging
 import logging
 import time
+import datetime
+from datetime import datetime
 
 
 def connect_to_database(db_config):
@@ -27,7 +29,7 @@ def fetch_order_data_from_table(connection):
             setup_logging()
             cursor = connection.cursor()
             # Construct the SQL query
-            query = "SELECT * FROM orders where process_status=%s and payment_by_user!='' and workflow_status in ('Payment_success','XML_Pending','db_insertion_pending','Loader_pending')"
+            query = "SELECT * FROM orders where process_status=%s and payment_by_user!='' and workflow_status in ('Payment_success','XML_Pending','db_insertion_pending','Loader_pending') and python_locked_by = ''"
             #value1 = ("Download_Pending")
             cursor.execute(query, ('InProgress',))
             logging.info(query, ('InProgress',))
@@ -91,7 +93,7 @@ def update_locked_by(dbconfig,Cin):
     connection = mysql.connector.connect(**dbconfig)
     cursor = connection.cursor()
     try:
-        update_locked_query = "update orders set locked_by = %s where cin=%s"
+        update_locked_query = "update orders set python_locked_by = %s where cin=%s"
         user = os.getlogin()
         values = (user, Cin)
         cursor.execute(update_locked_query, values)
@@ -106,7 +108,7 @@ def update_locked_by_empty(dbconfig,Cin):
     connection = mysql.connector.connect(**dbconfig)
     cursor = connection.cursor()
     try:
-        update_locked_query = "update orders set locked_by = '' where cin=%s"
+        update_locked_query = "update orders set python_locked_by = '' where cin=%s"
         values = (Cin,)
         cursor.execute(update_locked_query, values)
         connection.commit()
@@ -343,7 +345,7 @@ def fetch_order_download_data_from_table(connection):
             setup_logging()
             cursor = connection.cursor()
             # Construct the SQL query
-            query = "SELECT * FROM orders where process_status=%s and payment_by_user!='' and document_download_status = 'N' and (workflow_status = 'Payment_success' or workflow_status = 'XML_Pending') LIMIT 1"
+            query = "SELECT * FROM orders where process_status=%s and payment_by_user!='' and document_download_status = 'N' and (workflow_status = 'Payment_success' or workflow_status = 'XML_Pending') and python_locked_by = '' order by modified_date LIMIT 1"
             #value1 = ("Download_Pending")
             cursor.execute(query, ('InProgress',))
             logging.info(query, ('InProgress',))
@@ -360,3 +362,22 @@ def fetch_order_download_data_from_table(connection):
     except mysql.connector.Error as error:
         print("Error:", error)
         return None
+
+
+def update_modified_date(db_config,cin):
+    setup_logging()
+    connection = mysql.connector.connect(**db_config)
+    cursor = connection.cursor()
+    try:
+        update_locked_query = "update orders set modified_date = %s where cin=%s"
+        current_date = datetime.now()
+        today_date = current_date.strftime("%Y-%m-%d %H:%M:%S")
+        values = (today_date, cin)
+        logging.info(update_locked_query % values)
+        cursor.execute(update_locked_query, values)
+        connection.commit()
+    except Exception as e:
+        print(f"Excpetion occured while updating locked by {e}")
+    finally:
+        cursor.close()
+        connection.close()
