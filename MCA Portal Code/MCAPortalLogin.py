@@ -137,10 +137,10 @@ def login_to_website(url, chrome_driver_path,username,password,db_config):
                 logging.info("Login failed. Retrying...")
                 driver.close()
             # If login fails after the last attempt, print a message
-        if attempt == retry_count:
-            print("Login failed after 3 attempts.")
-            Status = "Fail"
-            return Status, driver,options,'Login Failed'
+            if attempt == retry_count:
+                logging.info("Login failed after 3 attempts.")
+                Status = "Fail"
+                return Status, driver,options,'Login Failed'
 
             # Add a delay before the next attempt
         time.sleep(10)
@@ -156,7 +156,7 @@ def login_to_website(url, chrome_driver_path,username,password,db_config):
         # Print the traceback details
         for line in traceback_details:
             logging.error(line.strip())
-        return Status,driver,options,e
+        return Status,None,None,e
 
 
     # Close the browser window
