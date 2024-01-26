@@ -29,7 +29,7 @@ def fetch_order_data_from_table(connection):
             setup_logging()
             cursor = connection.cursor()
             # Construct the SQL query
-            query = "SELECT * FROM orders where process_status=%s and payment_by_user!='' and workflow_status in ('Payment_success','XML_Pending','db_insertion_pending','Loader_pending') and python_locked_by = ''"
+            query = "SELECT * FROM orders where process_status=%s and payment_by_user!='' and workflow_status in ('Payment_success','XML_Pending','db_insertion_pending','Loader_pending') and (python_locked_by = '' or python_locked_by is NULL)"
             #value1 = ("Download_Pending")
             cursor.execute(query, ('InProgress',))
             logging.info(query, ('InProgress',))
@@ -345,7 +345,7 @@ def fetch_order_download_data_from_table(connection):
             setup_logging()
             cursor = connection.cursor()
             # Construct the SQL query
-            query = "SELECT * FROM orders where process_status=%s and payment_by_user!='' and document_download_status = 'N' and (workflow_status = 'Payment_success' or workflow_status = 'XML_Pending') and python_locked_by = '' order by modified_date LIMIT 1"
+            query = "SELECT * FROM orders where process_status=%s and payment_by_user!='' and document_download_status = 'N' and (workflow_status = 'Payment_success' or workflow_status = 'XML_Pending') and (python_locked_by = '' or python_locked_by is NULL) order by modified_date LIMIT 1"
             #value1 = ("Download_Pending")
             cursor.execute(query, ('InProgress',))
             logging.info(query, ('InProgress',))
