@@ -190,11 +190,11 @@ def insert_datatable_with_table(db_config, sql_table_name, column_names_list, df
         # logging.info(f"Data row values are saved in table {sql_table_name} with \n {df_row}")
     else:
         logging.info(f"Entry with values already exists in table {sql_table_name}")
-        update_query = f"""UPDATE {sql_table_name}
-                                                SET {', '.join([f"{col} = '{str(result_dict[col])}'" for col in column_names_list])} 
-                                                WHERE {cin_column_name} = '{cin}'"""
-        logging.info(update_query)
-        db_cursor.execute(update_query)
+        # update_query = f"""UPDATE {sql_table_name}
+        #                                         SET {', '.join([f"{col} = '{str(result_dict[col])}'" for col in column_names_list])}
+        #                                         WHERE {cin_column_name} = '{cin}'"""
+        # logging.info(update_query)
+        # db_cursor.execute(update_query)
     db_cursor.close()
     db_connection.close()
 
