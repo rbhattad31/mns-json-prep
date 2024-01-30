@@ -198,6 +198,9 @@ def XMLGeneration(db_config,CinData,config_dict):
                     file_date = files[5]
                     if 'XBRL document in respect Consolidated' in file_name or 'XBRL financial statements' in file_name:
                         continue
+                    if 'Fresh Certificate of Incorporation'.lower() in str(file_name).lower():
+                        update_xml_extraction_status(Cin, file_name, config_dict, 'Success')
+                        continue
                     folder_path = os.path.dirname(pdf_path)
                     xml_file_path, PDF_to_XML = PDFtoXML(pdf_path, file_name)
                     if PDF_to_XML:
