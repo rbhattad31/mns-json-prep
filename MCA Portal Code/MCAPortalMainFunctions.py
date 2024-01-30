@@ -51,6 +51,7 @@ from FreshCertificateOpenAI import fresh_name_main
 from DIR_11_xml_to_db import dir11_main
 from DIR2PDFToDB import dir2_main
 from AOC4_CFS_XMLToDB import AOC_cfs_xml_to_db
+from DBFunctions import update_locked_by_empty
 
 def sign_out(driver,config_dict,CinData):
     try:
@@ -104,6 +105,7 @@ def Login_and_Download(config_dict,CinData):
                 logging.warning("Already Logged in")
                 # update_status(User,"Exception",db_config)
                 exception_message = "Already Logged in"
+                update_locked_by_empty(db_config, Cin)
                 return False,None,exception_message
             print(Login)
             if Login == "Pass":
@@ -111,6 +113,7 @@ def Login_and_Download(config_dict,CinData):
                 last_logged_in_user = User
             else:
                 # update_status(User, "Login Failed", db_config,Cin)
+                update_locked_by_empty(db_config,Cin)
                 return False,None,exception_message
         else:
             logging.info("Already Logged in so carrying on with the same credentials")
