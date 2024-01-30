@@ -64,9 +64,9 @@ def insert_datatable_with_table(db_config, sql_table_name, column_names_list, df
     where_clause = f'SELECT * FROM {sql_table_name} WHERE '
     for key, value in result_dict.items():
         if value is not None:
-            where_clause += f"`{key}` = '{value}' AND "
+            where_clause += f'`{key}` = "{value}" AND '
         else:
-            where_clause += f"(`{key}` is NULL OR `{key}` = '') AND "
+            where_clause += f'(`{key}` is NULL OR `{key}` = "") AND '
 
     select_query = where_clause[:-4]
     logging.info(select_query)
@@ -77,7 +77,7 @@ def insert_datatable_with_table(db_config, sql_table_name, column_names_list, df
         # Insert the record
         insert_query = f"""
                         INSERT INTO {sql_table_name}
-                        SET {', '.join([f'{col} = %s' for col in column_names_list])};
+                        SET {', '.join([f"{col} = %s" for col in column_names_list])};
                         """
         db_cursor.execute(insert_query, tuple(df_row.values))
         # logging.info(f"Data row values are saved in table {sql_table_name} with \n {df_row}")
