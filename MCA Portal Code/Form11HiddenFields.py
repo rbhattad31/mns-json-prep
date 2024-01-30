@@ -6,6 +6,8 @@ import logging
 from logging_config import setup_logging
 import mysql.connector
 from Config import create_main_config_dictionary
+import re
+
 
 def update_database_single_value_form11(db_config, config_dict, table_name, cin_column_name, cin_value,
                                  column_name, column_value,check_value,financial_year):
@@ -18,7 +20,7 @@ def update_database_single_value_form11(db_config, config_dict, table_name, cin_
     id_column_name = config_dict['signer_id_column_name']
     nominee_id_column_name = config_dict['nominee_id_column_name']
     category_column_name = config_dict['category_column_name']
-
+    pan_column_name = config_dict['pan_column_name']
 
     # json_dict = json.loads(column_value)
     # num_elements = len(json_dict)
@@ -37,9 +39,15 @@ def update_database_single_value_form11(db_config, config_dict, table_name, cin_
     #     column_value = json.dumps(json_dict)
 
     # check if there is already entry with cin
+    din_pattern = re.compile(r'^\d{7,10}$')
+    pan_pattern = re.compile(r'^[A-Za-z0-9]{10}$')
     if table_name == config_dict['authorized_signatories_table_name']:
-        query = "SELECT * FROM {} WHERE {} = '{}' AND {} = '{}'".format(table_name, cin_column_name, cin_value,
+        if bool(din_pattern.match(check_value)):
+            query = "SELECT * FROM {} WHERE {} = '{}' AND {} = '{}'".format(table_name, cin_column_name, cin_value,
                                                                         din_column_name, check_value)
+        else:
+            query = "SELECT * FROM {} WHERE {} = '{}' AND {} = '{}'".format(table_name, cin_column_name, cin_value,
+                                                                            pan_column_name, check_value)
     elif table_name == config_dict['individual_partners_table_name']:
         query = "SELECT * FROM {} WHERE {} = '{}' AND {} = '{}' AND {} = '{}'".format(table_name, cin_column_name,
                                                                         cin_value,
@@ -83,12 +91,20 @@ def update_database_single_value_form11(db_config, config_dict, table_name, cin_
     if len(result) > 0:
         if table_name == config_dict['authorized_signatories_table_name']:
             print(f"cin {cin_value} is exist in table {table_name}")
-            update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} ='{}'".format(table_name,
-                                                                                         column_name, column_value,
-                                                                                         cin_column_name, cin_value,
-                                                                                         din_column_name,
-                                                                                         check_value
-                                                                                         )
+            if bool(din_pattern.match(check_value)):
+                update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} ='{}'".format(table_name,
+                                                                                             column_name, column_value,
+                                                                                             cin_column_name, cin_value,
+                                                                                             din_column_name,
+                                                                                             check_value
+                                                                                             )
+            else:
+                update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} ='{}'".format(table_name,
+                                                                                             column_name, column_value,
+                                                                                             cin_column_name, cin_value,
+                                                                                             pan_column_name,
+                                                                                             check_value
+                                                                                             )
         elif table_name == config_dict['individual_partners_table_name']:
             print(f"cin {cin_value} is exist in table {table_name}")
             # print(f"Entry already exist for cin '{cin_value}' with value '{column_value}' for column '{column_name}' "
@@ -151,14 +167,24 @@ def update_database_single_value_form11(db_config, config_dict, table_name, cin_
         # print(type(column_value))
         if table_name == config_dict['authorized_signatories_table_name']:
             print(f"cin {cin_value} is not exist in table {table_name}")
-            insert_query = "INSERT INTO {} ({}, {}, {}) VALUES ('{}', '{}', '{}')".format(table_name,
-                                                                                          cin_column_name,
-                                                                                          din_column_name,
-                                                                                          column_name,
-                                                                                          cin_value,
-                                                                                          check_value,
-                                                                                          column_value
-                                                                                          )
+            if bool(din_pattern.match(check_value)):
+                insert_query = "INSERT INTO {} ({}, {}, {}) VALUES ('{}', '{}', '{}')".format(table_name,
+                                                                                              cin_column_name,
+                                                                                              din_column_name,
+                                                                                              column_name,
+                                                                                              cin_value,
+                                                                                              check_value,
+                                                                                              column_value
+                                                                                              )
+            else:
+                insert_query = "INSERT INTO {} ({}, {}, {}) VALUES ('{}', '{}', '{}')".format(table_name,
+                                                                                              cin_column_name,
+                                                                                              pan_column_name,
+                                                                                              column_name,
+                                                                                              cin_value,
+                                                                                              check_value,
+                                                                                              column_value
+                                                                                              )
         elif table_name == config_dict['individual_partners_table_name']:
             print(f"cin {cin_value} is not exist in table {table_name}")
             insert_query = "INSERT INTO {} ({}, {}, {},{}) VALUES ('{}', '{}', '{}', '{}')".format(table_name,

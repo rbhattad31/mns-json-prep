@@ -8,7 +8,7 @@ import mysql.connector
 from logging_config import setup_logging
 import logging
 pd.set_option('display.max_columns', None)
-
+from Config import create_main_config_dictionary
 
 def get_single_value_from_xml(xml_root, parent_node, child_node):
     try:
@@ -269,15 +269,13 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
     # for each distinct table value, filter the df with table value and find columns
     for sql_table_name in sql_tables_list:
         table_df = single_df[single_df[single_df.columns[sql_table_name_index]] == sql_table_name]
-        print(table_df)
+        logging.info(table_df)
         if sql_table_name == config_dict['open_charges_latest_event_table_name']:
             charge_id = table_df.loc[table_df['Column_Name'] == config_dict['open_charges_latest_event_charge_id_column_name'], 'Value'].values[0]
         elif sql_table_name == config_dict['charge_sequence_table_name']:
             charge_id = table_df.loc[table_df['Column_Name'] == config_dict['charge_sequence_charge_id_column_name'], 'Value'].values[0]
         else:
             charge_id = None
-        date = table_df.loc[table_df['Column_Name'] == config_dict['date_column_name'], 'Value'].values[0]
-        amount = table_df.loc[table_df['Column_Name'] == config_dict['amount_column_name'], 'Value'].values[0]
         if sql_table_name == config_dict['open_charges_table_name']:
             print(f'{sql_table_name=}')
             try:
@@ -548,3 +546,21 @@ def form8_interim_xml_to_db(db_config, config_dict, map_file_path, map_file_shee
         return False
     else:
         return True
+
+
+# db_config = {
+#         "host": "162.241.123.123",
+#         "user": "classle3_deal_saas",
+#         "password": "o2i=hi,64u*I",
+#         "database": "classle3_mns_credit"
+#     }
+# excel_file_path = r"C:\Users\BRADSOL123\Documents\Python\Config\Config_Python.xlsx"
+# sheet_name = 'Form_8_Interim'
+# config_dict,config_status = create_main_config_dictionary(excel_file_path,sheet_name)
+# map_file_path = config_dict['mapping file path']
+# map_sheet_name = 'Sheet1'
+# xml_file_path = r"C:\Users\BRADSOL123\OneDrive - MNS Credit Management Group P Ltd\MNS-Credit\AAG-8883\Charge Documents\LLP Form8-29122021_signed.xml"
+# output_file_path = str(xml_file_path).replace('.xml','.xlsx')
+# cin = 'AAG-8883'
+# filing_date = '29-12-2021'
+# form8_interim_xml_to_db(db_config,config_dict,map_file_path,map_sheet_name,xml_file_path,output_file_path,cin,filing_date)

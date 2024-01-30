@@ -8,7 +8,8 @@ import os
 import json
 import mysql.connector
 import re
-
+from logging_config import setup_logging
+import logging
 from dateutil.relativedelta import relativedelta
 
 
@@ -344,20 +345,40 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
     # print(current_year_df)
 
     current_year = current_year_df[current_year_df['Field_Name'] == config_dict['year_column_name']]['Value'].values[0]
-    if current_year is None:
-        raise Exception(f"Exception occurred while extracting year value {current_year} from current year data")
-    years.append(current_year)
+    # if current_year is None:
+    #     raise Exception(f"Exception occurred while extracting year value {current_year} from current year data")
     previous_year = previous_year_df[previous_year_df['Field_Name'] == config_dict['year_column_name']]['Value'].values[
         0]
-    if previous_year is None:
-        raise Exception(f"Exception occurred while extracting year value {previous_year} from previous year data")
-    years.append(previous_year)
+    # if previous_year is None:
+    #     raise Exception(f"Exception occurred while extracting year value {previous_year} from previous year data")
     # print(years)
     print("Saving Single Values to database")
     
-    if not form8_first_file_found:
+    # if not form8_first_file_found:
+    #     single_df_list.append(current_year_df)
+    # single_df_list.append(previous_year_df)
+    db_connection = mysql.connector.connect(**db_config)
+    db_cursor = db_connection.cursor()
+    previous_year_check_query = "select * from financials where year = %s and cin =%s"
+    previous_year_values = (previous_year, cin_column_value)
+    logging.info(previous_year_check_query % previous_year_values)
+    db_cursor.execute(previous_year_check_query, previous_year_values)
+    previous_year_result = db_cursor.fetchall()
+    current_year_check_query = "select * from financials where year = %s and cin =%s"
+    current_year_values = (current_year, cin_column_value)
+    logging.info(current_year_check_query, current_year_values)
+    db_cursor.execute(current_year_check_query, current_year_values)
+    current_year_result = db_cursor.fetchall()
+    if len(current_year_result) == 0:
         single_df_list.append(current_year_df)
-    single_df_list.append(previous_year_df)
+        years.append(current_year)
+        logging.info("Current year not found so inserting")
+    if len(previous_year_result) == 0:
+        single_df_list.append(previous_year_df)
+        years.append(previous_year)
+        logging.info("Previous year not found so inserting")
+    db_cursor.close()
+    db_connection.close()
     current_year_output_df = pd.DataFrame(current_year_df, columns=['Field_Name', 'Value', 'Table_Name', 'Column_Name',
                                                                     'Column_JSON_Node'])
     previous_year_output_df = pd.DataFrame(previous_year_df,
@@ -449,8 +470,8 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             common_json_string = json.dumps(common_json_dict)
             # print(common_json_string)
             
-            if form8_first_file_found:
-                years = years[1:]
+            # if form8_first_file_found:
+            #     years = years[1:]
             for year in years:
                 if year is None or year == '':
                     continue

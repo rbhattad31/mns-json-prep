@@ -13,6 +13,7 @@ pd.set_option('display.max_columns', None)
 from Form11HiddenFields import form11_hidden_fields
 from Config import create_main_config_dictionary
 
+
 def get_state_from_openai(city,config_dict):
     setup_logging()
     url = config_dict['url']
@@ -43,13 +44,13 @@ def get_state_from_openai(city,config_dict):
     content = json_response[config_dict['choices_keyword']][0][config_dict['message_keyword']][
         config_dict['content_keyword']]
     logging.info(content)
-    print(content)
+    logging.info(content)
     return content
 
 
 def get_single_value_from_xml(xml_root, parent_node, child_node):
     try:
-
+        setup_logging()
         if child_node == 'nan':
             elements = xml_root.findall(f'.//{parent_node}')
         else:
@@ -65,15 +66,16 @@ def get_single_value_from_xml(xml_root, parent_node, child_node):
                     return str(element.text)
         return None
     except Exception as e:
-        print(parent_node)
-        print(child_node)
-        print(f"Below error occurred for processing parent node: {parent_node} and child node: {child_node}"
+        logging.info(parent_node)
+        logging.info(child_node)
+        logging.info(f"Below error occurred for processing parent node: {parent_node} and child node: {child_node}"
               f"\n {e}")
         return None
 
 
 def update_database_single_value(db_config, config_dict, table_name, cin_column_name, cin_value,
                                  column_name, column_value):
+    setup_logging()
     db_connection = mysql.connector.connect(**db_config)
     db_cursor = db_connection.cursor()
     db_connection.autocommit = True
@@ -112,22 +114,22 @@ def update_database_single_value(db_config, config_dict, table_name, cin_column_
                                                                         )
 
     else:
-        print(f"Irrelevant table {table_name} to update data for Form11")
+        logging.info(f"Irrelevant table {table_name} to update data for Form11")
         db_cursor.close()
         db_connection.close()
         return
-    print(query)
+    logging.info(query)
 
     try:
         db_cursor.execute(query)
     except mysql.connector.Error as e:
-        print(f"Exception {e} occurred while executing db selection query for table {table_name}")
+        logging.info(f"Exception {e} occurred while executing db selection query for table {table_name}")
     except Exception as e:
-        print(f"Exception {e} occurred while executing db selection query for table {table_name}")
+        logging.info(f"Exception {e} occurred while executing db selection query for table {table_name}")
 
     result = db_cursor.fetchall()
     # print(result)
-    print(column_value)
+    logging.info(column_value)
     # if cin value already exists, update
     if len(result) > 0:
         if table_name == config_dict['principal_business_activities_table_name']:
@@ -143,7 +145,7 @@ def update_database_single_value(db_config, config_dict, table_name, cin_column_
                                                                                          year
                                                                                          )
         elif table_name == config_dict['company_table_name']:
-            print(f"cin {cin_value} with financial year {financial_year} is exist in table {table_name}")
+            logging.info(f"cin {cin_value} with financial year {financial_year} is exist in table {table_name}")
             # print(f"Entry already exist for cin '{cin_value}' with value '{column_value}' for column '{column_name}' "
             #       f"for financial year '{financial_year}', hence updating")
             update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}'".format(table_name,
@@ -155,17 +157,17 @@ def update_database_single_value(db_config, config_dict, table_name, cin_column_
                                                                                           financial_year
                                                                                           )
         else:
-            print(f"Irrelevant table {table_name} to update data for Form11")
+            logging.info(f"Irrelevant table {table_name} to update data for Form11")
             db_cursor.close()
             db_connection.close()
             return
-        print(update_query)
+        logging.info(update_query)
         try:
             db_cursor.execute(update_query)
         except Exception as e:
             raise e
         else:
-            print(f"updated form 11 data in table {table_name}")
+            logging.info(f"updated form 11 data in table {table_name}")
             db_cursor.close()
             db_connection.close()
             return
@@ -175,7 +177,7 @@ def update_database_single_value(db_config, config_dict, table_name, cin_column_
         # print(type(cin_value))
         # print(type(column_value))
         if table_name == config_dict['principal_business_activities_table_name']:
-            print(f"cin {cin_value} with year {year} is not exist in table {table_name}")
+            logging.info(f"cin {cin_value} with year {year} is not exist in table {table_name}")
             if column_name == year_column_name:
                 db_cursor.close()
                 db_connection.close()
@@ -189,7 +191,7 @@ def update_database_single_value(db_config, config_dict, table_name, cin_column_
                                                                                           column_value
                                                                                           )
         elif table_name == config_dict['company_table_name']:
-            print(f"cin {cin_value} with financial year {financial_year} is not exist in table {table_name}")
+            logging.info(f"cin {cin_value} with financial year {financial_year} is not exist in table {table_name}")
             insert_query = "INSERT INTO {} ({}, {}, {}) VALUES ('{}', '{}', '{}')".format(table_name,
                                                                                           cin_column_name,
                                                                                           column_name,
@@ -203,13 +205,13 @@ def update_database_single_value(db_config, config_dict, table_name, cin_column_
             db_cursor.close()
             db_connection.close()
             return
-        print(insert_query)
+        logging.info(insert_query)
         try:
             db_cursor.execute(insert_query)
         except Exception as e:
             raise e
         else:
-            print(f"Inserted into table {table_name}")
+            logging.info(f"Inserted into table {table_name}")
             db_cursor.close()
             db_connection.close()
             return
@@ -238,6 +240,7 @@ def extract_table_values_from_xml(xml_root, table_node_name, child_nodes):
 
 def insert_datatable_with_table(db_config, config_dict, sql_table_name, column_names_list, df_row,
                                 cin_column_name):
+    setup_logging()
     db_connection = mysql.connector.connect(**db_config)
     db_cursor = db_connection.cursor()
     db_connection.autocommit = True
@@ -296,10 +299,10 @@ def insert_datatable_with_table(db_config, config_dict, sql_table_name, column_n
             raise Exception(f"Nominee id is not available for sql query for table {sql_table_name}")
     else:
         raise Exception(f"{sql_table_name} is not related to Group datatable")
-    print(select_query)
+    logging.info(select_query)
     db_cursor.execute(select_query)
     result = db_cursor.fetchall()
-    print(len(result))
+    logging.info(len(result))
     if len(result) == 0:  # If no matching record found
         # Insert the record
         insert_query = f"""INSERT INTO {sql_table_name} SET """
@@ -309,9 +312,9 @@ def insert_datatable_with_table(db_config, config_dict, sql_table_name, column_n
             else:
                 insert_query += f"`{key}` = '{value}' , "
         insert_query = insert_query[:-2]
-        print(f'{insert_query=}')
+        logging.info(f'{insert_query=}')
         db_cursor.execute(insert_query)
-        print(f"Data row values are saved in table {sql_table_name} with \n {df_row}")
+        logging.info(f"Data row values are saved in table {sql_table_name} with \n {df_row}")
     if len(result) > 0:  # If matching record found
         if sql_table_name == config_dict['authorized_signatories_table_name']:
             din_column_name = config_dict['din_column_name']
@@ -350,7 +353,7 @@ def insert_datatable_with_table(db_config, config_dict, sql_table_name, column_n
             else:
                 raise Exception(f"Both DIN and PAN values are empty for director's data in table {sql_table_name} "
                                 f"with below data \n {list(df_row)} ")
-            print(update_query)
+            logging.info(update_query)
             db_cursor.execute(update_query)
 
             print(f"Data row values are saved in table '{sql_table_name}' with \n {df_row}")
@@ -381,10 +384,10 @@ def insert_datatable_with_table(db_config, config_dict, sql_table_name, column_n
             else:
                 raise Exception(f"one of the Signer id and financial year value is not available to save in "
                                 f"{sql_table_name} data")
-            print(update_query)
+            logging.info(update_query)
             db_cursor.execute(update_query)
 
-            print(f"Data row values are saved in table '{sql_table_name}' with \n {df_row}")
+            logging.info(f"Data row values are saved in table '{sql_table_name}' with \n {df_row}")
 
         elif sql_table_name == config_dict['body_corporates_table_name']:
             nominee_id_column_name = config_dict['nominee_id_column_name']
@@ -404,9 +407,9 @@ def insert_datatable_with_table(db_config, config_dict, sql_table_name, column_n
                 '''
             else:
                 raise Exception(f"Nominee id is not available for sql query for table {sql_table_name}")
-            print(update_query)
+            logging.info(update_query)
             db_cursor.execute(update_query)
-            print(f"Data row values are saved in table '{sql_table_name}' with \n {df_row}")
+            logging.info(f"Data row values are saved in table '{sql_table_name}' with \n {df_row}")
 
         else:
             pass
@@ -417,6 +420,7 @@ def insert_datatable_with_table(db_config, config_dict, sql_table_name, column_n
 
 def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
               output_file_path, cin):
+    setup_logging()
     config_dict_keys = ['single_type_indicator', 'group_type_indicator', 'cin_column_name',
                         'field_name_index', 'type_index',
                         'parent_node_index',
@@ -524,7 +528,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         # print(field_name)
         # print(value)
         results.append([field_name, value, sql_table_name, column_name, column_json_node])
-    # print(single_df)
+    logging.info(single_df)
 
     # get year and financial year data from single df and save it in config dict
     city = single_df[single_df['Field_Name'] == 'city']['Value'].values[0]
@@ -554,7 +558,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 column_name == config_dict['ba_pincode_column_name']:
             column_df = single_df[single_df[single_df.columns[column_name_index]] == column_name]
             config_dict[column_name] = column_df['Value'].iloc[0]  # config_dict['ba_address_line1'] = value
-            print(config_dict[column_name])
+            logging.info(config_dict[column_name])
     # create full address from config dict saved values
     full_address = ', '.join(value for value in [config_dict[config_dict['ba_address_line1_column_name']],
                                                  config_dict[config_dict['ba_address_line2_column_name']],
@@ -563,19 +567,19 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                                                  config_dict[config_dict['ba_pincode_column_name']]]
                              if value is not None
                              )
-    print(f'{full_address=}')
+    logging.info(f'{full_address=}')
 
     # assign full address value to single df full address row
     full_address_row_index = single_df[single_df[single_df.columns[column_name_index]] ==
                                        config_dict['full_address_column_name']].index[0]
-    print(f'{full_address_row_index=}')
+    logging.info(f'{full_address_row_index=}')
     if full_address_row_index is not None:
         if full_address is not None:
             single_df.loc[full_address_row_index, 'Value'] = full_address
         else:
             single_df.loc[full_address_row_index, 'Value'] = None
     else:
-        print(f"full_address details is not in mapping file.")
+        logging.info(f"full_address details is not in mapping file.")
 
     # print("single df after updating full address")
     # print(single_df)
@@ -583,7 +587,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
     # update single values in datatable
     # get all the tables names for all single values df
     sql_tables_list = single_df[single_df.columns[sql_table_name_index]].unique()
-    print(sql_tables_list)
+    logging.info(sql_tables_list)
     # for each distinct table value, filter the df with table value and find columns
     for sql_table_name in sql_tables_list:
         print(sql_table_name)
@@ -592,7 +596,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         if (sql_table_name == config_dict["company_table_name"] or sql_table_name ==
                 config_dict["principal_business_activities_table_name"]):
             table_df = single_df[single_df[single_df.columns[sql_table_name_index]] == sql_table_name]
-            print(table_df)
+            logging.info(table_df)
 
             columns_list = table_df[table_df.columns[column_name_index]].unique()
             # print(columns_list)
@@ -607,7 +611,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 json_dict = column_df.set_index(table_df.columns[field_name_index])['Value'].to_dict()
                 # Convert the dictionary to a JSON string
                 json_string = json.dumps(json_dict)
-                print(json_string)
+                logging.info(json_string)
                 try:
                     update_database_single_value(db_config, config_dict, sql_table_name,
                                                  cin_column_name,
@@ -615,10 +619,10 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                                                  column_name,
                                                  json_string)
                 except Exception as e:
-                    print(f"Exception {e} occurred while updating data in table {sql_table_name} "
+                    logging.info(f"Exception {e} occurred while updating data in table {sql_table_name} "
                           f"with data {json_string}")
                 else:
-                    print(f'{sql_table_name} Table is updated')
+                    logging.info(f'{sql_table_name} Table is updated')
         elif sql_table_name == config_dict["individual_partners_table_name"]:
             continue
         elif sql_table_name == config_dict["summary_designated_partners_table_name"]:
@@ -631,7 +635,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                                                       'Column JSON Node'])
     # print(single_output_df)
     output_dataframes_list.append(single_output_df)
-    print("Completed processing single rows")
+    logging.info("Completed processing single rows")
 
     din_list = []
     id_list = []
@@ -646,12 +650,12 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         column_names = str(row.iloc[column_name_index]).strip()
         column_names_list = column_names.split(',')
         column_names_list = [x.strip() for x in column_names_list]
-        print(f'{column_names_list=}')
+        logging.info(f'{column_names_list=}')
         table_node_name = parent_node
         # print(table_node_name)
         try:
-            print(f'{table_node_name=}')
-            print(f'{child_nodes=}')
+            logging.info(f'{table_node_name=}')
+            logging.info(f'{child_nodes=}')
             if table_node_name == config_dict['constant_keyword']:
                 table_in_list = child_nodes.split(',')
                 for category in table_in_list:
@@ -662,7 +666,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             table_df.columns = column_names_list
             # print(table_df)
         except Exception as e:
-            print(f'Exception {e} occurred while extracting data from xml for table {table_node_name}')
+            logging.info(f'Exception {e} occurred while extracting data from xml for table {table_node_name}')
             continue
 
         # print(table_df)
@@ -713,15 +717,23 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                         nominee_id_type = config_dict['pan_value']
                     else:
                         nominee_id_type = config_dict['others_nominee_type_value']
-                    print(nominee_id_type)
+                    logging.info(nominee_id_type)
                     df_row[config_dict['nominee_id_type_column_name']] = nominee_id_type
-                print(df_row)
+                logging.info(df_row)
                 combined = list(zip(column_names_list, df_row))
                 result_dict = dict(combined)
                 try:
                     din_column_name = config_dict['din_column_name']
                     din = result_dict[din_column_name]
-                    din_list.append(din)
+                    pan_column_name = config_dict['pan_column_name']
+                    pan = result_dict[pan_column_name]
+                    if din is not None:
+                        if din == '' or str(din).lower() == 'none':
+                            din_list.append(pan)
+                        else:
+                            din_list.append(din)
+                    else:
+                        din_list.append(pan)
                 except:
                     pass
                 try:
@@ -740,7 +752,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                                             cin_column_name)
 
             except Exception as e:
-                print(f"Exception '{e}' occurred while inserting below table row in table {sql_table_name}- \n",
+                logging.info(f"Exception '{e}' occurred while inserting below table row in table {sql_table_name}- \n",
                       df_row)
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 # Get the formatted traceback as a string
@@ -748,8 +760,8 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
                 # Print the traceback details
                 for line in traceback_details:
-                    print(line.strip())
-        print(f"DB execution is complete for {sql_table_name}")
+                    logging.info(line.strip())
+        logging.info(f"DB execution is complete for {sql_table_name}")
         output_dataframes_list.append(table_df)
 
     with pd.ExcelWriter(output_file_path, engine='xlsxwriter') as writer:
@@ -762,21 +774,23 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
     output_dataframes_list.clear()
     return din_list,id_list,nominee_id_list,category_list,financial_year
 
+
 def form_11_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path,
                       output_file_path, cin,hidden_xml_file_path):
     try:
+        setup_logging()
         din_list,id_list,nominee_id_list,category_list,financial_year = xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_file_path, output_file_path, cin)
-        print(category_list)
+        logging.info(category_list)
         form11_hidden_fields(db_config,hidden_xml_file_path,map_file_path,config_dict,din_list,cin,id_list,nominee_id_list,financial_year,category_list)
     except Exception as e:
-        print("Below Exception occurred while processing Form 11 file: \n ", e)
+        logging.info("Below Exception occurred while processing Form 11 file: \n ", e)
         exc_type, exc_value, exc_traceback = sys.exc_info()
         # Get the formatted traceback as a string
         traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
 
         # Print the traceback details
         for line in traceback_details:
-            print(line.strip())
+            logging.info(line.strip())
 
         return False
     else:
@@ -789,13 +803,13 @@ def form_11_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name
 #         "password": "o2i=hi,64u*I",
 #         "database": "classle3_mns_credit"
 #     }
-# excel_file_path = r"C:\MCA Portal\Config.xlsx"
+# excel_file_path = r"C:\Users\BRADSOL123\Documents\Python\Config\Config_Python.xlsx"
 # sheet_name = 'Form_11'
 # config_dict,config_status = create_main_config_dictionary(excel_file_path,sheet_name)
-# map_file_path = r"C:\MCA Portal\FORM-11_nodes_config.xlsx"
+# map_file_path = config_dict['mapping file path']
 # map_sheet_name = 'Sheet1'
-# xml_file_path = r"C:\Users\BRADSOL123\Desktop\Form 11\LLP Form11-28072021_signed.xml"
-# hidden_xml_file_path = r"C:\Users\BRADSOL123\Desktop\Form 11\LLP Form11-28072021_signed_hidden.xml"
+# xml_file_path = r"C:\Users\BRADSOL123\OneDrive - MNS Credit Management Group P Ltd\MNS-Credit\AAG-8883\Annual Returns and Balance Sheet eForms\LLP Form11-21072020_signed.xml"
+# hidden_xml_file_path = r"C:\Users\BRADSOL123\OneDrive - MNS Credit Management Group P Ltd\MNS-Credit\AAG-8883\Annual Returns and Balance Sheet eForms\LLP Form11-21072020_signed_hidden.xml"
 # output_file_path = str(xml_file_path).replace('.xml','.xlsx')
-# cin = 'AAL-7718'
+# cin = 'AAG-8883'
 # form_11_xml_to_db(db_config,config_dict,map_file_path,map_sheet_name,xml_file_path,output_file_path,cin,hidden_xml_file_path)
