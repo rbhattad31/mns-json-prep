@@ -52,6 +52,9 @@ from DIR_11_xml_to_db import dir11_main
 from DIR2PDFToDB import dir2_main
 from AOC4_CFS_XMLToDB import AOC_cfs_xml_to_db
 from DBFunctions import update_locked_by_empty
+import requests
+import json
+
 
 def sign_out(driver,config_dict,CinData):
     try:
@@ -812,6 +815,29 @@ def update_download_insertion_status(db_config,cin):
     finally:
         cursor.close()
         connection.close()
+
+
+def update_completed_status_api(orderid,config_dict):
+    try:
+        url = config_dict['url']
+
+        payload = json.dumps({
+            "receiptnumber": orderid,
+            "status": 2
+        })
+        headers = {
+            'Authorization': config_dict['Authorization'],
+            'Content-Type': 'application/json',
+            'Cookie': config_dict['Cookie']
+        }
+
+        response = requests.request("POST", url, headers=headers, data=payload)
+        logging.info(response.text)
+    except Exception as e:
+        logging.info(f"Error in updating status in API {e}")
+        return False
+    else:
+        return True
 
 
 
