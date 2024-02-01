@@ -88,12 +88,12 @@ def main():
                                 update_locked_by_empty(db_config, cin)
                                 update_modified_date(db_config, cin)
                                 update_retry_count(db_config,cin,retry_counter_db)
-                                if retry_counter_db > 3:
-                                    update_process_status('Exception',db_config,cin)
                                 try:
                                     sign_out(driver, config_dict, downloaddata)
                                 except:
                                     pass
+                                if retry_counter_db > 3:
+                                    update_process_status('Exception',db_config,cin)
                                 raise Exception(f"Download failed for {cin} {exception_message}")
                     except Exception as e:
                         logging.info(f"Error in downloading{e}")
@@ -167,7 +167,9 @@ def main():
                                         attachments = []
                                         attachments.append(json_file_path)
                                         attachments.append(transaction_log_path)
-                                        send_email(config_dict,cin_complete_subject,cin_completed_body,emails,attachments)
+                                        emails_end = config_dict['end_email']
+                                        emails_end = str(emails_end).split(',')
+                                        send_email(config_dict,cin_complete_subject,cin_completed_body,emails_end,attachments)
                                     except Exception as e:
                                         logging.info(f"Exception occured while sending end email {e}")
                                 else:

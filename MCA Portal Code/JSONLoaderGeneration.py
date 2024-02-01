@@ -36,7 +36,7 @@ def JSON_loader(db_config,config_json_file_path,cin,root_path,excel_path,sheet_n
             os.makedirs(json_folder_path)
         current_date = datetime.date.today()
         today_date = current_date.strftime("%d-%m-%Y")
-        file_name = cin
+        file_name = receiptno
         json_file_path = os.path.join(json_folder_path,file_name)
         json_file_path = json_file_path + '.json'
         if not os.path.exists(json_file_path):
