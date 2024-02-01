@@ -8,7 +8,7 @@ import traceback
 import logging
 from logging_config import setup_logging
 import datetime
-
+from datetime import date
 
 def get_json_node_names(data, parent_name=''):
     node_names = []
@@ -25,25 +25,29 @@ def get_json_node_names(data, parent_name=''):
     return node_names
 # Read JSON data from a file
 
-def JSON_loader(db_config,config_json_file_path,cin,root_path,excel_path,sheet_name):
+def JSON_loader(db_config,config_json_file_path,cin,root_path,excel_path,sheet_name,receiptno):
     try:
         setup_logging()
         if not os.path.exists(config_json_file_path):
             raise Exception("Config file not exists")
-
-        json_folder_path = os.path.join(root_path,cin)
+        json_folder_name = 'JSons'
+        json_folder_path = os.path.join(root_path,json_folder_name)
         if not os.path.exists(json_folder_path):
             os.makedirs(json_folder_path)
         current_date = datetime.date.today()
         today_date = current_date.strftime("%d-%m-%Y")
-        file_name = cin + "_" + today_date
+        file_name = cin
         json_file_path = os.path.join(json_folder_path,file_name)
         json_file_path = json_file_path + '.json'
         if not os.path.exists(json_file_path):
             shutil.copy(config_json_file_path,json_file_path)
         with open(json_file_path) as f:
             json_data = json.load(f)
-
+        try:
+            json_data["metatag"]["last_updated"] = date.today().strftime("%Y-%m-%d")
+            json_data["metatag"]["MNS_receiptno"] = receiptno
+        except Exception as e:
+            logging.info(f"Exception occured while updating receipt no and date {e}")
         # Call the function with your JSON data, starting directly with the 'data' child nodes
         json_nodes = get_json_node_names(json_data.get('data', {}), parent_name='')
         config_dict_loader, status = create_main_config_dictionary(excel_path, sheet_name)
@@ -56,7 +60,7 @@ def JSON_loader(db_config,config_json_file_path,cin,root_path,excel_path,sheet_n
                     company_query = config_dict_loader[json_node]
                 except Exception as e:
                     continue
-                if json_node == 'company' or json_node == 'authorized_signatories' or json_node == 'charge_sequence' or json_node == 'director_network' or json_node == 'open_charges' or json_node == 'open_charges_latest_event' or json_node == 'stock_exchange' or json_node == 'directors' or json_node == 'llp' or json_node == 'contribution_details' or json_node == 'financials' or json_node == 'nbfc_financials' or json_node == 'financial_parameters' or json_node == 'credit_ratings':
+                if json_node == 'company' or json_node == 'authorized_signatories' or json_node == 'charge_sequence' or json_node == 'director_network' or json_node == 'open_charges' or json_node == 'open_charges_latest_event' or json_node == 'stock_exchange' or json_node == 'directors' or json_node == 'llp' or json_node == 'contribution_details' or json_node == 'financials' or json_node == 'nbfc_financials' or json_node == 'financial_parameters' or json_node == 'credit_ratings' or json_node == 'legal_history':
                     if json_node == 'contribution_details':
                        query = company_query.format(cin,cin,cin,cin)
                     else:
@@ -104,14 +108,3 @@ def JSON_loader(db_config,config_json_file_path,cin,root_path,excel_path,sheet_n
         return False,None,e,[]
     else:
         return True,json_file_path,None,json_nodes
-
-
-
-# config_json_file_path = 'Config JSON Non-LLP.json'
-# db_config = {
-#         "host": "162.241.123.123",
-#         "user": "classle3_deal_saas",
-#         "password": "o2i=hi,64u*I",
-#         "database": "classle3_mns_credit",
-#     }
-# JSON_loader(db_config,config_json_file_path,'U14100GJ2021PLC121538',r'C:\MCA Portal')

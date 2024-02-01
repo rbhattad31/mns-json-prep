@@ -739,16 +739,16 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
 def json_loader_generation(cindata,dbconfig,config_dict,excel_file_path):
     try:
         root_path = config_dict['Root path']
-        Cin, CompanyName, User = cindata[2], cindata[3], cindata[15]
+        Cin, CompanyName, User,receiptno = cindata[2], cindata[3], cindata[15],cindata[1]
         if len(Cin) == 21:
             json_config_path = config_dict['config_json_path_nonllp']
             excel_sheet_name = 'JSON Loader Queries'
             json_loader, json_file_path, exception_message,json_nodes = JSON_loader(dbconfig, json_config_path, Cin, root_path,
-                                                                         excel_file_path, excel_sheet_name)
+                                                                         excel_file_path, excel_sheet_name,receiptno)
         elif len(Cin) == 8:
             json_config_path = config_dict['config_json_path_llp']
             excel_sheet_name = 'LLP JSON Loader Queries'
-            json_loader,json_file_path,exception_message,json_nodes = JSON_loader(dbconfig,json_config_path,Cin,root_path,excel_file_path,excel_sheet_name)
+            json_loader,json_file_path,exception_message,json_nodes = JSON_loader(dbconfig,json_config_path,Cin,root_path,excel_file_path,excel_sheet_name,receiptno)
         else:
             json_loader = False
             json_file_path = None
