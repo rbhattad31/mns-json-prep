@@ -328,7 +328,7 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath,options
                         logging.info(filename)
                         download_filepath = os.path.join(folder_path, filename)
                         filepath = download_filepath + '.pdf'
-                        if index_id == '':
+                        if index_id == '' or index_id is None:
                             file_xpath = f'//a[contains(text(),"{filename}")]'
                             try:
                                 file_download_button = driver.find_element(By.XPATH, file_xpath)
@@ -951,12 +951,12 @@ def download_captcha_and_enter_text(CompanyName, driver, file_path, filename, Ci
                     file_path = moved_file_path
                     logging.info('Success')
 
-        if index_id == '':
+        if index_id == '' or index_id is None:
             if os.path.exists(download_file_path):
                 os.rename(download_file_path,file_path)
                 logging.info(f"Renamed from {download_file_path} to {file_path}")
         time.sleep(1)
-        if index_id == '':
+        if index_id == '' or index_id is None:
             download_filename = os.path.basename(file_path)
             download_filename = str(download_filename).replace('.pdf', '')
             logging.info(download_filename)
@@ -975,10 +975,10 @@ def download_captcha_and_enter_text(CompanyName, driver, file_path, filename, Ci
         if os.path.exists(file_path):
             connection = mysql.connector.connect(**dbconfig)
             cursor = connection.cursor()
-            if index_id == '':
+            if index_id == '' or index_id is None:
                 logging.info("Downloaded for duplicate")
-                update_query = 'update documents set Download_Status=%s where cin=%s and document=%s and company=%s'
-                path_update_query = 'update documents set document_download_path=%s where cin=%s and document=%s and company=%s'
+                update_query = 'update documents set Download_Status=%s where cin=%s and document=%s and company=%s and path_index IS NULL'
+                path_update_query = 'update documents set document_download_path=%s where cin=%s and document=%s and company=%s and path_index IS NULL'
                 values_update = ('Downloaded', Cin, filename, CompanyName)
                 values_path_update = (file_path, Cin, filename, CompanyName)
                 logging.info(values_update)
@@ -1011,13 +1011,47 @@ def download_captcha_and_enter_text(CompanyName, driver, file_path, filename, Ci
                             updated_file_path = updated_file_path + '.pdf'
                         os.rename(latest_file, updated_file_path)
                         logging.info(f"Renamed from {latest_file} to {updated_file_path}")
+                        time.sleep(4)
+                        if os.path.exists(updated_file_path):
+                            connection = mysql.connector.connect(**dbconfig)
+                            cursor = connection.cursor()
+                            update_query = 'update documents set Download_Status=%s where cin=%s and document=%s and company=%s and path_index IS NULL'
+                            path_update_query = 'update documents set document_download_path=%s where cin=%s and document=%s and company=%s and path_index IS NULL'
+                            values_update = ('Downloaded', Cin, filename, CompanyName)
+                            values_path_update = (updated_file_path, Cin, filename, CompanyName)
+                            logging.info(values_update)
+                            cursor.execute(update_query, values_update)
+                            cursor.execute(path_update_query, values_path_update)
+                            connection.commit()
+                            cursor.close()
+                            connection.close()
                         return True
                 else:
                     logging.info("Not Downloaded successfully")
                     return False
             else:
-                logging.info("Not Downloaded successfully")
-                return False
+                try:
+                    file_path = str(file_path).replace('.pdf','.PDF')
+                    if os.path.exists(file_path):
+                        connection = mysql.connector.connect(**dbconfig)
+                        cursor = connection.cursor()
+                        update_query = 'update documents set Download_Status=%s where cin=%s and document=%s and company=%s and path_index IS NULL'
+                        path_update_query = 'update documents set document_download_path=%s where cin=%s and document=%s and company=%s and path_index IS NULL'
+                        values_update = ('Downloaded', Cin, filename, CompanyName)
+                        values_path_update = (file_path, Cin, filename, CompanyName)
+                        logging.info(values_update)
+                        cursor.execute(update_query, values_update)
+                        cursor.execute(path_update_query, values_path_update)
+                        connection.commit()
+                        cursor.close()
+                        connection.close()
+                        return True
+                    else:
+                        logging.info("Not Downloaded successfully")
+                        return False
+                except Exception as e:
+                    logging.info("Not Downloaded successfully")
+                    return False
     except Exception as e:
         logging.info(f"Exception Occured {e}")
         exc_type, exc_value, exc_traceback = sys.exc_info()

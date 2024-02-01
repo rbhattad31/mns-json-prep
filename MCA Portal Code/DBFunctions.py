@@ -94,7 +94,8 @@ def update_locked_by(dbconfig,Cin):
     cursor = connection.cursor()
     try:
         update_locked_query = "update orders set python_locked_by = %s where cin=%s"
-        user = os.getlogin()
+        #user = os.getlogin()
+        user = 'Python-Machine-159'
         values = (user, Cin)
         cursor.execute(update_locked_query, values)
         connection.commit()
@@ -378,6 +379,44 @@ def update_modified_date(db_config,cin):
         connection.commit()
     except Exception as e:
         print(f"Excpetion occured while updating locked by {e}")
+    finally:
+        cursor.close()
+        connection.close()
+        
+        
+
+def update_retry_count(db_config,cin,retry_counter):
+    setup_logging()
+    connection = mysql.connector.connect(**db_config)
+    cursor = connection.cursor()
+    try:
+        update_retry_counter_query = "update orders set retry_counter = %s where cin=%s"
+        values = (retry_counter, cin)
+        logging.info(update_retry_counter_query % values)
+        cursor.execute(update_retry_counter_query, values)
+        connection.commit()
+    except Exception as e:
+        print(f"Excpetion occured while updating retry counter by {e}")
+    finally:
+        cursor.close()
+        connection.close()
+
+
+def get_retry_count(db_config,cin):
+    setup_logging()
+    connection = mysql.connector.connect(**db_config)
+    cursor = connection.cursor()
+    try:
+        retry_counter_query = "select retry_counter from orders where cin = %s"
+        values = (cin,)
+        logging.info(retry_counter_query % values)
+        cursor.execute(retry_counter_query, values)
+        result = cursor.fetchone()[0]
+        logging.info(f"Retry count {result}")
+        return result
+    except Exception as e:
+        logging.info(f"Excpetion occured while updating retry counter by {e}")
+        return None
     finally:
         cursor.close()
         connection.close()

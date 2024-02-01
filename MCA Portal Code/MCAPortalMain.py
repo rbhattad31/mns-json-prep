@@ -26,6 +26,11 @@ from DBFunctions import fetch_download_status
 from DBFunctions import fetch_order_download_data_from_table
 from DBFunctions import update_locked_by
 from DBFunctions import update_modified_date
+from DBFunctions import update_retry_count
+from DBFunctions import get_retry_count
+from MCAPortalMainFunctions import update_completed_status_api
+
+
 
 def main():
     excel_file = os.environ.get("MCA_Config")
@@ -52,6 +57,7 @@ def main():
                         emails = str(emails).split(',')
                         if (workflow_status == 'Payment_success' or workflow_status == 'XML_Pending') and download_status == 'N':
                             logging.info(f"Starting to download for {cin}")
+                            update_locked_by(db_config, cin)
                             subject_start = str(config_dict['subject_start']).format(cin, receipt_number)
                             body_start = str(config_dict['Body_start']).format(cin, receipt_number, company_name)
                             try:
@@ -65,10 +71,29 @@ def main():
                                 update_download_status(db_config, cin)
                                 update_locked_by_empty(db_config,cin)
                                 update_modified_date(db_config,cin)
+                                try:
+                                    sign_out(driver, config_dict, downloaddata)
+                                except:
+                                    pass
                             else:
+                                retry_counter_db = get_retry_count(db_config, cin)
+                                if retry_counter_db is None:
+                                    retry_counter_db = 0
+                                try:
+                                    retry_counter_db = int(retry_counter_db)
+                                except:
+                                    pass
+                                retry_counter_db = retry_counter_db + 1
                                 logging.info("Not Downloaded")
                                 update_locked_by_empty(db_config, cin)
                                 update_modified_date(db_config, cin)
+                                update_retry_count(db_config,cin,retry_counter_db)
+                                try:
+                                    sign_out(driver, config_dict, downloaddata)
+                                except:
+                                    pass
+                                if retry_counter_db > 3:
+                                    update_process_status('Exception',db_config,cin)
                                 raise Exception(f"Download failed for {cin} {exception_message}")
                     except Exception as e:
                         logging.info(f"Error in downloading{e}")
@@ -100,20 +125,28 @@ def main():
                                 if XML_Generation:
                                     logging.info("XML Generated successfully")
                                     update_status(user,'db_insertion_pending',db_config,cin)
+                                    update_locked_by_empty(db_config,cin)
                                 else:
+                                    update_modified_date(db_config,cin)
+                                    update_locked_by_empty(db_config,cin)
                                     logging.info("XML Not Generated successfully")
                                     if 'driver' in locals():
                                         sign_out(driver, config_dict, CinData)
                                     continue
                             if workflow_status == 'db_insertion_pending':
+                                update_locked_by(db_config, cin)
                                 Insert_fields_into_DB,exception_message_db = insert_fields_into_db(hidden_attachments, config_dict, CinData,excel_file)
                                 if Insert_fields_into_DB:
                                     logging.info("Successfully Inserted into DB")
                                     update_status(user,'Loader_pending',db_config,cin)
+                                    update_locked_by_empty(db_config,cin)
                                 else:
+                                    update_modified_date(db_config,cin)
                                     logging.info("Not Successfully Inserted into DB")
+                                    update_locked_by_empty(db_config,cin)
                                     raise Exception(exception_message_db)
                             if workflow_status == 'Loader_pending':
+                                update_locked_by(db_config, cin)
                                 json_loader,json_file_path,exception_message = json_loader_generation(CinData, db_config, config_dict,excel_file)
                                 if json_loader:
                                     logging.info("JSON Loader generated succesfully")
@@ -125,21 +158,38 @@ def main():
                                     config_transactional_log_path = config_dict['config_transactional_log_path']
                                     root_path = config_dict['Root path']
                                     transaction_log_path = generate_transactional_log(db_config,config_transactional_log_path,root_path)
+                                    update_api = update_completed_status_api(receipt_number,config_dict)
+                                    if update_api:
+                                        logging.info(f"Updated successfully in API for {receipt_number}")
+                                    else:
+                                        logging.info(f"Not Updated successfully in API for {receipt_number}")
                                     try:
                                         attachments = []
                                         attachments.append(json_file_path)
                                         attachments.append(transaction_log_path)
-                                        send_email(config_dict,cin_complete_subject,cin_completed_body,emails,attachments)
+                                        emails_end = config_dict['end_email']
+                                        emails_end = str(emails_end).split(',')
+                                        send_email(config_dict,cin_complete_subject,cin_completed_body,emails_end,attachments)
                                     except Exception as e:
                                         logging.info(f"Exception occured while sending end email {e}")
                                 else:
+                                    update_modified_date(db_config,cin)
                                     logging.info("JSON Loader not generated")
+                                    update_locked_by_empty(db_config,cin)
                                     raise Exception(f"Exception occured for json loader generation {cin} {exception_message}")
+                        except Exception as e:
+                            retry_counter_db = get_retry_count(db_config, cin)
+                            if retry_counter_db is None:
+                                retry_counter_db = 0
                             try:
-                                sign_out(driver, config_dict, CinData)
+                                retry_counter_db = int(retry_counter_db)
                             except:
                                 pass
-                        except Exception as e:
+                            retry_counter_db = retry_counter_db + 1
+                            update_modified_date(db_config,cin)
+                            update_retry_count(db_config, cin, retry_counter_db)
+                            if retry_counter_db > 3:
+                                update_process_status('Exception', db_config, cin)
                             logging.info(f"Exception occured for cin {cin} {e}")
                             update_locked_by_empty(db_config, cin)
                             exc_type, exc_value, exc_traceback = sys.exc_info()
