@@ -94,7 +94,7 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,tabl
                         row_values = [value for i, value in enumerate(row) if (
                                 (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
                                 isinstance(row[i], str) and (row[i] != "NaN" or 'Unnamed' not in row[i])))]
-                        if field_name == 'total_changes_in_inventories_or_finished_goods' and (row[0] == 'Changes in inventories of finished goods, work-in-progress and' or row[0] == 'Changes in inventories of finished goods, work-in-progress and stock-in-trade'):
+                        if field_name == 'total_changes_in_inventories_or_finished_goods' and (row[0] == 'Changes in inventories of finished goods, work-in-progress and' or row[0] == 'Changes in inventories of finished goods, work-in-progress and stock-in-trade' or 'Changes in inventories of finished goods'.lower() in str(row[0]).lower()):
                             if len(row_values) > 1:
                                 logging.info("Going straight for inventories or finished goods")
                                 try:

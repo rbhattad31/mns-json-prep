@@ -17,9 +17,25 @@ from Config import create_main_config_dictionary
 import sys
 import traceback
 from CaptureTextUsingOCR import extract_text_from_pdf
+from datetime import datetime
 
 
-def update_value_in_db(db_config, DIN, PAN, MobileNumber, Email, CIN):
+def Get_Age(DOB):
+    # Given date in the "dd/mm/yyyy" format
+    given_date_string = DOB
+
+    # Parse the given date string
+    given_date = datetime.strptime(given_date_string, "%Y-%m-%d")
+
+    # Get the current date
+    current_date = datetime.now()
+
+    # Calculate the age
+    age = current_date.year - given_date.year - (
+            (current_date.month, current_date.day) < (given_date.month, given_date.day))
+    return age
+
+def update_value_in_db(db_config, DIN, PAN, MobileNumber, Email, CIN,dob,nationality,age):
     try:
         setup_logging()
         db_connection = mysql.connector.connect(**db_config)
@@ -37,8 +53,8 @@ def update_value_in_db(db_config, DIN, PAN, MobileNumber, Email, CIN):
 
             if len(DIN_Result) != 0:
                 # update Query:
-                update_query = "UPDATE authorized_signatories set pan = %s,phone_number = %s,email = %s where din = %s and cin = %s"
-                update_values = (PAN, MobileNumber, Email, DIN, CIN)
+                update_query = "UPDATE authorized_signatories set pan = %s,phone_number = %s,email = %s,date_of_birth = %s,nationality = %s,age = %s where din = %s and cin = %s"
+                update_values = (PAN, MobileNumber, Email, dob,nationality,age,DIN, CIN)
                 logging.info(update_query % update_values)
                 db_cursor.execute(update_query, update_values)
             # else:
@@ -77,8 +93,8 @@ def update_value_in_db(db_config, DIN, PAN, MobileNumber, Email, CIN):
 
             if len(PAN_Result) != 0:
                 # update Query:
-                update_query = "UPDATE authorized_signatories set phone_number = %s,email = %s where pan = %s and cin = %s"
-                update_values = (MobileNumber, Email, PAN, CIN)
+                update_query = "UPDATE authorized_signatories set phone_number = %s,email = %s,date_of_birth = %s,nationality = %s,age = %s where pan = %s and cin = %s"
+                update_values = (MobileNumber, Email,dob,nationality,age,PAN, CIN)
                 logging.info(update_query % update_values)
                 db_cursor.execute(update_query, update_values)
             # else:
@@ -192,11 +208,21 @@ def MGT_director_shareholdings_pdf_to_db(pdf_path, config_dict, db_config, cin):
                         PAN = shareholder['PAN']
                         MobileNumber = shareholder['MobileNumber']
                         Email = shareholder['Email']
-                        logging.info('DIN-', DIN)
-                        logging.info('PAN-', PAN)
-                        logging.info('MobileNumber-', MobileNumber)
-                        logging.info('Email-', Email)
-                        update_value_in_db(db_config, DIN, PAN, MobileNumber, Email, cin)
+                        dob = shareholder['DateOfBirth']
+                        nationality = shareholder['Nationality']
+                        logging.info(DIN)
+                        logging.info(PAN)
+                        logging.info(MobileNumber)
+                        logging.info(Email)
+                        logging.info(dob)
+                        logging.info(nationality)
+                        try:
+                            age = Get_Age(dob)
+                            logging.info(age)
+                        except Exception as e:
+                            age = None
+                            logging.info(f"Exception occured in calculating age {e}")
+                        update_value_in_db(db_config, DIN, PAN, MobileNumber, Email, cin,dob,nationality,age)
                 except Exception as e:
                     return True
                     # DIN not available
@@ -227,4 +253,3 @@ def dir2_main(db_config, config_dict, output_directory, pdf_path, cin):
         logging.info(f"Exception in fetching address from MGT {e}")
     else:
         return True
-
