@@ -92,7 +92,7 @@ def update_value_in_db(db_config,name,no_of_shares,cin):
             logging.info(f"Error in calculating percentage holding {e}")
             percentage_holding = None
         try:
-            year_query = "select * from director_shareholdings where cin = %s and din_pan = ''"
+            year_query = "select * from director_shareholdings where cin = %s and (din_pan = '' or din_pan IS NULL)"
             year_values = (cin,)
             logging.info(year_query % year_values)
             db_cursor.execute(year_query,year_values)
@@ -279,4 +279,3 @@ def mgt_director_shareholdings_main(db_config,config_dict,output_directory,pdf_p
         logging.info(f"Exception in fetching address from MGT {e}")
     else:
         return True
-
