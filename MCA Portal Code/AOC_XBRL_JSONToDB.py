@@ -748,6 +748,7 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                 auditor_value = Auditor_information(auditor_complete_sentence,child_nodes)
                 try:
                     auditor_value = str(auditor_value).replace('\"', '')
+                    auditor_value = str(auditor_value).replace("'","")
                 except Exception as e:
                     pass
                 logging.info(f"{field_name}:{auditor_value}")
