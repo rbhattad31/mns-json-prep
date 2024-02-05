@@ -680,7 +680,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                                WHERE MONTH(created_date) = MONTH(CURRENT_DATE())
                                 AND YEAR(created_date) = YEAR(CURRENT_DATE()) AND cin=%s AND gst_status='Y'"""
                 cin_value = (Cin,)
-                print(gst_query % cin_value)
+                logging.info(gst_query % cin_value)
                 gst_cursor.execute(gst_query,cin_value)
                 gst_result = gst_cursor.fetchall()
                 gst_cursor.close()
@@ -691,10 +691,14 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     root_path = config_dict['Root path']
                     gst = insert_gst_number(db_config,config_dict_GST,Cin,CompanyName,root_path)
                     if gst:
-                        print("Successfully inserted for GST")
+                        logging.info("Successfully inserted for GST")
                         break
+                    else:
+                        time.sleep(30)
+                        continue
             except Exception as e:
-                print(f"Exception occured while inserting GST {e}")
+                logging.info(f"Exception occured while inserting GST {e}")
+                time.sleep(30)
                 continue
         try:
             sheet_name = 'OpenAI'
