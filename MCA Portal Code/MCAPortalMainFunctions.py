@@ -448,6 +448,16 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     chg_db_insertion = chg1_xml_to_db(db_config,config_dict_CHG,map_file_path_CHG,map_sheet_name_CHG,xml_file_path,output_excel_path,Cin,CompanyName,date,file_name)
                     if chg_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
+                    else:
+                        logging.info("Going for other type of CHG-1 form")
+                        map_file_path_CHG_old = config_dict_CHG['old_file_config']
+                        logging.info("old file")
+                        map_sheet_name_CHG = config_dict_CHG['mapping_file_sheet_name']
+                        chg_db_insertion_old = chg1_xml_to_db(db_config, config_dict_CHG, map_file_path_CHG_old,
+                                                          map_sheet_name_CHG, xml_file_path, output_excel_path, Cin,
+                                                          CompanyName, date, file_name)
+                        if chg_db_insertion_old:
+                            update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                 elif 'XBRL document in respect Consolidated'.lower() in str(file_name).lower() or 'XBRL financial statements'.lower() in str(file_name).lower():
                     logging.info(f"Going to extract for {file_name}")
                     Sheet_name = "AOC XBRL"
