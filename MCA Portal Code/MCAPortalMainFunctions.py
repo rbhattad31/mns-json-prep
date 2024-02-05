@@ -54,7 +54,7 @@ from AOC4_CFS_XMLToDB import AOC_cfs_xml_to_db
 from DBFunctions import update_locked_by_empty
 import requests
 import json
-
+import time
 
 def sign_out(driver,config_dict,CinData):
     try:
