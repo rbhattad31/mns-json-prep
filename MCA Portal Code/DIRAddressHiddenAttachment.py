@@ -129,7 +129,7 @@ def get_hidden_attachment(input_pdf_path, output_path,file_name_hidden_pdf):
         item_name_dict[each_item] = doc.embfile_info(each_item)["filename"]
 
     for item_name, file_name in item_name_dict.items():
-        if 'directors' in str(file_name).lower() or 'lod' in str(file_name).lower():
+        if 'directors' in str(file_name).lower() or 'lod' in str(file_name).lower() or 'director' in str(file_name).lower():
             out_pdf =  output_path + "\\" + file_name
             logging.info(out_pdf)
             fData = doc.embfile_get(item_name)
