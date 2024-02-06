@@ -491,7 +491,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                         config_dict_DIR,config_status = create_main_config_dictionary(excel_file,Sheet_name)
                         digit_count = sum(c.isdigit() for c in file_name)
                         logging.info(digit_count)
-                        if digit_count == 8:
+                        if digit_count == 8 or digit_count == 9 or digit_count == 14 or digit_count == 15:
                             map_file_path_DIR = config_dict_DIR['Form32_config']
                             logging.info("old file")
                         else:
