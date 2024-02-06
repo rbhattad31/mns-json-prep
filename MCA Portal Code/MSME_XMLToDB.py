@@ -185,7 +185,8 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             continue
         # logging.info(table_in_list)
         table_df = pd.DataFrame(table_in_list)
-
+        logging.info(table_df)
+        table_df = table_df.dropna(how='all')
         if table_df.empty:
             logging.info("Table df is empty so going for different node")
             table_node_name = 'T_ZNCA_MSME_S3'
