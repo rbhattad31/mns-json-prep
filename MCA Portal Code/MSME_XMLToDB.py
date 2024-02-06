@@ -189,7 +189,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         table_df = table_df.dropna(how='all')
         if table_df.empty:
             logging.info("Table df is empty so going for different node")
-            table_node_name = 'T_ZNCA_MSME_S3'
+            table_node_name = 'T_ZNCA_MSME_S3/DATA'
             try:
                 table_in_list_updated = extract_table_values_from_xml(xml_root, table_node_name, child_nodes)
                 table_df = pd.DataFrame(table_in_list_updated)
