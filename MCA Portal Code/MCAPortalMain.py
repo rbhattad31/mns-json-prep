@@ -44,6 +44,9 @@ def main():
             while next_cin:
                 connection, cursor = connect_to_database(db_config)
                 download_columnnames, downloadData, downloadFetchStatus = fetch_order_download_data_from_table(connection)
+                cin = None
+                receipt_number = None
+                company_name = None
                 for downloaddata in downloadData:
                     try:
                         cin = downloaddata[2]
@@ -97,6 +100,8 @@ def main():
                                 raise Exception(f"Download failed for {cin} {exception_message}")
                     except Exception as e:
                         logging.info(f"Error in downloading{e}")
+                        update_locked_by_empty(db_config,cin)
+                        update_modified_date(db_config,cin)
                 connection, cursor = connect_to_database(db_config)
                 columnnames,CinDBData , CinFetchStatus = fetch_order_data_from_table(connection)
                 if len(CinDBData) < 1:
