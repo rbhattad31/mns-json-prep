@@ -13,7 +13,8 @@ import PyPDF2
 from PyPDF2 import PdfReader
 import re
 from CaptureTextUsingOCR import extract_text_from_pdf
-
+import sys
+import traceback
 
 def check_name_probability(db_config,cin,input_name):
     setup_logging()
@@ -24,6 +25,8 @@ def check_name_probability(db_config,cin,input_name):
     logging.info(director_query % value)
     cursor.execute(director_query,value)
     directors = cursor.fetchall()
+    cursor.close()
+    connection.close()
     for director in directors:
         dbname = director[0]
         din = director[1]
@@ -43,7 +46,7 @@ def check_name_probability(db_config,cin,input_name):
         percentage_match = jaccard_similarity * 100
 
         # Output the result as a number
-        logging.info(percentage_match)
+        logging.info(f"Percentage Match of {input_name} is {percentage_match}")
         if percentage_match > 75:
             return dbname,din,designation,director
 
@@ -146,6 +149,14 @@ def update_value_in_db(db_config,name,no_of_shares,cin):
         db_connection.close()
     except Exception as e:
         logging.info(f"Exception {e} occured while inserting into db")
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+
+        # Get the formatted traceback as a string
+        traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+        # logging.info the traceback details
+        for line in traceback_details:
+            logging.info(line.strip())
 
 
 def image_to_text(image_path):
@@ -163,7 +174,7 @@ def get_hidden_attachment(input_pdf_path, output_path,file_name_hidden_pdf):
         item_name_dict[each_item] = doc.embfile_info(each_item)["filename"]
 
     for item_name, file_name in item_name_dict.items():
-        if 'shareholders' in str(file_name).lower() or 'shareholder' in str(file_name).lower() or 'share holders' in str(file_name).lower() or 'share holder' in str(file_name).lower() or 'los' in str(file_name).lower():
+        if 'shareholders' in str(file_name).lower() or 'shareholder' in str(file_name).lower() or 'share holders' in str(file_name).lower() or 'share holder' in str(file_name).lower() or 'los' in str(file_name).lower() or 'shareholding' in str(file_name).lower() or 'share' in str(file_name).lower():
             out_pdf =  output_path + "\\" + file_name
             logging.info(out_pdf)
             fData = doc.embfile_get(item_name)
