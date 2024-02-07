@@ -711,6 +711,7 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                     child_nodes = 'Profit (loss) from discontinuing operations before tax'
                     values = JSONtoDB_AOC_XBRL_straight(cin_column_value, company_name, json_file_path, child_nodes,
                                                         table_column_check, field_name)
+                    all_none = all(element is None for element in values)
                     if len(values) != 0 and not all_none:
                         if year_category == 'Previous':
                             try:
@@ -764,7 +765,66 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                             single_df.at[index, 'Value'] = None
                         continue
                     else:
-                        single_df.at[index, 'Value'] = None
+                        child_nodes = 'Total profit (loss) from discontinuing operation after tax'
+                        values = JSONtoDB_AOC_XBRL_straight(cin_column_value, company_name, json_file_path, child_nodes,
+                                                            table_column_check, field_name)
+                        all_none = all(element is None for element in values)
+                        logging.info(f"New Values {values}")
+                        if len(values) != 0 and not all_none:
+                            if year_category == 'Previous':
+                                try:
+                                    logging.info("Disconinuing operations for Previous year")
+                                    values[1] = values[1].replace(',', '')
+                                    if million_keyword in filing_standard_check:
+                                        num_value = (float(values[1])) * 1000000
+                                        logging.info("In Millions")
+                                    elif crores_keyword in filing_standard_check:
+                                        logging.info("In Crores")
+                                        num_value = (float(values[1])) * 10000000
+                                    elif lakh_keyword in filing_standard_check:
+                                        logging.info("In lakhs")
+                                        num_value = (float(values[1])) * 100000
+                                    elif billion_keyword in filing_standard_check:
+                                        logging.info("In Billion")
+                                        num_value = (float(values[1])) * 1000000000
+                                    elif trillion_keyword in filing_standard_check:
+                                        logging.info("In trillion")
+                                        num_value = (float(values[1])) * 1000000000000
+                                    else:
+                                        logging.info("Normal Value")
+                                        num_value = float(values[1])
+                                    single_df.at[index, 'Value'] = round(num_value, 2)
+                                except Exception as e:
+                                    single_df.at[index, 'Value'] = values[1]
+                            elif year_category == 'Current':
+                                try:
+                                    logging.info("Disconinuing operations for current year")
+                                    values[0] = values[0].replace(',', '')
+                                    if million_keyword in filing_standard_check:
+                                        logging.info("In Millions")
+                                        num_value = (float(values[0])) * 1000000
+                                    elif crores_keyword in filing_standard_check:
+                                        logging.info("In Crores")
+                                        num_value = (float(values[0])) * 10000000
+                                    elif lakh_keyword in filing_standard_check:
+                                        logging.info("In lakhs")
+                                        num_value = (float(values[0])) * 100000
+                                    elif billion_keyword in filing_standard_check:
+                                        logging.info("In Billion")
+                                        num_value = (float(values[0])) * 1000000000
+                                    elif trillion_keyword in filing_standard_check:
+                                        logging.info("In trillion")
+                                        num_value = (float(values[0])) * 1000000000000
+                                    else:
+                                        logging.info("Normal Value")
+                                        num_value = float(values[0])
+                                    single_df.at[index, 'Value'] = round(num_value, 2)
+                                except Exception as e:
+                                    single_df.at[index, 'Value'] = values[0]
+                            else:
+                                single_df.at[index, 'Value'] = None
+                        else:
+                            single_df.at[index, 'Value'] = None
                         continue
             if parent_node == config_dict['Straight_Keyword'] and field_name != 'profit_from_discontinuing_operation_after_tax':
                 values = JSONtoDB_AOC_XBRL_straight(cin_column_value,company_name,json_file_path,child_nodes,table_column_check,field_name)
