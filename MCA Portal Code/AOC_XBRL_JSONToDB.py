@@ -861,6 +861,12 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                                 single_df.at[index, 'Value'] = round(num_value,2)
                             except Exception as e:
                                 single_df.at[index,'Value'] = values[0]
+                    elif year_category == 'Common':
+                        logging.info(f"Going for common{field_name}")
+                        try:
+                            single_df.at[index, 'Value'] = values[0]
+                        except Exception as e:
+                            single_df.at[index, 'Value'] = None
                     else:
                         single_df.at[index, 'Value'] = None
                 else:
@@ -979,6 +985,10 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
             years.append(previous_year)
             natures.append(previous_year_nature)
             logging.info("Previous year not found so inserting")
+        years.append(current_year)
+        natures.append(current_year_nature)
+        years.append(previous_year)
+        natures.append(previous_year_nature)
         db_cursor.close()
         db_connection.close()
         # if not aoc_xbrl_first_file_found:
