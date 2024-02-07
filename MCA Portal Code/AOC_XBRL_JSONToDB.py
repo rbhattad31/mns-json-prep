@@ -166,7 +166,18 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,tabl
                                             (isinstance(next_row[i], (float, int)) and not math.isnan(next_row[i])) or (
                                             isinstance(next_row[i], str) and (next_row[i] != "NaN" and 'Unnamed' not in next_row[i])))]
                                     current_year_value = row_values[0]
-                                    previous_year_value = row_values[1]
+                                    try:
+                                        previous_year_value = row_values[1]
+                                    except Exception as e:
+                                        stock_next_row = table_data[r + 2]
+                                        if 'stock-in-trade' in str(stock_next_row[0]).lower() or str(stock_next_row[0]) == 'stock-in-trade':
+                                            stock_row_values = [value for i, value in enumerate(next_row) if (
+                                                    (isinstance(stock_next_row[i], (float, int)) and not math.isnan(
+                                                        stock_next_row[i])) or (
+                                                            isinstance(stock_next_row[i], str) and (
+                                                                stock_next_row[i] != "NaN" and 'Unnamed' not in stock_next_row[
+                                                            i])))]
+                                            previous_year_value = stock_row_values[1]
                                     value_current_year = re.sub(r'\([^)]*\)', '', str(current_year_value))
                                     value_previous_year = re.sub(r'\([^)]*\)', '', str(previous_year_value))
                                     value_found = True
@@ -634,7 +645,128 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                     nature = None
                 single_df.at[index, 'Value'] = nature
                 continue
-            if parent_node == config_dict['Straight_Keyword']:
+            if field_name == 'profit_from_discontinuing_operation_after_tax':
+                child_nodes = 'Total profit (loss) from discontinued operations after tax'
+                values = JSONtoDB_AOC_XBRL_straight(cin_column_value, company_name, json_file_path, child_nodes,
+                                                    table_column_check, field_name)
+                million_keyword = 'Millions of INR'
+                crores_keyword = 'Crores of INR'
+                lakh_keyword = 'Lakhs of INR'
+                billion_keyword = 'Billions of INR'
+                trillion_keyword = 'Trillions of INR'
+                all_none = all(element is None for element in values)
+                if len(values) !=0 and not all_none:
+                    if year_category == 'Previous':
+                        try:
+                            values[1]=values[1].replace(',','')
+                            if million_keyword in filing_standard_check:
+                                num_value = (float(values[1]))*1000000
+                                logging.info("In Millions")
+                            elif crores_keyword in filing_standard_check:
+                                logging.info("In Crores")
+                                num_value = (float(values[1]))*10000000
+                            elif lakh_keyword in filing_standard_check:
+                                logging.info("In lakhs")
+                                num_value = (float(values[1]))*100000
+                            elif billion_keyword in filing_standard_check:
+                                logging.info("In Billion")
+                                num_value = (float(values[1]))*1000000000
+                            elif trillion_keyword in filing_standard_check:
+                                logging.info("In trillion")
+                                num_value = (float(values[1]))*1000000000000
+                            else:
+                                logging.info("Normal Value")
+                                num_value = float(values[1])
+                            single_df.at[index, 'Value'] = round(num_value,2)
+                        except Exception as e:
+                            single_df.at[index, 'Value'] = values[1]
+                    elif year_category == 'Current':
+                        try:
+                            values[0]=values[0].replace(',','')
+                            if million_keyword in filing_standard_check:
+                                logging.info("In Millions")
+                                num_value = (float(values[0]))*1000000
+                            elif crores_keyword in filing_standard_check:
+                                logging.info("In Crores")
+                                num_value = (float(values[0]))*10000000
+                            elif lakh_keyword in filing_standard_check:
+                                logging.info("In lakhs")
+                                num_value = (float(values[0]))*100000
+                            elif billion_keyword in filing_standard_check:
+                                logging.info("In Billion")
+                                num_value = (float(values[0]))*1000000000
+                            elif trillion_keyword in filing_standard_check:
+                                logging.info("In trillion")
+                                num_value = (float(values[0]))*1000000000000
+                            else:
+                                logging.info("Normal Value")
+                                num_value = float(values[0])
+                            single_df.at[index, 'Value'] = round(num_value,2)
+                        except Exception as e:
+                            single_df.at[index,'Value'] = values[0]
+                    else:
+                        single_df.at[index, 'Value'] = None
+                    continue
+                else:
+                    child_nodes = 'Profit (loss) from discontinuing operations before tax'
+                    values = JSONtoDB_AOC_XBRL_straight(cin_column_value, company_name, json_file_path, child_nodes,
+                                                        table_column_check, field_name)
+                    if len(values) != 0 and not all_none:
+                        if year_category == 'Previous':
+                            try:
+                                values[1] = values[1].replace(',', '')
+                                if million_keyword in filing_standard_check:
+                                    num_value = (float(values[1])) * 1000000
+                                    logging.info("In Millions")
+                                elif crores_keyword in filing_standard_check:
+                                    logging.info("In Crores")
+                                    num_value = (float(values[1])) * 10000000
+                                elif lakh_keyword in filing_standard_check:
+                                    logging.info("In lakhs")
+                                    num_value = (float(values[1])) * 100000
+                                elif billion_keyword in filing_standard_check:
+                                    logging.info("In Billion")
+                                    num_value = (float(values[1])) * 1000000000
+                                elif trillion_keyword in filing_standard_check:
+                                    logging.info("In trillion")
+                                    num_value = (float(values[1])) * 1000000000000
+                                else:
+                                    logging.info("Normal Value")
+                                    num_value = float(values[1])
+                                single_df.at[index, 'Value'] = round(num_value, 2)
+                            except Exception as e:
+                                single_df.at[index, 'Value'] = values[1]
+                        elif year_category == 'Current':
+                            try:
+                                values[0] = values[0].replace(',', '')
+                                if million_keyword in filing_standard_check:
+                                    logging.info("In Millions")
+                                    num_value = (float(values[0])) * 1000000
+                                elif crores_keyword in filing_standard_check:
+                                    logging.info("In Crores")
+                                    num_value = (float(values[0])) * 10000000
+                                elif lakh_keyword in filing_standard_check:
+                                    logging.info("In lakhs")
+                                    num_value = (float(values[0])) * 100000
+                                elif billion_keyword in filing_standard_check:
+                                    logging.info("In Billion")
+                                    num_value = (float(values[0])) * 1000000000
+                                elif trillion_keyword in filing_standard_check:
+                                    logging.info("In trillion")
+                                    num_value = (float(values[0])) * 1000000000000
+                                else:
+                                    logging.info("Normal Value")
+                                    num_value = float(values[0])
+                                single_df.at[index, 'Value'] = round(num_value, 2)
+                            except Exception as e:
+                                single_df.at[index, 'Value'] = values[0]
+                        else:
+                            single_df.at[index, 'Value'] = None
+                        continue
+                    else:
+                        single_df.at[index, 'Value'] = None
+                        continue
+            if parent_node == config_dict['Straight_Keyword'] and field_name != 'profit_from_discontinuing_operation_after_tax':
                 values = JSONtoDB_AOC_XBRL_straight(cin_column_value,company_name,json_file_path,child_nodes,table_column_check,field_name)
                 logging.info(f"{child_nodes}:{values}")
                 million_keyword = 'Millions of INR'
