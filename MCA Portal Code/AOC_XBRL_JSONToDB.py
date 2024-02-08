@@ -171,7 +171,7 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,tabl
                                     except Exception as e:
                                         stock_next_row = table_data[r + 2]
                                         if 'stock-in-trade' in str(stock_next_row[0]).lower() or str(stock_next_row[0]) == 'stock-in-trade':
-                                            stock_row_values = [value for i, value in enumerate(next_row) if (
+                                            stock_row_values = [value for i, value in enumerate(stock_next_row) if (
                                                     (isinstance(stock_next_row[i], (float, int)) and not math.isnan(
                                                         stock_next_row[i])) or (
                                                             isinstance(stock_next_row[i], str) and (
