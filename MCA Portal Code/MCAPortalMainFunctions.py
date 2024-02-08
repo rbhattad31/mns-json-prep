@@ -476,7 +476,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     else:
                         AOC_XBRL_first_file_found = True
                 elif 'DIR'.lower() in str(file_name).lower():
-                    if 'DIR_2'.lower() in file_name.lower() or 'DIR-2'.lower() in file_name.lower() or 'DIR 2'.lower() in file_name.lower() or 'DIR-2-'.lower() in file_name.lower():
+                    if 'DIR_2'.lower() in file_name.lower() or 'DIR-2'.lower() in file_name.lower() or 'DIR 2'.lower() in file_name.lower() or 'DIR-2-'.lower() in file_name.lower() or 'dir2' in str(file_name).lower():
                         logging.info("Going to extract for Dir-2 hidden attachment")
                         Sheet_name = "OpenAI"
                         config_dict_dir, config_status = create_main_config_dictionary(excel_file, Sheet_name)
