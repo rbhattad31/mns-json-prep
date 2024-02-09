@@ -11,6 +11,8 @@ import traceback
 from datetime import datetime
 import logging
 from logging_config import setup_logging
+
+
 def update_database_single_value_GST(db_config, table_name, cin_column_name, cin_value,company_name_column_name,company_name, column_name, column_value,gst_number):
     setup_logging()
     db_connection = mysql.connector.connect(**db_config)
@@ -144,11 +146,26 @@ def insert_gst_number(db_config,config_dict,cin,company,root_path):
         # logging.info the traceback details
         for line in traceback_details:
             logging.error(line.strip())
+        try:
+            json_response = response.json()
+            error_details = json_response['result']
+            error_message = error_details['message']
+            connection = mysql.connector.connect(**db_config)
+            cursor = connection.cursor()
+            update_query = "update orders set gst_exception_message = %s where cin = %s"
+            values_cin = (error_message,cin)
+            logging.info(update_query % values_cin)
+            cursor.execute(update_query, values_cin)
+            connection.commit()
+            cursor.close()
+            connection.close()
+        except Exception as e:
+            logging.info(f"Exception in updating error status {e}")
         return False
     else:
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor()
-        update_query = "update orders set gst_status='Y' where cin = %s"
+        update_query = "update orders set gst_status='Y',gst_exception_message = '' where cin = %s"
         values_cin = (cin,)
         logging.info(update_query % values_cin)
         cursor.execute(update_query,values_cin)
@@ -156,6 +173,7 @@ def insert_gst_number(db_config,config_dict,cin,company,root_path):
         cursor.close()
         connection.close()
         return True
+
 
 def fetch_gst_details(config_dict,gst_number,status):
     try:
