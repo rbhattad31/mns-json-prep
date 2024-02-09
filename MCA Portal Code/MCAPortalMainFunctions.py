@@ -96,7 +96,7 @@ def Login_and_Download(config_dict,CinData):
         Url = config_dict['Url']
         Cin, CompanyName, User = CinData[2], CinData[3], CinData[15]
         workflow_status = CinData[5]
-        db_insertion_status = CinData[67]
+        db_insertion_status = CinData[68]
         db_config = get_db_credentials(config_dict)
         update_locked_by(db_config,Cin)
         last_logged_in_user = None

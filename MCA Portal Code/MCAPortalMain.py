@@ -54,7 +54,7 @@ def main():
                         user = downloaddata[15]
                         company_name = downloaddata[3]
                         workflow_status = downloaddata[5]
-                        download_status = downloaddata[66]
+                        download_status = downloaddata[67]
                         logging.info(workflow_status)
                         emails = config_dict['to_email']
                         emails = str(emails).split(',')
@@ -120,7 +120,7 @@ def main():
                             user = CinData[15]
                             company_name = CinData[3]
                             workflow_status = CinData[5]
-                            download_status = CinData[66]
+                            download_status = CinData[67]
                             logging.info(workflow_status)
                             emails = config_dict['to_email']
                             emails = str(emails).split(',')
