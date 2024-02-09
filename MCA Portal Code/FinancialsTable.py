@@ -49,10 +49,18 @@ def financials_table(db_config, cin):
             pnl_items = result[14]
             subtotals_dict = json.loads(subtotals)
             pnl_dict = json.loads(pnl_items)
-            assets_difference = subtotals_dict['diffrence_value_of_assets']
-            liabilities_difference = subtotals_dict['diffrence_value_of_liabilities']
-            pnl_difference = pnl_dict['difference_value']
-
+            try:
+                assets_difference = subtotals_dict['diffrence_value_of_assets']
+            except:
+                assets_difference = None
+            try:
+                liabilities_difference = subtotals_dict['diffrence_value_of_liabilities']
+            except:
+                liabilities_difference = None
+            try:
+                pnl_difference = pnl_dict['difference_value']
+            except:
+                pnl_difference = None
             # Create a new row
             row = soup.new_tag('tr')
 
