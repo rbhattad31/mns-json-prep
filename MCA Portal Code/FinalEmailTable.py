@@ -79,6 +79,16 @@ def FinalTable(db_config,cin):
             <td>{result[0]}</td>
             <td>{result[1] if result[1] is not None else ''}</td>
         </tr>
+        <tr class="{ 'red' if result[30] in ['N', 'P'] else '' }">
+            <td>Index Charges Check</td>
+            <td>{result[30]}</td>
+            <td>{result[31] if result[31] is not None else ''}</td>
+        </tr>
+        <tr class="{ 'red' if result[36] in ['N', 'P'] else '' }">
+            <td>Directors Data</td>
+            <td>{result[36]}</td>
+            <td>{result[37] if result[37] is not None else ''}</td>
+        </tr>
         <tr class="{ 'red' if result[4] in ['N', 'P'] else '' }">
             <td>NSE</td>
             <td>{result[4]}</td>
@@ -139,16 +149,6 @@ def FinalTable(db_config,cin):
             <td>{result[26]}</td>
             <td>{result[27] if result[27] is not None else ''}</td>
         </tr>
-        <tr class="{ 'red' if result[28] in ['N', 'P'] else '' }">
-            <td>GST</td>
-            <td>{result[28]}</td>
-            <td>{result[29] if result[29] is not None else ''}</td>
-        </tr>
-        <tr class="{ 'red' if result[30] in ['N', 'P'] else '' }">
-            <td>Index Charges Check</td>
-            <td>{result[30]}</td>
-            <td>{result[31] if result[31] is not None else ''}</td>
-        </tr>
         <tr class="{ 'red' if result[32] in ['N', 'P'] else '' }">
             <td>News</td>
             <td>{result[32]}</td>
@@ -159,10 +159,10 @@ def FinalTable(db_config,cin):
             <td>{result[34]}</td>
             <td>{result[35] if result[35] is not None else ''}</td>
         </tr>
-        <tr class="{ 'red' if result[36] in ['N', 'P'] else '' }">
-            <td>Directors Data</td>
-            <td>{result[36]}</td>
-            <td>{result[37] if result[37] is not None else ''}</td>
+        <tr class="{ 'red' if result[28] in ['N', 'P'] else '' }">
+            <td>GST</td>
+            <td>{result[28]}</td>
+            <td>{result[29] if result[29] is not None else ''}</td>
         </tr>
     </table>
 </body>
