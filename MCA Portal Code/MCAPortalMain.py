@@ -29,7 +29,7 @@ from DBFunctions import update_modified_date
 from DBFunctions import update_retry_count
 from DBFunctions import get_retry_count
 from MCAPortalMainFunctions import update_completed_status_api
-
+from FinalEmailTable import FinalTable
 
 
 def main():
@@ -157,7 +157,8 @@ def main():
                                     logging.info("JSON Loader generated succesfully")
                                     update_json_loader_db(CinData, config_dict)
                                     cin_complete_subject = str(config_dict['cin_Completed_subject']).format(cin,receipt_number)
-                                    cin_completed_body = str(config_dict['cin_Completed_body']).format(cin,receipt_number,company_name)
+                                    table = FinalTable(db_config,cin)
+                                    cin_completed_body = str(config_dict['cin_Completed_body']).format(cin,receipt_number,company_name,table)
                                     update_process_status('Completed',db_config,cin)
                                     update_locked_by_empty(db_config,cin)
                                     config_transactional_log_path = config_dict['config_transactional_log_path']

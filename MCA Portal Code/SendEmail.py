@@ -5,6 +5,7 @@ from email.mime.base import MIMEBase
 from email import encoders
 import os
 
+
 def send_email(config_dict,subject, body, to_emails, attachment_paths=None):
     try:
         # Email configuration
@@ -20,8 +21,7 @@ def send_email(config_dict,subject, body, to_emails, attachment_paths=None):
         msg['Subject'] = subject
 
         # Attach body text
-        msg.attach(MIMEText(body, 'plain'))
-
+        msg.attach(MIMEText(body, 'html'))
         # Attach file if specified
         if attachment_paths:
             for attachment_path in attachment_paths:
