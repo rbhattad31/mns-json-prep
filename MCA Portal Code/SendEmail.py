@@ -6,6 +6,7 @@ from email import encoders
 import os
 
 
+
 def send_email(config_dict,subject, body, to_emails, attachment_paths=None):
     try:
         # Email configuration
@@ -52,4 +53,3 @@ def send_email(config_dict,subject, body, to_emails, attachment_paths=None):
         print(f"SMTP error: {e}")
     except Exception as e:
         print(f"Error: {e}")
-

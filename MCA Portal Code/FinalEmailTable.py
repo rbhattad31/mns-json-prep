@@ -50,12 +50,13 @@ def FinalTable(db_config,cin):
     <style>
         table {{
             border-collapse: collapse;
-            width: 40%;
+            width: 60%;
         }}
         th, td {{
             border: 1px solid black;
             padding: 8px;
             text-align: left;
+            width: 20%;
         }}
         th {{
             background-color: #f2f2f2;
@@ -77,11 +78,6 @@ def FinalTable(db_config,cin):
             <td>Company Information</td>
             <td>{result[0]}</td>
             <td>{result[1] if result[1] is not None else ''}</td>
-        </tr>
-        <tr class="{ 'red' if result[2] in ['N', 'P'] else '' }">
-            <td>PAN (For LLP)</td>
-            <td>{result[2]}</td>
-            <td>{result[3] if result[3] is not None else ''}</td>
         </tr>
         <tr class="{ 'red' if result[4] in ['N', 'P'] else '' }">
             <td>NSE</td>
