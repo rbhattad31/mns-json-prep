@@ -76,5 +76,5 @@ def financials_table(db_config, cin):
         # Return the HTML table as a string
         return str(soup)
     except Exception as e:
-        print(f"Exception in generating Fianancials Table")
+        print(f"Exception in generating Fianancials Table {e}")
         return None
