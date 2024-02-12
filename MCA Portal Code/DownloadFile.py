@@ -81,7 +81,7 @@ def Navigate_to_Company(Cin,CompanyName,driver,dbconfig):
                         logging.info("Completed Navigation")
                         connection = mysql.connector.connect(**dbconfig)
                         cursor = connection.cursor()
-                        Update_no_company_query = "update orders set workflow_status='Download Failed' and bot_comments='Company Not found' where cin = %s"
+                        Update_no_company_query = "update orders set workflow_status='Download_Failed',bot_comments='Company Not found' where cin = %s"
                         Update_no_company_values = (Cin,)
                         logging.info(Update_no_company_query % Update_no_company_values)
                         cursor.execute(Update_no_company_query, Update_no_company_values)
@@ -99,7 +99,7 @@ def Navigate_to_Company(Cin,CompanyName,driver,dbconfig):
                         # If the button is not clickable, you've reached the last page
                         connection = mysql.connector.connect(**dbconfig)
                         cursor = connection.cursor()
-                        Update_no_company_query = "update orders set workflow_status='Download Failed' and bot_comments='Company Not found' where cin = %s"
+                        Update_no_company_query = "update orders set workflow_status='Download_Failed',bot_comments='Company Not found' where cin = %s"
                         Update_no_company_values = (Cin,)
                         logging.info(Update_no_company_query % Update_no_company_values)
                         cursor.execute(Update_no_company_query, Update_no_company_values)
