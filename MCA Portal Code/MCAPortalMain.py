@@ -32,6 +32,7 @@ from MCAPortalMainFunctions import update_completed_status_api
 from FinalEmailTable import FinalTable
 from FinancialsTable import financials_table
 
+
 def main():
     excel_file = os.environ.get("MCA_Config")
     Sheet_name = "Sheet1"
@@ -80,13 +81,16 @@ def main():
                                     pass
                             else:
                                 retry_counter_db = get_retry_count(db_config, cin)
-                                if retry_counter_db is None:
+                                if retry_counter_db is not None:
+                                    if retry_counter_db == '':
+                                        retry_counter_db = 0
+                                else:
                                     retry_counter_db = 0
                                 try:
                                     retry_counter_db = int(retry_counter_db)
+                                    retry_counter_db = retry_counter_db + 1
                                 except:
                                     pass
-                                retry_counter_db = retry_counter_db + 1
                                 logging.info("Not Downloaded")
                                 update_locked_by_empty(db_config, cin)
                                 update_modified_date(db_config, cin)
@@ -186,13 +190,16 @@ def main():
                                     raise Exception(f"Exception occured for json loader generation {cin} {exception_message}")
                         except Exception as e:
                             retry_counter_db = get_retry_count(db_config, cin)
-                            if retry_counter_db is None:
+                            if retry_counter_db is not None:
+                                if retry_counter_db == '':
+                                    retry_counter_db = 0
+                            else:
                                 retry_counter_db = 0
                             try:
                                 retry_counter_db = int(retry_counter_db)
+                                retry_counter_db = retry_counter_db + 1
                             except:
                                 pass
-                            retry_counter_db = retry_counter_db + 1
                             update_modified_date(db_config,cin)
                             update_retry_count(db_config, cin, retry_counter_db)
                             if retry_counter_db > 3:

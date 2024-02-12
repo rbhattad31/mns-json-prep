@@ -69,6 +69,7 @@ def update_database_single_value_GST(db_config, table_name, cin_column_name, cin
     db_cursor.close()
     db_connection.close()
 
+
 def insert_gst_number(db_config,config_dict,cin,company,root_path):
     try:
         setup_logging()
@@ -85,6 +86,34 @@ def insert_gst_number(db_config,config_dict,cin,company,root_path):
         cursor.execute(pan_number_query,values)
         pan_number = cursor.fetchone()[0]
         logging.info(pan_number)
+        if pan_number is not None:
+            if pan_number == '':
+                logging.info(f"Pan Number not found for cin {cin}")
+                error_message = 'PAN Number not found'
+                connection = mysql.connector.connect(**db_config)
+                cursor = connection.cursor()
+                update_query = "update orders set gst_exception_message = %s where cin = %s"
+                values_cin = (error_message, cin)
+                logging.info(update_query % values_cin)
+                cursor.execute(update_query, values_cin)
+                connection.commit()
+                cursor.close()
+                connection.close()
+                raise Exception(error_message)
+        else:
+            logging.info(f"Pan Number not found for cin {cin}")
+            error_message = 'PAN Number not found'
+            connection = mysql.connector.connect(**db_config)
+            cursor = connection.cursor()
+            update_query = "update orders set gst_exception_message = %s where cin = %s"
+            values_cin = (error_message, cin)
+            logging.info(update_query % values_cin)
+            cursor.execute(update_query, values_cin)
+            connection.commit()
+            cursor.close()
+            connection.close()
+            raise Exception(error_message)
+
         payload = json.dumps({
             "panNumber": pan_number
         })
