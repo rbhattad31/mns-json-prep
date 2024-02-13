@@ -831,8 +831,9 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                 lakh_keyword = 'Lakhs of INR'
                 billion_keyword = 'Billions of INR'
                 trillion_keyword = 'Trillions of INR'
+                thousand_keyword = 'Thousands of INR'
                 all_none = all(element is None for element in values)
-                if len(values) !=0 and not all_none:
+                if len(values) != 0 and not all_none:
                     if year_category == 'Previous':
                         try:
                             values[1]=values[1].replace(',','')
@@ -851,6 +852,9 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                             elif trillion_keyword in filing_standard_check:
                                 logging.info("In trillion")
                                 num_value = (float(values[1]))*1000000000000
+                            elif thousand_keyword in filing_standard_check:
+                                logging.info("In thousands")
+                                num_value = (float(values[1]))*1000
                             else:
                                 logging.info("Normal Value")
                                 num_value = float(values[1])
@@ -875,6 +879,9 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                             elif trillion_keyword in filing_standard_check:
                                 logging.info("In trillion")
                                 num_value = (float(values[0]))*1000000000000
+                            elif thousand_keyword in filing_standard_check:
+                                logging.info("In thousands")
+                                num_value = (float(values[0]))*1000
                             else:
                                 logging.info("Normal Value")
                                 num_value = float(values[0])
@@ -908,6 +915,9 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                                 elif trillion_keyword in filing_standard_check:
                                     logging.info("In trillion")
                                     num_value = (float(values[1])) * 1000000000000
+                                elif thousand_keyword in filing_standard_check:
+                                    logging.info("In thousands")
+                                    num_value = (float(values[1])) * 1000
                                 else:
                                     logging.info("Normal Value")
                                     num_value = float(values[1])
@@ -932,6 +942,9 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                                 elif trillion_keyword in filing_standard_check:
                                     logging.info("In trillion")
                                     num_value = (float(values[0])) * 1000000000000
+                                elif thousand_keyword in filing_standard_check:
+                                    logging.info("In thousands")
+                                    num_value = (float(values[0])) * 1000
                                 else:
                                     logging.info("Normal Value")
                                     num_value = float(values[0])
@@ -967,6 +980,9 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                                     elif trillion_keyword in filing_standard_check:
                                         logging.info("In trillion")
                                         num_value = (float(values[1])) * 1000000000000
+                                    elif thousand_keyword in filing_standard_check:
+                                        logging.info("In thousands")
+                                        num_value = (float(values[1])) * 1000
                                     else:
                                         logging.info("Normal Value")
                                         num_value = float(values[1])
@@ -992,6 +1008,9 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                                     elif trillion_keyword in filing_standard_check:
                                         logging.info("In trillion")
                                         num_value = (float(values[0])) * 1000000000000
+                                    elif thousand_keyword in filing_standard_check:
+                                        logging.info("In thousands")
+                                        num_value = (float(values[0])) * 1000
                                     else:
                                         logging.info("Normal Value")
                                         num_value = float(values[0])
@@ -1011,6 +1030,7 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                 lakh_keyword = 'Lakhs of INR'
                 billion_keyword = 'Billions of INR'
                 trillion_keyword = 'Trillions of INR'
+                thousand_keyword = 'Thousands of INR'
                 all_none = all(element is None for element in values)
                 if len(values) != 0 and not all_none:
                     if year_category == 'Previous':
@@ -1031,6 +1051,9 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                             elif trillion_keyword in filing_standard_check:
                                 logging.info("In trillion")
                                 num_value = (float(values[1]))*1000000000000
+                            elif thousand_keyword in filing_standard_check:
+                                logging.info("In thousands")
+                                num_value = (float(values[1]))*1000
                             else:
                                 logging.info("Normal Value")
                                 num_value = float(values[1])
@@ -1055,6 +1078,9 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                             elif trillion_keyword in filing_standard_check:
                                 logging.info("In trillion")
                                 num_value = (float(values[0]))*1000000000000
+                            elif thousand_keyword in filing_standard_check:
+                                logging.info("In thousands")
+                                num_value = (float(values[0])) * 1000
                             else:
                                 logging.info("Normal Value")
                                 num_value = float(values[0])
@@ -1091,6 +1117,9 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                                 elif trillion_keyword in filing_standard_check:
                                     logging.info("In trillion")
                                     num_value = (float(values[0])) * 1000000000000
+                                elif thousand_keyword in filing_standard_check:
+                                    logging.info("In thousands")
+                                    num_value = (float(values[0])) * 1000
                                 else:
                                     logging.info("Normal Value")
                                     num_value = float(values[0])

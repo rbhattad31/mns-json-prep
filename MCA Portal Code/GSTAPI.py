@@ -122,6 +122,9 @@ def insert_gst_number(db_config,config_dict,cin,company,root_path):
             'Content-Type': 'application/json'
         }
         response = requests.request("POST", url, headers=headers, data=payload)
+        if response == '':
+            logging.info(f"No response from API")
+            raise Exception(f"No Response from API for cin {cin}")
         if response.status_code == 200:
             json_response = response.json()
             logging.info(json_response)
@@ -165,8 +168,8 @@ def insert_gst_number(db_config,config_dict,cin,company,root_path):
         cursor.close()
         connection.close()
 
-    except Exception as e:
-        logging.error(f"Error in fetching GST number from API {e}")
+    except Exception as error:
+        logging.error(f"Error in fetching GST number from API {error}")
         exc_type, exc_value, exc_traceback = sys.exc_info()
 
         # Get the formatted traceback as a string
@@ -189,7 +192,17 @@ def insert_gst_number(db_config,config_dict,cin,company,root_path):
             cursor.close()
             connection.close()
         except Exception as e:
+            connection = mysql.connector.connect(**db_config)
+            cursor = connection.cursor()
+            update_query = "update orders set gst_exception_message = %s where cin = %s"
+            values_cin = (error, cin)
+            logging.info(update_query % values_cin)
+            cursor.execute(update_query, values_cin)
+            connection.commit()
+            cursor.close()
+            connection.close()
             logging.info(f"Exception in updating error status {e}")
+
         return False
     else:
         connection = mysql.connector.connect(**db_config)

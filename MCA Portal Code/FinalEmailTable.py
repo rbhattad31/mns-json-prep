@@ -31,7 +31,8 @@ def FinalTable(db_config,cin):
                 index_charges_status, index_charges_comments,
                 google_news_status, google_news_exception_message,
                 epfo_status, epfo_comments,
-                din_status, din_comments
+                din_status, din_comments,
+                dinstatusceck_status,dinstatusceck_comment
             FROM orders
             WHERE cin = %s
         """
@@ -88,6 +89,11 @@ def FinalTable(db_config,cin):
             <td>Directors Data</td>
             <td>{result[36]}</td>
             <td>{result[37] if result[37] is not None else ''}</td>
+        </tr>
+        <tr class="{ 'red' if result[38] in ['N', 'P'] else '' }">
+            <td>DIN Status</td>
+            <td>{result[38]}</td>
+            <td>{result[39] if result[39] is not None else ''}</td>
         </tr>
         <tr class="{ 'red' if result[4] in ['N', 'P'] else '' }">
             <td>NSE</td>
