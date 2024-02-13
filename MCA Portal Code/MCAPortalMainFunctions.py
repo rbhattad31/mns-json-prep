@@ -171,12 +171,28 @@ def Login_and_Download(config_dict,CinData):
         download_files = cursor.fetchall()
         cursor.close()
         connection.close()
+        time.sleep(2)
+        connection = mysql.connector.connect(**db_config)
+        cursor = connection.cursor()
+        all_file_details = "select * from documents where cin = %s and form_data_extraction_needed='Y'"
+        cursor.execute(all_file_details, values)
+        all_files = cursor.fetchall()
+        cursor.close()
+        connection.close()
         check_files_and_update(Cin,db_config)
-        if len(download_files) < 10:
-            return True,driver,None
+        if len(all_files) < 10:
+            logging.info("Total files are less than 10")
+            if len(download_files) < 2:
+                return True,driver,None
+            else:
+                exception_message = f"Download failed for {Cin}"
+                return False,driver,exception_message
         else:
-            exception_message = f"Download failed for {Cin}"
-            return False,driver,exception_message
+            if len(download_files) < 10:
+                return True,driver,None
+            else:
+                exception_message = f"Download failed for {Cin}"
+                return False,driver,exception_message
     except Exception as e:
         print(f"Exception Occured in downloading Main {e}")
         return False, driver, e
