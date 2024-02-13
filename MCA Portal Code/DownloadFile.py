@@ -49,6 +49,7 @@ def select_category(category,driver):
         return False
 
 
+
 def Navigate_to_Company(Cin,CompanyName,driver,dbconfig):
     try:
         setup_logging()
@@ -1029,6 +1030,37 @@ def download_captcha_and_enter_text(CompanyName, driver, file_path, filename, Ci
                     if 'XBRL financial statements' in latest_file:
                         updated_filename = filename
                         updated_file_path = os.path.join(other_attachments_directory, updated_filename)
+                        if '.pdf' not in updated_file_path:
+                            updated_file_path = updated_file_path + '.pdf'
+                        os.rename(latest_file, updated_file_path)
+                        logging.info(f"Renamed from {latest_file} to {updated_file_path}")
+                        time.sleep(4)
+                        if os.path.exists(updated_file_path):
+                            connection = mysql.connector.connect(**dbconfig)
+                            cursor = connection.cursor()
+                            update_query = 'update documents set Download_Status=%s where cin=%s and document=%s and company=%s and path_index IS NULL'
+                            path_update_query = 'update documents set document_download_path=%s where cin=%s and document=%s and company=%s and path_index IS NULL'
+                            values_update = ('Downloaded', Cin, filename, CompanyName)
+                            values_path_update = (updated_file_path, Cin, filename, CompanyName)
+                            logging.info(values_update)
+                            cursor.execute(update_query, values_update)
+                            cursor.execute(path_update_query, values_path_update)
+                            connection.commit()
+                            cursor.close()
+                            connection.close()
+                        return True
+                else:
+                    logging.info("Not Downloaded successfully")
+                    return False
+            elif 'fresh certificate' in str(filename).lower():
+                fresh_certificate_directory = os.path.dirname(file_path)
+                if os.path.exists(fresh_certificate_directory):
+                    files = [os.path.join(fresh_certificate_directory, file) for file in
+                             os.listdir(fresh_certificate_directory)]
+                    latest_file = max(files, key=os.path.getctime)
+                    if 'fresh certificate' in str(latest_file).lower():
+                        updated_filename = filename
+                        updated_file_path = os.path.join(fresh_certificate_directory, updated_filename)
                         if '.pdf' not in updated_file_path:
                             updated_file_path = updated_file_path + '.pdf'
                         os.rename(latest_file, updated_file_path)
