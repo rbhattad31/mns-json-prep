@@ -126,9 +126,13 @@ def insert_gst_number(db_config,config_dict,cin,company,root_path):
             logging.info(f"No response from API")
             raise Exception(f"No Response from API for cin {cin}")
         if response.status_code == 200:
-            json_response = response.json()
-            logging.info(json_response)
-            result = json_response['result']
+            try:
+                json_response = response.json()
+                result = json_response['result']
+                logging.info(json_response)
+            except Exception as e:
+                logging.info(response)
+                raise Exception('No Response from API')
             logging.info(result)
             output_df = []
             for gst_details in result:
