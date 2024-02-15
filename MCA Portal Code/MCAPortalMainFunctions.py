@@ -346,6 +346,12 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                         config_dict_shareholdings, config_status = create_main_config_dictionary(excel_file,Sheet_name_MGT_address)
                         output_directory = os.path.dirname(path)
                         shareholdings = mgt_director_shareholdings_main(db_config,config_dict_shareholdings,output_directory,path,Cin)
+                    else:
+                        update_query = "update orders set director_shareholding_status='Y',director_shareholding_comments = '' where cin = %s"
+                        values_cin = (Cin,)
+                        logging.info(update_query % values_cin)
+                        db_cursor.execute(update_query, values_cin)
+                        db_connection.commit()
                     db_cursor.close()
                     db_connection.close()
                 elif 'MSME'.lower() in str(file_name).lower():

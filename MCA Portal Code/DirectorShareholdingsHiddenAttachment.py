@@ -157,6 +157,9 @@ def update_value_in_db(db_config,name,no_of_shares,cin):
         # logging.info the traceback details
         for line in traceback_details:
             logging.info(line.strip())
+        return 0
+    else:
+        return percentage_holding
 
 
 def image_to_text(image_path):
@@ -250,6 +253,7 @@ def MGT_director_shareholdings_pdf_to_db(pdf_path,config_dict,db_config,cin):
         shareholders_details = eval(shareholders_details)
         salutation_list = str(config_dict['salutation_list']).split(',')
         salutation_list = [str(x).strip() for x in salutation_list]
+        total_percentage_holding = 0
         if len(shareholders_details) != 0:
             for shareholder in shareholders_details:
                 name = shareholder['name']
@@ -270,12 +274,40 @@ def MGT_director_shareholdings_pdf_to_db(pdf_path,config_dict,db_config,cin):
                 no_of_shares = float(no_of_shares)
                 logging.info(name)
                 logging.info(no_of_shares)
-                update_value_in_db(db_config,name,no_of_shares,cin)
+                percentage_holding = update_value_in_db(db_config,name,no_of_shares,cin)
+                try:
+                    percentage_holding = float(percentage_holding)
+                except:
+                    pass
+                total_percentage_holding += percentage_holding
+        logging.info(f"Total percentage holding {total_percentage_holding}")
+        if total_percentage_holding == 100 or total_percentage_holding == 100.0:
+            connection = mysql.connector.connect(**db_config)
+            cursor = connection.cursor()
+            update_query = "update orders set director_shareholding_status='Y',director_shareholding_comments = '' where cin = %s"
+            values_cin = (cin,)
+            logging.info(update_query % values_cin)
+            cursor.execute(update_query, values_cin)
+            connection.commit()
+            cursor.close()
+            connection.close()
+            return True
+        else:
+            logging.info(f"Percentage shareholding is {total_percentage_holding} so not hundred")
+            connection = mysql.connector.connect(**db_config)
+            cursor = connection.cursor()
+            error_message = f'Percentage shareholding is {total_percentage_holding} so not hundred'
+            update_query = "update orders set director_shareholding_status='N',director_shareholding_comments = %s where cin = %s"
+            values_cin = (error_message,cin)
+            logging.info(update_query % values_cin)
+            cursor.execute(update_query, values_cin)
+            connection.commit()
+            cursor.close()
+            connection.close()
+            return False
     except Exception as e:
         logging.info(f"Exception in finding address in MGT{e}")
         return False
-    else:
-        return True
 
 
 def mgt_director_shareholdings_main(db_config,config_dict,output_directory,pdf_path,cin):

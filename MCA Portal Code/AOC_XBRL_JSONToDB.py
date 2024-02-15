@@ -1340,6 +1340,10 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
         for _, row in current_year_formula_df.iterrows():
             current_formula = row['Child_Nodes']
             current_formula_field_name = row['Field_Name']
+            if current_formula_field_name == 'difference_value':
+                if str(nature).lower() == 'consolidated':
+                    logging.info("Taking different formula for difference value for consolidated")
+                    current_formula = config_dict['consolidated_difference_value_formula']
             for field_name in current_year_df['Field_Name']:
                 pattern = r'\b' + re.escape(field_name) + r'\b'
                 current_formula = re.sub(pattern, str(
@@ -1365,6 +1369,10 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
         for _, row in previous_year_formula_df.iterrows():
             previous_formula = row['Child_Nodes']
             previous_formula_field_name = row['Field_Name']
+            if previous_formula_field_name == 'difference_value':
+                if str(nature).lower() == 'consolidated':
+                    logging.info("Taking different formula for difference value for consolidated")
+                    previous_formula = config_dict['consolidated_difference_value_formula']
             for previous_field_name in previous_year_df['Field_Name']:
                 previous_pattern = r'\b' + re.escape(previous_field_name) + r'\b'
                 previous_formula = re.sub(previous_pattern, str(
