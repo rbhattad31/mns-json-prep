@@ -93,7 +93,7 @@ def directors_shareholdings_table(db_config, cin):
         table = soup.new_tag('table', style='width: 60%; border-collapse: collapse;')
 
         # Create table headers
-        headers = ['Name','Percentage_holding']
+        headers = ['Name','No_of_shares','Percentage_holding']
         header_row = soup.new_tag('tr')
         for header in headers:
             th = soup.new_tag('th', style='border: 1px solid black; padding: 8px;')
@@ -102,8 +102,10 @@ def directors_shareholdings_table(db_config, cin):
         table.append(header_row)
 
         # Populate table with data
+        total_percentage_holding = 0
         for result in director_shareholdings_results:
             name = result[9]
+            no_of_shares = result[12]
             row = soup.new_tag('tr')
             try:
                 percentage_holding = float(result[13])
@@ -111,7 +113,18 @@ def directors_shareholdings_table(db_config, cin):
             except Exception as e:
                 percentage_holding = result[13]
             # Add data to the row
-            data = [name,percentage_holding]
+            total_percentage_holding += percentage_holding
+            data = [name,no_of_shares,percentage_holding]
+            for idx, item in enumerate(data):
+                td = soup.new_tag('td', style='border: 1px solid black; padding: 8px;')
+                td['style'] += 'color: black;'
+                td.string = str(item)
+                row.append(td)
+            table.append(row)
+
+        if total_percentage_holding !=0 or total_percentage_holding != 0.0:
+            row = soup.new_tag('tr')
+            data = ['','',total_percentage_holding]
             for idx, item in enumerate(data):
                 td = soup.new_tag('td', style='border: 1px solid black; padding: 8px;')
                 td['style'] += 'color: black;'

@@ -32,7 +32,8 @@ def FinalTable(db_config,cin):
                 google_news_status, google_news_exception_message,
                 epfo_status, epfo_comments,
                 din_status, din_comments,
-                dinstatusceck_status,dinstatusceck_comment
+                dinstatusceck_status,dinstatusceck_comment,
+                director_shareholding_status,director_shareholding_comments
             FROM orders
             WHERE cin = %s
         """
@@ -169,6 +170,11 @@ def FinalTable(db_config,cin):
             <td>GST</td>
             <td>{result[28]}</td>
             <td>{result[29] if result[29] is not None else ''}</td>
+        </tr>
+        <tr class="{ 'red' if result[40] in ['N', 'P'] else '' }">
+            <td>Director shareholdings</td>
+            <td>{result[40]}</td>
+            <td>{result[41] if result[41] is not None else ''}</td>
         </tr>
     </table>
 </body>

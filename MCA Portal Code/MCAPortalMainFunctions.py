@@ -180,15 +180,25 @@ def Login_and_Download(config_dict,CinData):
         cursor.close()
         connection.close()
         check_files_and_update(Cin,db_config)
+        time.sleep(2)
+        connection = mysql.connector.connect(**db_config)
+        cursor = connection.cursor()
+        financials_check_query = "select * from documents where cin = %s and form_data_extraction_needed = 'Y' and (document like '%%AOC-4%%' or document like '%%XBRL document in respect Consolidated%%'  or document like '%%XBRL financial statements%%') and document not like '%%AOC-4(XBRL)%%' and document not like '%%AOC-4 XBRL%%' and Download_Status = 'Pending'"
+        value = (Cin,)
+        logging.info(financials_check_query % value)
+        cursor.execute(financials_check_query, value)
+        financial_pending_result = cursor.fetchall()
+        cursor.close()
+        connection.close()
         if len(all_files) < 10:
             logging.info("Total files are less than 10")
-            if len(download_files) < 2:
+            if len(download_files) < 2 and len(financial_pending_result) == 0:
                 return True,driver,None
             else:
                 exception_message = f"Download failed for {Cin}"
                 return False,driver,exception_message
         else:
-            if len(download_files) < 10:
+            if len(download_files) < 10 and len(financial_pending_result) == 0:
                 return True,driver,None
             else:
                 exception_message = f"Download failed for {Cin}"
@@ -261,14 +271,27 @@ def XMLGeneration(db_config,CinData,config_dict):
             connection.close()
         except Exception as e:
             print(f"Exception occured in query for XBRL JSON Generation{e}")
-
     except Exception as e:
         print(f"Exception Occured {e}")
         return False,[]
     else:
-        return True, hidden_attachments_list
-
-
+        try:
+            connection = mysql.connector.connect(**db_config)
+            cursor = connection.cursor()
+            financials_check_query = "select * from documents where cin = %s and form_data_extraction_needed = 'Y' and (document like '%%AOC-4%%' or document like '%%XBRL document in respect Consolidated%%'  or document like '%%XBRL financial statements%%') and document not like '%%AOC-4(XBRL)%%' and document not like '%%AOC-4 XBRL%%' and form_data_extraction_status = 'Failure'"
+            value = (Cin,)
+            logging.info(financials_check_query % value)
+            cursor.execute(financials_check_query,value)
+            financial_pending_result = cursor.fetchall()
+            cursor.close()
+            connection.close()
+            if len(financial_pending_result) == 0:
+                return True, hidden_attachments_list
+            else:
+                return False,[]
+        except Exception as e:
+            logging.info(f"Exception in checking financial values {e}")
+            return False, []
 def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
     try:
         setup_logging()
