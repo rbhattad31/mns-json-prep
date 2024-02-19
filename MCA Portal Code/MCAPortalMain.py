@@ -101,10 +101,11 @@ def main():
                                 update_retry_count(db_config,cin,retry_counter_db)
                                 if retry_counter_db > 3:
                                     update_process_status('Exception',db_config,cin)
-                                try:
-                                    sign_out(driver, config_dict, downloaddata)
-                                except:
-                                    pass
+                                if str(exception_message).lower() != 'already logged in':
+                                    try:
+                                        sign_out(driver, config_dict, downloaddata)
+                                    except:
+                                        pass
                                 raise Exception(f"Download failed for {cin} {exception_message}")
                     except Exception as e:
                         logging.info(f"Error in downloading{e}")
