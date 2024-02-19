@@ -275,23 +275,9 @@ def XMLGeneration(db_config,CinData,config_dict):
         print(f"Exception Occured {e}")
         return False,[]
     else:
-        try:
-            connection = mysql.connector.connect(**db_config)
-            cursor = connection.cursor()
-            financials_check_query = "select * from documents where cin = %s and form_data_extraction_needed = 'Y' and (document like '%%AOC-4%%' or document like '%%XBRL document in respect Consolidated%%'  or document like '%%XBRL financial statements%%') and document not like '%%AOC-4(XBRL)%%' and document not like '%%AOC-4 XBRL%%' and form_data_extraction_status = 'Failure'"
-            value = (Cin,)
-            logging.info(financials_check_query % value)
-            cursor.execute(financials_check_query,value)
-            financial_pending_result = cursor.fetchall()
-            cursor.close()
-            connection.close()
-            if len(financial_pending_result) == 0:
-                return True, hidden_attachments_list
-            else:
-                return False,[]
-        except Exception as e:
-            logging.info(f"Exception in checking financial values {e}")
-            return False, []
+        return True,hidden_attachments_list
+
+    
 def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
     try:
         setup_logging()
