@@ -183,7 +183,7 @@ def Login_and_Download(config_dict,CinData):
         time.sleep(2)
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor()
-        financials_check_query = "select * from documents where cin = %s and form_data_extraction_needed = 'Y' and (document like '%%AOC-4%%' or document like '%%XBRL document in respect Consolidated%%'  or document like '%%XBRL financial statements%%') and document not like '%%AOC-4(XBRL)%%' and document not like '%%AOC-4 XBRL%%' and Download_Status = 'Pending'"
+        financials_check_query = "select * from documents where cin = %s and form_data_extraction_needed = 'Y' and (document like '%%AOC-4%%' or document like '%%XBRL document in respect Consolidated%%'  or document like '%%XBRL financial statements%%') and document not like '%%AOC-4(XBRL)%%' and document not like '%%AOC-4 XBRL%%' and document not like '%%AOC-4_xbrl%%' and Download_Status = 'Pending'"
         value = (Cin,)
         logging.info(financials_check_query % value)
         cursor.execute(financials_check_query, value)
@@ -277,7 +277,7 @@ def XMLGeneration(db_config,CinData,config_dict):
     else:
         return True,hidden_attachments_list
 
-    
+
 def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
     try:
         setup_logging()
