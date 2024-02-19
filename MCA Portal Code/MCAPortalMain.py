@@ -35,6 +35,8 @@ from DirectorsTable import directors_table
 from DirectorsTable import directors_shareholdings_table
 from FilesTable import files_table
 
+
+
 def main():
     excel_file = os.environ.get("MCA_Config")
     Sheet_name = "Sheet1"
@@ -141,9 +143,7 @@ def main():
                                     update_modified_date(db_config,cin)
                                     update_locked_by_empty(db_config,cin)
                                     logging.info("XML Not Generated successfully")
-                                    if 'driver' in locals():
-                                        sign_out(driver, config_dict, CinData)
-                                    continue
+                                    raise Exception("XML Not Generated successfully")
                             if workflow_status == 'db_insertion_pending':
                                 update_locked_by(db_config, cin)
                                 Insert_fields_into_DB,exception_message_db = insert_fields_into_db(hidden_attachments, config_dict, CinData,excel_file)
@@ -221,11 +221,6 @@ def main():
                                 logging.error(line.strip())
                             exception_subject = str(config_dict['Exception_subject']).format(cin,receipt_number)
                             exception_body = str(config_dict['Exception_message']).format(cin,receipt_number,company_name,e)
-                            try:
-                                if 'driver' in locals():
-                                    sign_out(driver, config_dict, CinData)
-                            except:
-                                pass
                             try:
                                 send_email(config_dict,exception_subject,exception_body,emails,None)
                             except Exception as e:
