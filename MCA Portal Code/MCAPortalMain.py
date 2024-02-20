@@ -34,7 +34,7 @@ from FinancialsTable import financials_table
 from DirectorsTable import directors_table
 from DirectorsTable import directors_shareholdings_table
 from FilesTable import files_table
-
+from FinancialsTable import aoc_files_table
 
 
 def main():
@@ -169,7 +169,8 @@ def main():
                                     directors_Table = directors_table(db_config,cin)
                                     shareholdings_table = directors_shareholdings_table(db_config,cin)
                                     files_Table = files_table(db_config,cin)
-                                    cin_completed_body = str(config_dict['cin_Completed_body']).format(cin,receipt_number,company_name,table,financials_Table,directors_Table,files_Table,shareholdings_table)
+                                    aoc_table = aoc_files_table(db_config,cin)
+                                    cin_completed_body = str(config_dict['cin_Completed_body']).format(cin,receipt_number,company_name,table,aoc_table,financials_Table,directors_Table,files_Table,shareholdings_table)
                                     update_process_status('Completed',db_config,cin)
                                     update_locked_by_empty(db_config,cin)
                                     config_transactional_log_path = config_dict['config_transactional_log_path']
