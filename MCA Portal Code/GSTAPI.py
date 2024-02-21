@@ -32,7 +32,7 @@ def update_database_single_value_GST(db_config, table_name, cin_column_name, cin
         column_value = json.dumps(json_dict)
 
     # check if there is already entry with cin
-    query = 'SELECT * FROM {} WHERE {} = "{}" and {}="{}" and {}="{}"'.format(table_name, cin_column_name, cin_value,company_name_column_name,company_name,'gstin',gst_number)
+    query = "SELECT * FROM {} WHERE {} = '{}' and {}='{}' and {}='{}'".format(table_name, cin_column_name, cin_value,company_name_column_name,company_name,'gstin',gst_number)
     logging.info(query)
     try:
         db_cursor.execute(query)
@@ -43,7 +43,7 @@ def update_database_single_value_GST(db_config, table_name, cin_column_name, cin
 
     # if cin value already exists
     if len(result) > 0:
-        update_query = 'UPDATE {} SET {} = "{}" WHERE {} = "{}" AND {} = "{}" AND {}="{}"'.format(table_name, column_name,
+        update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}' AND {}='{}'".format(table_name, column_name,
                                                                                       column_value, cin_column_name,
                                                                                       cin_value,
                                                                                       company_name_column_name,
@@ -56,7 +56,7 @@ def update_database_single_value_GST(db_config, table_name, cin_column_name, cin
 
     # if cin value doesn't exist
     else:
-        insert_query = 'INSERT INTO {} ({}, {}, {}) VALUES ("{}", "{}", "{}")'.format(table_name, cin_column_name,
+        insert_query = "INSERT INTO {} ({}, {}, {}) VALUES ('{}', '{}', '{}')".format(table_name, cin_column_name,
                                                                                       company_name_column_name,
                                                                                       column_name,
                                                                                       cin_value,
@@ -293,6 +293,11 @@ def fetch_gst_details(config_dict,gst_number,status):
                             value = matches[0]
                     elif field_name == config_dict['nature_of_business_activities_keyword']:
                         value = '\n'.join(value)
+                    elif field_name == 'legal_business_name' or field_name == 'trade_name':
+                        try:
+                            value = value.replace("'", '')
+                        except:
+                            pass
                 df_map.at[index, 'Value'] = value
             return df_map
     except Exception as e:
