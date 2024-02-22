@@ -36,7 +36,7 @@ def login_to_website(url, chrome_driver_path,username,password,db_config):
         options.add_argument('--start-maximized')
         service = Service(chrome_driver_path)
         pytesseract.pytesseract.tesseract_cmd = r"C:\Users\BRADSOL123\AppData\Local\Programs\Tesseract-OCR\tesseract.exe"
-        retry_count = 5
+        retry_count = 10
         for attempt in range(1, retry_count + 1):
             driver = webdriver.Chrome(service=service, options=options)
             driver.get(url)

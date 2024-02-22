@@ -145,6 +145,14 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
 
         value = get_single_value_from_xml(xml_root, parent_node, child_nodes)
         # logging.info(value)
+        if field_name == 'total_outstanding_amount':
+            if value is not None:
+                if value == '':
+                    child_nodes = 'TOTAL_OS_AMT_IR'
+                    value = get_single_value_from_xml(xml_root,parent_node,child_nodes)
+            else:
+                child_nodes = 'TOTAL_OS_AMT_IR'
+                value = get_single_value_from_xml(xml_root, parent_node, child_nodes)
         single_df.at[index, 'Value'] = value
         results.append([field_name, value, sql_table_name, column_name, column_json_node])
         # logging.info(results)
@@ -177,7 +185,17 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             continue
         # logging.info(table_in_list)
         table_df = pd.DataFrame(table_in_list)
-
+        logging.info(table_df)
+        table_df = table_df.dropna(how='all')
+        if table_df.empty:
+            logging.info("Table df is empty so going for different node")
+            table_node_name = 'T_ZNCA_MSME_S3/DATA'
+            try:
+                table_in_list_updated = extract_table_values_from_xml(xml_root, table_node_name, child_nodes)
+                table_df = pd.DataFrame(table_in_list_updated)
+            except Exception as e:
+                logging.info(f'Exception {e} occurred while extracting data from xml for table {table_node_name}')
+                continue
         column_names_list = column_names.split(',')
         column_names_list = [x.strip() for x in column_names_list]
         table_df[cin_column_name_in_db] = cin_column_value
@@ -194,6 +212,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         table_df.columns = column_names_list
         table_df = table_df[table_df[column_names_list[0]].notna()]
         logging.info(table_df)
+
 
         for _, df_row in table_df.iterrows():
             try:

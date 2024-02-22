@@ -607,7 +607,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             logging.info("Going to Form 32 other director program")
             other_director_map_file_path = config_dict['Form32_other_directors_config']
         else:
-            if digit_count == 8:
+            if digit_count == 8 or digit_count == 9 or digit_count == 14 or digit_count == 15:
                 other_director_map_file_path = config_dict['DIR12_old_date_config_other_directors']
             else:
                 logging.info("Going to DIR other director program")
@@ -1005,7 +1005,7 @@ def dir_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xm
         logging.info(din_list)
         digit_count = sum(c.isdigit() for c in file_name)
         logging.info(digit_count)
-        if 'dir' in str(file_name).lower() and digit_count != 8:
+        if 'dir' in str(file_name).lower() and digit_count != 8 and digit_count != 9 and digit_count != 14 and digit_count != 15:
             logging.info("Going for hidden fields extraction")
             dir_hidden_fields(db_config,hidden_xml_file_path,map_file_path,config_dict,din_list,cin_column_value)
     except Exception as e:

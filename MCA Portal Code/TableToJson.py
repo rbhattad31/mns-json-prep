@@ -41,7 +41,9 @@ def json_generation(pdf_file, json_file_path):
             return False
 
         # Continue with the rest of the JSON generation using the temporary PDF
-        tables = tabula.read_pdf(temp_pdf_file, pages='all', multiple_tables=True)
+        # tables = tabula.read_pdf(temp_pdf_file, pages='all', multiple_tables=True)
+        tables = tabula.read_pdf(temp_pdf_file, pages='all', multiple_tables=True, guess=False, stream=True,
+                                 lattice=True)
 
         all_data = []
 

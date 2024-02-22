@@ -11,6 +11,8 @@ import traceback
 from datetime import datetime
 import logging
 from logging_config import setup_logging
+
+
 def update_database_single_value_GST(db_config, table_name, cin_column_name, cin_value,company_name_column_name,company_name, column_name, column_value,gst_number):
     setup_logging()
     db_connection = mysql.connector.connect(**db_config)
@@ -67,6 +69,7 @@ def update_database_single_value_GST(db_config, table_name, cin_column_name, cin
     db_cursor.close()
     db_connection.close()
 
+
 def insert_gst_number(db_config,config_dict,cin,company,root_path):
     try:
         setup_logging()
@@ -83,6 +86,34 @@ def insert_gst_number(db_config,config_dict,cin,company,root_path):
         cursor.execute(pan_number_query,values)
         pan_number = cursor.fetchone()[0]
         logging.info(pan_number)
+        if pan_number is not None:
+            if pan_number == '':
+                logging.info(f"Pan Number not found for cin {cin}")
+                error_message = 'PAN Number not found'
+                connection = mysql.connector.connect(**db_config)
+                cursor = connection.cursor()
+                update_query = "update orders set gst_exception_message = %s where cin = %s"
+                values_cin = (error_message, cin)
+                logging.info(update_query % values_cin)
+                cursor.execute(update_query, values_cin)
+                connection.commit()
+                cursor.close()
+                connection.close()
+                raise Exception(error_message)
+        else:
+            logging.info(f"Pan Number not found for cin {cin}")
+            error_message = 'PAN Number not found'
+            connection = mysql.connector.connect(**db_config)
+            cursor = connection.cursor()
+            update_query = "update orders set gst_exception_message = %s where cin = %s"
+            values_cin = (error_message, cin)
+            logging.info(update_query % values_cin)
+            cursor.execute(update_query, values_cin)
+            connection.commit()
+            cursor.close()
+            connection.close()
+            raise Exception(error_message)
+
         payload = json.dumps({
             "panNumber": pan_number
         })
@@ -91,10 +122,17 @@ def insert_gst_number(db_config,config_dict,cin,company,root_path):
             'Content-Type': 'application/json'
         }
         response = requests.request("POST", url, headers=headers, data=payload)
+        if response == '':
+            logging.info(f"No response from API")
+            raise Exception(f"No Response from API for cin {cin}")
         if response.status_code == 200:
-            json_response = response.json()
-            logging.info(json_response)
-            result = json_response['result']
+            try:
+                json_response = response.json()
+                result = json_response['result']
+                logging.info(json_response)
+            except Exception as e:
+                logging.info(response)
+                raise Exception('No Response from API')
             logging.info(result)
             output_df = []
             for gst_details in result:
@@ -134,8 +172,8 @@ def insert_gst_number(db_config,config_dict,cin,company,root_path):
         cursor.close()
         connection.close()
 
-    except Exception as e:
-        logging.error(f"Error in fetching GST number from API {e}")
+    except Exception as error:
+        logging.error(f"Error in fetching GST number from API {error}")
         exc_type, exc_value, exc_traceback = sys.exc_info()
 
         # Get the formatted traceback as a string
@@ -144,11 +182,36 @@ def insert_gst_number(db_config,config_dict,cin,company,root_path):
         # logging.info the traceback details
         for line in traceback_details:
             logging.error(line.strip())
+        try:
+            json_response = response.json()
+            error_details = json_response['result']
+            error_message = error_details['message']
+            connection = mysql.connector.connect(**db_config)
+            cursor = connection.cursor()
+            update_query = "update orders set gst_exception_message = %s where cin = %s"
+            values_cin = (error_message,cin)
+            logging.info(update_query % values_cin)
+            cursor.execute(update_query, values_cin)
+            connection.commit()
+            cursor.close()
+            connection.close()
+        except Exception as e:
+            connection = mysql.connector.connect(**db_config)
+            cursor = connection.cursor()
+            update_query = "update orders set gst_exception_message = %s where cin = %s"
+            values_cin = (error, cin)
+            logging.info(update_query % values_cin)
+            cursor.execute(update_query, values_cin)
+            connection.commit()
+            cursor.close()
+            connection.close()
+            logging.info(f"Exception in updating error status {e}")
+
         return False
     else:
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor()
-        update_query = "update orders set gst_status='Y' where cin = %s"
+        update_query = "update orders set gst_status='Y',gst_exception_message = '' where cin = %s"
         values_cin = (cin,)
         logging.info(update_query % values_cin)
         cursor.execute(update_query,values_cin)
@@ -156,6 +219,7 @@ def insert_gst_number(db_config,config_dict,cin,company,root_path):
         cursor.close()
         connection.close()
         return True
+
 
 def fetch_gst_details(config_dict,gst_number,status):
     try:
@@ -229,6 +293,11 @@ def fetch_gst_details(config_dict,gst_number,status):
                             value = matches[0]
                     elif field_name == config_dict['nature_of_business_activities_keyword']:
                         value = '\n'.join(value)
+                    elif field_name == 'legal_business_name' or field_name == 'trade_name':
+                        try:
+                            value = value.replace("'", '')
+                        except:
+                            pass
                 df_map.at[index, 'Value'] = value
             return df_map
     except Exception as e:

@@ -94,7 +94,7 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,tabl
                         row_values = [value for i, value in enumerate(row) if (
                                 (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
                                 isinstance(row[i], str) and (row[i] != "NaN" or 'Unnamed' not in row[i])))]
-                        if field_name == 'total_changes_in_inventories_or_finished_goods' and (row[0] == 'Changes in inventories of finished goods, work-in-progress and' or row[0] == 'Changes in inventories of finished goods, work-in-progress and stock-in-trade'):
+                        if field_name == 'total_changes_in_inventories_or_finished_goods' and (row[0] == 'Changes in inventories of finished goods, work-in-progress and' or row[0] == 'Changes in inventories of finished goods, work-in-progress and stock-in-trade' or 'Changes in inventories of finished goods'.lower() in str(row[0]).lower()):
                             if len(row_values) > 1:
                                 logging.info("Going straight for inventories or finished goods")
                                 try:
@@ -120,6 +120,30 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,tabl
                                                     else:
                                                         current_year_value = next_row[2]
                                                     print(f"Have taken current year value from next row {previous_year_value}")
+                                                except Exception as e:
+                                                    current_year_value = None
+                                            else:
+                                                current_year_value = None
+                                    elif str(row[1]).lower() == 'nan' and 'stock' in str(next_row[0]).lower():
+                                        row_values = [value for i, value in enumerate(row) if (
+                                                (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
+                                                isinstance(row[i], str) and (
+                                                    row[i] != "NaN" and 'Unnamed' not in row[i])))]
+                                        previous_year_value = row_values[1]
+                                        try:
+                                            current_year_value = row_values[2]
+                                        except Exception as e:
+                                            print(f"Exception in straight values {e} for {target_header}")
+                                            next_row = table_data[r + 1]
+                                            print(next_row)
+                                            if str(next_row[0]).lower() == 'nan':
+                                                try:
+                                                    if str(next_row[1]).lower() != 'nan':
+                                                        current_year_value = next_row[1]
+                                                    else:
+                                                        current_year_value = next_row[2]
+                                                    print(
+                                                        f"Have taken current year value from next row {previous_year_value}")
                                                 except Exception as e:
                                                     current_year_value = None
                                             else:
@@ -161,12 +185,40 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,tabl
                                 value_current_year = None
                                 logging.info("Going for breaks for inventories or finished goods")
                                 next_row = table_data[r + 1]
-                                if str(next_row[0]).lower() == 'nan':
+                                if str(next_row[0]).lower() == 'nan' or 'stock' in str(next_row[0]).lower():
                                     row_values = [value for i, value in enumerate(next_row) if (
                                             (isinstance(next_row[i], (float, int)) and not math.isnan(next_row[i])) or (
                                             isinstance(next_row[i], str) and (next_row[i] != "NaN" and 'Unnamed' not in next_row[i])))]
-                                    current_year_value = row_values[0]
-                                    previous_year_value = row_values[1]
+                                    if 'stock' in str(next_row[0]).lower():
+                                        current_year_value = row_values[1]
+                                        try:
+                                            previous_year_value = row_values[2]
+                                        except Exception as e:
+                                            stock_next_row = table_data[r + 2]
+                                            if 'stock-in-trade' in str(stock_next_row[0]).lower() or str(
+                                                    stock_next_row[0]) == 'stock-in-trade':
+                                                stock_row_values = [value for i, value in enumerate(stock_next_row) if (
+                                                        (isinstance(stock_next_row[i], (float, int)) and not math.isnan(
+                                                            stock_next_row[i])) or (
+                                                                isinstance(stock_next_row[i], str) and (
+                                                                stock_next_row[i] != "NaN" and 'Unnamed' not in
+                                                                stock_next_row[
+                                                                    i])))]
+                                                previous_year_value = stock_row_values[1]
+                                    else:
+                                        current_year_value = row_values[0]
+                                        try:
+                                            previous_year_value = row_values[1]
+                                        except Exception as e:
+                                            stock_next_row = table_data[r + 2]
+                                            if 'stock-in-trade' in str(stock_next_row[0]).lower() or str(stock_next_row[0]) == 'stock-in-trade':
+                                                stock_row_values = [value for i, value in enumerate(stock_next_row) if (
+                                                        (isinstance(stock_next_row[i], (float, int)) and not math.isnan(
+                                                            stock_next_row[i])) or (
+                                                                isinstance(stock_next_row[i], str) and (
+                                                                    stock_next_row[i] != "NaN" and 'Unnamed' not in stock_next_row[
+                                                                i])))]
+                                                previous_year_value = stock_row_values[1]
                                     value_current_year = re.sub(r'\([^)]*\)', '', str(current_year_value))
                                     value_previous_year = re.sub(r'\([^)]*\)', '', str(previous_year_value))
                                     value_found = True
@@ -175,9 +227,620 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,tabl
                         elif field_name == 'Property_plant_and_equipment' and row[0] == "Property, plant and equipment":
                             logging.info("Going for property plant")
                             logging.info(row)
+                            excluded_values = ['(a)', '(b)', '(c)', '(d)', '(e)', '(f)', '(g)', '(h)', '(i)', '(j)',
+                                               '(k)']
                             if len(row_values) > 1:
                                 try:
                                     logging.info("Going for property plant field")
+                                    logging.info(row)
+                                    try:
+                                        next_row = table_data[r + 1]
+                                    except Exception as e:
+                                        next_row = ['nan', 'nan', 'nan']
+                                    if str(row[1]).lower() == 'nan' and str(next_row[0]).lower() == 'nan':
+                                        logging.info(
+                                            "As present value not there taking previous value first and gping for present value")
+                                        row_values = [value for i, value in enumerate(row) if (
+                                                (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
+                                                isinstance(row[i], str) and (
+                                                    row[i] != "NaN" and 'Unnamed' not in row[i]))) and
+                                                      str(row[i]).lower() not in excluded_values]
+                                        if str(row[2]).lower() == 'nan' and str(
+                                                next_row[0]).lower() == 'nan' and not last_row:
+                                            try:
+                                                next_row = table_data[r + 1]
+                                                print(next_row)
+                                                if str(next_row[0]).lower() == 'nan':
+                                                    try:
+                                                        next_row_values = [value for i, value in enumerate(next_row) if
+                                                                           (
+                                                                                   (isinstance(next_row[i], (
+                                                                                       float, int)) and not math.isnan(
+                                                                                       next_row[i])) or (
+                                                                                           isinstance(next_row[i],
+                                                                                                      str) and (
+                                                                                                   next_row[
+                                                                                                       i] != "NaN" and 'Unnamed' not in
+                                                                                                   next_row[i])))
+                                                                           and
+                                                                           str(next_row[
+                                                                                   i]).lower() not in excluded_values
+                                                                           ]
+                                                        previous_year_value = next_row_values[1]
+                                                    except Exception as e:
+                                                        previous_year_value = None
+                                                else:
+                                                    previous_year_value = None
+                                            except Exception as e:
+                                                print(f"Exception in straight values {e} for {target_header}")
+                                                next_row = table_data[r + 1]
+                                                print(next_row)
+                                                if str(next_row[0]).lower() == 'nan':
+                                                    try:
+                                                        next_row_values = [value for i, value in enumerate(next_row) if
+                                                                           (
+                                                                                   (isinstance(next_row[i], (
+                                                                                       float, int)) and not math.isnan(
+                                                                                       next_row[i])) or (
+                                                                                           isinstance(next_row[i],
+                                                                                                      str) and (
+                                                                                                   next_row[
+                                                                                                       i] != "NaN" and 'Unnamed' not in
+                                                                                                   next_row[
+                                                                                                       i])))
+                                                                           and
+                                                                           str(next_row[
+                                                                                   i]).lower() not in excluded_values
+                                                                           ]
+                                                        previous_year_value = next_row_values[1]
+                                                    except Exception as e:
+                                                        previous_year_value = None
+                                                else:
+                                                    previous_year_value = None
+                                        else:
+                                            previous_year_value = row_values[1]
+                                        try:
+                                            next_row = table_data[r + 1]
+                                            print(next_row)
+                                            if str(next_row[0]).lower() == 'nan':
+                                                try:
+                                                    if str(next_row[1]).lower() != 'nan' and str(
+                                                            next_row[1]).lower() != '(g)' and str(
+                                                            next_row[1]).lower() != '(h)' and str(
+                                                            next_row[1]).lower() != '(i)' and str(
+                                                            next_row[1]).lower() != '(f)':
+                                                        current_year_value = next_row[1]
+                                                    else:
+                                                        current_year_value = next_row[2]
+                                                    logging.info(
+                                                        f"Have taken current year value from next row {previous_year_value}")
+                                                except Exception as e:
+                                                    current_year_value = None
+                                            else:
+                                                current_year_value = None
+                                        except Exception as e:
+                                            print(f"Exception in straight values {e} for {target_header}")
+                                            next_row = table_data[r + 1]
+                                            print(next_row)
+                                            if str(next_row[0]).lower() == 'nan':
+                                                try:
+                                                    if str(next_row[1]).lower() != 'nan':
+                                                        current_year_value = next_row[1]
+                                                    else:
+                                                        current_year_value = next_row[2]
+                                                    logging.info(
+                                                        f"Have taken current year value from next row {previous_year_value}")
+                                                except Exception as e:
+                                                    current_year_value = None
+                                            else:
+                                                current_year_value = None
+
+                                    elif len(row) >= 2 and str(row[2]).lower() == 'nan' and str(next_row[0]).lower() == 'nan' and not last_row:
+                                        logging.info(
+                                            "As previous value not there taking current value first and gping for previous value")
+                                        row_values = [value for i, value in enumerate(row) if (
+                                                (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
+                                                isinstance(row[i], str) and (
+                                                    row[i] != "NaN" and 'Unnamed' not in row[i]))) and
+                                                                           str(row[i]).lower() not in excluded_values]
+                                        current_year_value = row_values[1]
+                                        try:
+                                            next_row = table_data[r + 1]
+                                            print(next_row)
+                                            if str(next_row[0]).lower() == 'nan':
+                                                try:
+                                                    next_row_values = [value for i, value in enumerate(next_row) if (
+                                                            (isinstance(next_row[i], (float, int)) and not math.isnan(
+                                                                next_row[i])) or (
+                                                                    isinstance(next_row[i], str) and (
+                                                                    next_row[i] != "NaN" and 'Unnamed' not in next_row[i])))and
+                                                                           str(row[i]).lower() not in excluded_values ]
+                                                    previous_year_value = next_row_values[0]
+                                                except Exception as e:
+                                                    previous_year_value = None
+                                            else:
+                                                previous_year_value = None
+                                        except Exception as e:
+                                            print(f"Exception in straight values {e} for {target_header}")
+                                            next_row = table_data[r + 1]
+                                            print(next_row)
+                                            if str(next_row[0]).lower() == 'nan':
+                                                try:
+                                                    next_row_values = [value for i, value in enumerate(next_row) if (
+                                                            (isinstance(next_row[i], (float, int)) and not math.isnan(
+                                                                next_row[i])) or (
+                                                                    isinstance(next_row[i], str) and (
+                                                                    next_row[i] != "NaN" and 'Unnamed' not in next_row[
+                                                                i]))) and
+                                                                           str(next_row[i]).lower() not in excluded_values]
+                                                    previous_year_value = next_row_values[0]
+                                                except Exception as e:
+                                                    previous_year_value = None
+                                            else:
+                                                previous_year_value = None
+
+                                    else:
+                                        row_values = [value for i, value in enumerate(row) if (
+                                                (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
+                                                isinstance(row[i], str) and (row[i] != "NaN" and 'Unnamed' not in row[i])))]
+                                        current_year_value = row_values[1]
+                                        try:
+                                            previous_year_value = row_values[2]
+                                        except Exception as e:
+                                            print(f"Exception in straight values {e} for {target_header}")
+                                            next_row = table_data[r + 1]
+                                            print(next_row)
+                                            if str(next_row[0]).lower() == 'nan':
+                                                try:
+                                                    if str(next_row[1]).lower() != 'nan':
+                                                        previous_year_value = next_row[1]
+                                                    else:
+                                                        previous_year_value = next_row[2]
+                                                    logging.info(
+                                                        f"Have taken previous year value from next row {previous_year_value}")
+                                                except Exception as e:
+                                                    previous_year_value = None
+                                            else:
+                                                previous_year_value = None
+                                except Exception as e:
+                                    logging.info(f"Exception occured at line 196 {e}")
+                                    current_year_value = None
+                                    previous_year_value = None
+                                current_year_value = re.sub(r'\([^)]*\)', '', str(current_year_value))
+                                previous_year_value = re.sub(r'\([^)]*\)', '', str(previous_year_value))
+                                values.append(current_year_value)
+                                values.append(previous_year_value)
+                                print(values)
+                                value_found = True
+
+                            else:
+                                logging.info("Going for breaks for inventories or finished goods")
+                                next_row = table_data[r + 1]
+                                if str(next_row[0]).lower() == 'nan':
+                                    row_values = [value for i, value in enumerate(next_row) if (
+                                            (isinstance(next_row[i], (float, int)) and not math.isnan(next_row[i])) or (
+                                            isinstance(next_row[i], str) and (next_row[i] != "NaN" or 'Unnamed' not in next_row[i])))]
+                                    current_year_value = row_values[0]
+                                    previous_year_value = row_values[1]
+                                    value_current_year = re.sub(r'\([^)]*\)', '', str(current_year_value))
+                                    value_previous_year = re.sub(r'\([^)]*\)', '', str(previous_year_value))
+                                    value_found = True
+                                    values.append(value_current_year)
+                                    values.append(value_previous_year)
+                        elif (field_name == 'Expenditure_on_production_transportation_and_other_expenditure_pertaining_to_exploration_and_production_activities' or field_name == 'total_expenditure_on_production_transportation_and_other') and ('Expenditure on production, transportation'.lower() in str(row[0]).lower() or 'exploration and production activities'.lower() in str(row[0]).lower()):
+                            excluded_values = ['(a)', '(b)', '(c)', '(d)', '(e)', '(f)', '(g)', '(h)', '(i)', '(j)',
+                                               '(k)']
+                            if len(row_values) > 1:
+                                try:
+                                    logging.info("Going for Expenditure on production field")
+                                    logging.info(row)
+                                    try:
+                                        next_row = table_data[r + 1]
+                                    except Exception as e:
+                                        next_row = ['nan', 'nan', 'nan']
+                                    if str(row[1]).lower() == 'nan' and str(next_row[0]).lower() == 'nan':
+                                        logging.info(
+                                            "As present value not there taking previous value first and gping for present value")
+                                        row_values = [value for i, value in enumerate(row) if (
+                                                (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
+                                                isinstance(row[i], str) and (
+                                                row[i] != "NaN" and 'Unnamed' not in row[i]))) and
+                                                      str(row[i]).lower() not in excluded_values]
+                                        if str(row[2]).lower() == 'nan' and str(
+                                                next_row[0]).lower() == 'nan' and not last_row:
+                                            try:
+                                                next_row = table_data[r + 1]
+                                                print(next_row)
+                                                if str(next_row[0]).lower() == 'nan':
+                                                    try:
+                                                        next_row_values = [value for i, value in enumerate(next_row) if
+                                                                           (
+                                                                                   (isinstance(next_row[i], (
+                                                                                       float, int)) and not math.isnan(
+                                                                                       next_row[i])) or (
+                                                                                           isinstance(next_row[i],
+                                                                                                      str) and (
+                                                                                                   next_row[
+                                                                                                       i] != "NaN" and 'Unnamed' not in
+                                                                                                   next_row[i])))
+                                                                           and
+                                                                           str(next_row[
+                                                                                   i]).lower() not in excluded_values
+                                                                           ]
+                                                        previous_year_value = next_row_values[1]
+                                                    except Exception as e:
+                                                        previous_year_value = None
+                                                else:
+                                                    previous_year_value = None
+                                            except Exception as e:
+                                                print(f"Exception in straight values {e} for {target_header}")
+                                                next_row = table_data[r + 1]
+                                                print(next_row)
+                                                if str(next_row[0]).lower() == 'nan':
+                                                    try:
+                                                        next_row_values = [value for i, value in enumerate(next_row) if
+                                                                           (
+                                                                                   (isinstance(next_row[i], (
+                                                                                       float, int)) and not math.isnan(
+                                                                                       next_row[i])) or (
+                                                                                           isinstance(next_row[i],
+                                                                                                      str) and (
+                                                                                                   next_row[
+                                                                                                       i] != "NaN" and 'Unnamed' not in
+                                                                                                   next_row[
+                                                                                                       i])))
+                                                                           and
+                                                                           str(next_row[
+                                                                                   i]).lower() not in excluded_values
+                                                                           ]
+                                                        previous_year_value = next_row_values[1]
+                                                    except Exception as e:
+                                                        previous_year_value = None
+                                                else:
+                                                    previous_year_value = None
+                                        else:
+                                            previous_year_value = row_values[1]
+                                        try:
+                                            next_row = table_data[r + 1]
+                                            print(next_row)
+                                            if str(next_row[0]).lower() == 'nan':
+                                                try:
+                                                    if str(next_row[1]).lower() != 'nan' and str(
+                                                            next_row[1]).lower() != '(g)' and str(
+                                                        next_row[1]).lower() != '(h)' and str(
+                                                        next_row[1]).lower() != '(i)' and str(
+                                                        next_row[1]).lower() != '(f)':
+                                                        current_year_value = next_row[1]
+                                                    else:
+                                                        current_year_value = next_row[2]
+                                                    logging.info(
+                                                        f"Have taken current year value from next row {previous_year_value}")
+                                                except Exception as e:
+                                                    current_year_value = None
+                                            else:
+                                                current_year_value = None
+                                        except Exception as e:
+                                            print(f"Exception in straight values {e} for {target_header}")
+                                            next_row = table_data[r + 1]
+                                            print(next_row)
+                                            if str(next_row[0]).lower() == 'nan':
+                                                try:
+                                                    if str(next_row[1]).lower() != 'nan':
+                                                        current_year_value = next_row[1]
+                                                    else:
+                                                        current_year_value = next_row[2]
+                                                    logging.info(
+                                                        f"Have taken current year value from next row {previous_year_value}")
+                                                except Exception as e:
+                                                    current_year_value = None
+                                            else:
+                                                current_year_value = None
+
+                                    elif len(row) >= 2 and str(row[2]).lower() == 'nan' and str(
+                                            next_row[0]).lower() == 'nan' and not last_row:
+                                        logging.info(
+                                            "As previous value not there taking current value first and gping for previous value")
+                                        row_values = [value for i, value in enumerate(row) if (
+                                                (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
+                                                isinstance(row[i], str) and (
+                                                row[i] != "NaN" and 'Unnamed' not in row[i]))) and
+                                                      str(row[i]).lower() not in excluded_values]
+                                        current_year_value = row_values[1]
+                                        try:
+                                            next_row = table_data[r + 1]
+                                            print(next_row)
+                                            if str(next_row[0]).lower() == 'nan':
+                                                try:
+                                                    next_row_values = [value for i, value in enumerate(next_row) if (
+                                                            (isinstance(next_row[i], (float, int)) and not math.isnan(
+                                                                next_row[i])) or (
+                                                                    isinstance(next_row[i], str) and (
+                                                                    next_row[i] != "NaN" and 'Unnamed' not in next_row[
+                                                                i]))) and
+                                                                       str(row[i]).lower() not in excluded_values]
+                                                    previous_year_value = next_row_values[0]
+                                                except Exception as e:
+                                                    previous_year_value = None
+                                            else:
+                                                previous_year_value = None
+                                        except Exception as e:
+                                            print(f"Exception in straight values {e} for {target_header}")
+                                            next_row = table_data[r + 1]
+                                            print(next_row)
+                                            if str(next_row[0]).lower() == 'nan':
+                                                try:
+                                                    next_row_values = [value for i, value in enumerate(next_row) if (
+                                                            (isinstance(next_row[i], (float, int)) and not math.isnan(
+                                                                next_row[i])) or (
+                                                                    isinstance(next_row[i], str) and (
+                                                                    next_row[i] != "NaN" and 'Unnamed' not in next_row[
+                                                                i]))) and
+                                                                       str(next_row[i]).lower() not in excluded_values]
+                                                    previous_year_value = next_row_values[0]
+                                                except Exception as e:
+                                                    previous_year_value = None
+                                            else:
+                                                previous_year_value = None
+
+                                    else:
+                                        row_values = [value for i, value in enumerate(row) if (
+                                                (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
+                                                isinstance(row[i], str) and (
+                                                    row[i] != "NaN" and 'Unnamed' not in row[i])))]
+                                        current_year_value = row_values[1]
+                                        try:
+                                            previous_year_value = row_values[2]
+                                        except Exception as e:
+                                            print(f"Exception in straight values {e} for {target_header}")
+                                            next_row = table_data[r + 1]
+                                            print(next_row)
+                                            if str(next_row[0]).lower() == 'nan':
+                                                try:
+                                                    if str(next_row[1]).lower() != 'nan':
+                                                        previous_year_value = next_row[1]
+                                                    else:
+                                                        previous_year_value = next_row[2]
+                                                    logging.info(
+                                                        f"Have taken previous year value from next row {previous_year_value}")
+                                                except Exception as e:
+                                                    previous_year_value = None
+                                            else:
+                                                previous_year_value = None
+                                except Exception as e:
+                                    logging.info(f"Exception occured at line 196 {e}")
+                                    current_year_value = None
+                                    previous_year_value = None
+                                current_year_value = re.sub(r'\([^)]*\)', '', str(current_year_value))
+                                previous_year_value = re.sub(r'\([^)]*\)', '', str(previous_year_value))
+                                values.append(current_year_value)
+                                values.append(previous_year_value)
+                                print(values)
+                                value_found = True
+
+                            else:
+                                logging.info("Going for breaks for inventories or finished goods")
+                                next_row = table_data[r + 1]
+                                if str(next_row[0]).lower() == 'nan':
+                                    row_values = [value for i, value in enumerate(next_row) if (
+                                            (isinstance(next_row[i], (float, int)) and not math.isnan(next_row[i])) or (
+                                            isinstance(next_row[i], str) and (
+                                                next_row[i] != "NaN" or 'Unnamed' not in next_row[i])))]
+                                    current_year_value = row_values[0]
+                                    previous_year_value = row_values[1]
+                                    value_current_year = re.sub(r'\([^)]*\)', '', str(current_year_value))
+                                    value_previous_year = re.sub(r'\([^)]*\)', '', str(previous_year_value))
+                                    value_found = True
+                                    values.append(value_current_year)
+                                    values.append(value_previous_year)
+                        elif (field_name == 'minority_interest_and_profit_from_associates_and_joint_ventures') and ('Share of profit (loss) of associates and joint ventures accounted for'.lower() in str(row[0]).lower()):
+                            excluded_values = ['(a)', '(b)', '(c)', '(d)', '(e)', '(f)', '(g)', '(h)', '(i)', '(j)',
+                                               '(k)']
+                            if len(row_values) > 1:
+                                try:
+                                    logging.info("Going for Expenditure on production field")
+                                    logging.info(row)
+                                    try:
+                                        next_row = table_data[r + 1]
+                                    except Exception as e:
+                                        next_row = ['nan', 'nan', 'nan']
+                                    if str(row[1]).lower() == 'nan' and str(next_row[0]).lower() == 'nan':
+                                        logging.info(
+                                            "As present value not there taking previous value first and gping for present value")
+                                        row_values = [value for i, value in enumerate(row) if (
+                                                (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
+                                                isinstance(row[i], str) and (
+                                                row[i] != "NaN" and 'Unnamed' not in row[i]))) and
+                                                      str(row[i]).lower() not in excluded_values]
+                                        if str(row[2]).lower() == 'nan' and str(
+                                                next_row[0]).lower() == 'nan' and not last_row:
+                                            try:
+                                                next_row = table_data[r + 1]
+                                                print(next_row)
+                                                if str(next_row[0]).lower() == 'nan':
+                                                    try:
+                                                        next_row_values = [value for i, value in enumerate(next_row) if
+                                                                           (
+                                                                                   (isinstance(next_row[i], (
+                                                                                       float, int)) and not math.isnan(
+                                                                                       next_row[i])) or (
+                                                                                           isinstance(next_row[i],
+                                                                                                      str) and (
+                                                                                                   next_row[
+                                                                                                       i] != "NaN" and 'Unnamed' not in
+                                                                                                   next_row[i])))
+                                                                           and
+                                                                           str(next_row[
+                                                                                   i]).lower() not in excluded_values
+                                                                           ]
+                                                        previous_year_value = next_row_values[1]
+                                                    except Exception as e:
+                                                        previous_year_value = None
+                                                else:
+                                                    previous_year_value = None
+                                            except Exception as e:
+                                                print(f"Exception in straight values {e} for {target_header}")
+                                                next_row = table_data[r + 1]
+                                                print(next_row)
+                                                if str(next_row[0]).lower() == 'nan':
+                                                    try:
+                                                        next_row_values = [value for i, value in enumerate(next_row) if
+                                                                           (
+                                                                                   (isinstance(next_row[i], (
+                                                                                       float, int)) and not math.isnan(
+                                                                                       next_row[i])) or (
+                                                                                           isinstance(next_row[i],
+                                                                                                      str) and (
+                                                                                                   next_row[
+                                                                                                       i] != "NaN" and 'Unnamed' not in
+                                                                                                   next_row[
+                                                                                                       i])))
+                                                                           and
+                                                                           str(next_row[
+                                                                                   i]).lower() not in excluded_values
+                                                                           ]
+                                                        previous_year_value = next_row_values[1]
+                                                    except Exception as e:
+                                                        previous_year_value = None
+                                                else:
+                                                    previous_year_value = None
+                                        else:
+                                            previous_year_value = row_values[1]
+                                        try:
+                                            next_row = table_data[r + 1]
+                                            print(next_row)
+                                            if str(next_row[0]).lower() == 'nan':
+                                                try:
+                                                    if str(next_row[1]).lower() != 'nan' and str(
+                                                            next_row[1]).lower() != '(g)' and str(
+                                                        next_row[1]).lower() != '(h)' and str(
+                                                        next_row[1]).lower() != '(i)' and str(
+                                                        next_row[1]).lower() != '(f)':
+                                                        current_year_value = next_row[1]
+                                                    else:
+                                                        current_year_value = next_row[2]
+                                                    logging.info(
+                                                        f"Have taken current year value from next row {previous_year_value}")
+                                                except Exception as e:
+                                                    current_year_value = None
+                                            else:
+                                                current_year_value = None
+                                        except Exception as e:
+                                            print(f"Exception in straight values {e} for {target_header}")
+                                            next_row = table_data[r + 1]
+                                            print(next_row)
+                                            if str(next_row[0]).lower() == 'nan':
+                                                try:
+                                                    if str(next_row[1]).lower() != 'nan':
+                                                        current_year_value = next_row[1]
+                                                    else:
+                                                        current_year_value = next_row[2]
+                                                    logging.info(
+                                                        f"Have taken current year value from next row {previous_year_value}")
+                                                except Exception as e:
+                                                    current_year_value = None
+                                            else:
+                                                current_year_value = None
+
+                                    elif len(row) >= 2 and str(row[2]).lower() == 'nan' and str(
+                                            next_row[0]).lower() == 'nan' and not last_row:
+                                        logging.info(
+                                            "As previous value not there taking current value first and gping for previous value")
+                                        row_values = [value for i, value in enumerate(row) if (
+                                                (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
+                                                isinstance(row[i], str) and (
+                                                row[i] != "NaN" and 'Unnamed' not in row[i]))) and
+                                                      str(row[i]).lower() not in excluded_values]
+                                        current_year_value = row_values[1]
+                                        try:
+                                            next_row = table_data[r + 1]
+                                            print(next_row)
+                                            if str(next_row[0]).lower() == 'nan':
+                                                try:
+                                                    next_row_values = [value for i, value in enumerate(next_row) if (
+                                                            (isinstance(next_row[i], (float, int)) and not math.isnan(
+                                                                next_row[i])) or (
+                                                                    isinstance(next_row[i], str) and (
+                                                                    next_row[i] != "NaN" and 'Unnamed' not in next_row[
+                                                                i]))) and
+                                                                       str(row[i]).lower() not in excluded_values]
+                                                    previous_year_value = next_row_values[0]
+                                                except Exception as e:
+                                                    previous_year_value = None
+                                            else:
+                                                previous_year_value = None
+                                        except Exception as e:
+                                            print(f"Exception in straight values {e} for {target_header}")
+                                            next_row = table_data[r + 1]
+                                            print(next_row)
+                                            if str(next_row[0]).lower() == 'nan':
+                                                try:
+                                                    next_row_values = [value for i, value in enumerate(next_row) if (
+                                                            (isinstance(next_row[i], (float, int)) and not math.isnan(
+                                                                next_row[i])) or (
+                                                                    isinstance(next_row[i], str) and (
+                                                                    next_row[i] != "NaN" and 'Unnamed' not in next_row[
+                                                                i]))) and
+                                                                       str(next_row[i]).lower() not in excluded_values]
+                                                    previous_year_value = next_row_values[0]
+                                                except Exception as e:
+                                                    previous_year_value = None
+                                            else:
+                                                previous_year_value = None
+
+                                    else:
+                                        row_values = [value for i, value in enumerate(row) if (
+                                                (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
+                                                isinstance(row[i], str) and (
+                                                    row[i] != "NaN" and 'Unnamed' not in row[i])))]
+                                        current_year_value = row_values[1]
+                                        try:
+                                            previous_year_value = row_values[2]
+                                        except Exception as e:
+                                            print(f"Exception in straight values {e} for {target_header}")
+                                            next_row = table_data[r + 1]
+                                            print(next_row)
+                                            if str(next_row[0]).lower() == 'nan':
+                                                try:
+                                                    if str(next_row[1]).lower() != 'nan':
+                                                        previous_year_value = next_row[1]
+                                                    else:
+                                                        previous_year_value = next_row[2]
+                                                    logging.info(
+                                                        f"Have taken previous year value from next row {previous_year_value}")
+                                                except Exception as e:
+                                                    previous_year_value = None
+                                            else:
+                                                previous_year_value = None
+                                except Exception as e:
+                                    logging.info(f"Exception occured at line 196 {e}")
+                                    current_year_value = None
+                                    previous_year_value = None
+                                current_year_value = re.sub(r'\([^)]*\)', '', str(current_year_value))
+                                previous_year_value = re.sub(r'\([^)]*\)', '', str(previous_year_value))
+                                values.append(current_year_value)
+                                values.append(previous_year_value)
+                                print(values)
+                                value_found = True
+
+                            else:
+                                logging.info("Going for breaks for inventories or finished goods")
+                                next_row = table_data[r + 1]
+                                if str(next_row[0]).lower() == 'nan':
+                                    row_values = [value for i, value in enumerate(next_row) if (
+                                            (isinstance(next_row[i], (float, int)) and not math.isnan(next_row[i])) or (
+                                            isinstance(next_row[i], str) and (
+                                                next_row[i] != "NaN" or 'Unnamed' not in next_row[i])))]
+                                    current_year_value = row_values[0]
+                                    previous_year_value = row_values[1]
+                                    value_current_year = re.sub(r'\([^)]*\)', '', str(current_year_value))
+                                    value_previous_year = re.sub(r'\([^)]*\)', '', str(previous_year_value))
+                                    value_found = True
+                                    values.append(value_current_year)
+                                    values.append(value_previous_year)
+                        elif field_name == 'Liabilities_directly_associated_with_assets_in_disposal_group_classified_as_held_for_sale' and 'Liabilities directly associated with assets' in row[0]:
+                            if len(row_values) > 1:
+                                try:
+                                    logging.info("Going for Liabilities field")
                                     logging.info(row)
                                     try:
                                         next_row = table_data[r + 1]
@@ -254,7 +917,7 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,tabl
                                 print(values)
                                 value_found = True
                             else:
-                                logging.info("Going for breaks for inventories or finished goods")
+                                logging.info("Going for breaks for Liabilities associated")
                                 next_row = table_data[r + 1]
                                 if str(next_row[0]).lower() == 'nan':
                                     row_values = [value for i, value in enumerate(next_row) if (
@@ -268,7 +931,9 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,tabl
                                     values.append(value_current_year)
                                     values.append(value_previous_year)
                         else:
-                            if row[0] == target_header and len(row_values) > 1 and field_name != 'total_changes_in_inventories_or_finished_goods' and field_name != 'Property_plant_and_equipment':
+                            excluded_values = ['(a)', '(b)', '(c)', '(d)', '(e)', '(f)', '(g)', '(h)', '(i)', '(j)',
+                                               '(k)']
+                            if row[0] == target_header and len(row_values) > 1 and field_name != 'total_changes_in_inventories_or_finished_goods' and field_name != 'Property_plant_and_equipment' and field_name != 'Liabilities_directly_associated_with_assets_in_disposal_group_classified_as_held_for_sale' and field_name != 'Expenditure_on_production_transportation_and_other_expenditure_pertaining_to_exploration_and_production_activities' and field_name != 'total_expenditure_on_production_transportation_and_other' and field_name != 'minority_interest_and_profit_from_associates_and_joint_ventures':
                                 logging.info(f"Going Straight for {target_header}")
                                 try:
                                     logging.info(row)
@@ -277,18 +942,70 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,tabl
                                     except Exception as e:
                                         next_row = ['nan','nan','nan']
                                         last_row = True
-                                    if str(row[1]).lower() == 'nan' and str(next_row[0]).lower() == 'nan' and not last_row:
+                                    if (str(row[1]).lower() == 'nan' or 'Unnamed' in str(row[1])) and str(next_row[0]).lower() == 'nan' and not last_row:
                                         logging.info("As present value not there taking previous value first and gping for present value")
                                         row_values = [value for i, value in enumerate(row) if (
                                                 (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
-                                                isinstance(row[i], str) and (row[i] != "NaN" and 'Unnamed' not in row[i])))]
-                                        previous_year_value = row_values[1]
+                                                isinstance(row[i], str) and (row[i] != "NaN" and 'Unnamed' not in row[i]))) and
+                                                      str(row[i]).lower() not in excluded_values]
+                                        if str(row[2]).lower() == 'nan' and str(next_row[0]).lower() == 'nan' and not last_row and len(row_values) >= 1:
+                                            try:
+                                                next_row = table_data[r + 1]
+                                                print(next_row)
+                                                if str(next_row[0]).lower() == 'nan':
+                                                    try:
+                                                        next_row_values = [value for i, value in enumerate(next_row) if
+                                                                           (
+                                                                                   (isinstance(next_row[i], (
+                                                                                   float, int)) and not math.isnan(
+                                                                                       next_row[i])) or (
+                                                                                           isinstance(next_row[i],
+                                                                                                      str) and (
+                                                                                                   next_row[
+                                                                                                       i] != "NaN" and 'Unnamed' not in
+                                                                                                   next_row[i])))
+                                                                           and
+                                                                           str(next_row[i]).lower() not in excluded_values
+                                                                           ]
+                                                        previous_year_value = next_row_values[1]
+                                                    except Exception as e:
+                                                        previous_year_value = None
+                                                else:
+                                                    previous_year_value = None
+                                            except Exception as e:
+                                                print(f"Exception in straight values {e} for {target_header}")
+                                                next_row = table_data[r + 1]
+                                                print(next_row)
+                                                if str(next_row[0]).lower() == 'nan':
+                                                    try:
+                                                        next_row_values = [value for i, value in enumerate(next_row) if
+                                                                           (
+                                                                                   (isinstance(next_row[i], (
+                                                                                   float, int)) and not math.isnan(
+                                                                                       next_row[i])) or (
+                                                                                           isinstance(next_row[i],
+                                                                                                      str) and (
+                                                                                                   next_row[
+                                                                                                       i] != "NaN" and 'Unnamed' not in
+                                                                                                   next_row[
+                                                                                                       i])))
+                                                                           and
+                                                                           str(next_row[
+                                                                                   i]).lower() not in excluded_values
+                                                                           ]
+                                                        previous_year_value = next_row_values[1]
+                                                    except Exception as e:
+                                                        previous_year_value = None
+                                                else:
+                                                    previous_year_value = None
+                                        else:
+                                            previous_year_value = row_values[1]
                                         try:
                                             next_row = table_data[r + 1]
                                             print(next_row)
                                             if str(next_row[0]).lower() == 'nan':
                                                 try:
-                                                    if str(next_row[1]).lower() != 'nan':
+                                                    if str(next_row[1]).lower() != 'nan' and str(next_row[1]).lower() != '(g)' and str(next_row[1]).lower() != '(h)' and  str(next_row[1]).lower() != '(i)' and str(next_row[1]).lower() != '(f)' :
                                                         current_year_value = next_row[1]
                                                     else:
                                                         current_year_value = next_row[2]
@@ -313,10 +1030,54 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,tabl
                                                     current_year_value = None
                                             else:
                                                 current_year_value = None
+                                    elif len(row) >= 2 and str(row[2]).lower() == 'nan' and str(next_row[0]).lower() == 'nan' and not last_row:
+                                        logging.info(
+                                            "As previous value not there taking current value first and gping for previous value")
+                                        row_values = [value for i, value in enumerate(row) if (
+                                                (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
+                                                isinstance(row[i], str) and (
+                                                    row[i] != "NaN" and 'Unnamed' not in row[i]))) and
+                                                                           str(row[i]).lower() not in excluded_values]
+                                        current_year_value = row_values[1]
+                                        try:
+                                            next_row = table_data[r + 1]
+                                            print(next_row)
+                                            if str(next_row[0]).lower() == 'nan':
+                                                try:
+                                                    next_row_values = [value for i, value in enumerate(next_row) if (
+                                                            (isinstance(next_row[i], (float, int)) and not math.isnan(
+                                                                next_row[i])) or (
+                                                                    isinstance(next_row[i], str) and (
+                                                                    next_row[i] != "NaN" and 'Unnamed' not in next_row[i])))and
+                                                                           str(row[i]).lower() not in excluded_values ]
+                                                    previous_year_value = next_row_values[0]
+                                                except Exception as e:
+                                                    previous_year_value = None
+                                            else:
+                                                previous_year_value = None
+                                        except Exception as e:
+                                            print(f"Exception in straight values {e} for {target_header}")
+                                            next_row = table_data[r + 1]
+                                            print(next_row)
+                                            if str(next_row[0]).lower() == 'nan':
+                                                try:
+                                                    next_row_values = [value for i, value in enumerate(next_row) if (
+                                                            (isinstance(next_row[i], (float, int)) and not math.isnan(
+                                                                next_row[i])) or (
+                                                                    isinstance(next_row[i], str) and (
+                                                                    next_row[i] != "NaN" and 'Unnamed' not in next_row[
+                                                                i]))) and
+                                                                           str(next_row[i]).lower() not in excluded_values]
+                                                    previous_year_value = next_row_values[0]
+                                                except Exception as e:
+                                                    previous_year_value = None
+                                            else:
+                                                previous_year_value = None
                                     else:
                                         row_values = [value for i, value in enumerate(row) if (
                                                 (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
-                                                isinstance(row[i], str) and (row[i] != "NaN" and 'Unnamed' not in row[i])))]
+                                                isinstance(row[i], str) and (row[i] != "NaN" and 'Unnamed' not in row[i]))) and
+                                                                           str(row[i]).lower() not in excluded_values]
                                         current_year_value = row_values[1]
                                         try:
                                             previous_year_value = row_values[2]
@@ -337,6 +1098,14 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,tabl
                                                 previous_year_value = None
                                 except Exception as e:
                                     logging.info(f"Exception occured at line 196 {e}")
+                                    exc_type, exc_value, exc_traceback = sys.exc_info()
+
+                                    # Get the formatted traceback as a string
+                                    traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+                                    # logging.info the traceback details
+                                    for line in traceback_details:
+                                        logging.info(line.strip())
                                     current_year_value = None
                                     previous_year_value = None
                                 current_year_value = re.sub(r'\([^)]*\)', '', str(current_year_value))
@@ -346,7 +1115,8 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,tabl
                                 print(values)
                                 value_found = True
                             else:
-                                if field_name != 'total_changes_in_inventories_or_finished_goods' and field_name != 'Property_plant_and_equipment':
+                                excluded_values = ['(a)', '(b)', '(c)', '(d)', '(e)', '(f)', '(g)', '(h)', '(i)', '(j)', '(k)']
+                                if field_name != 'total_changes_in_inventories_or_finished_goods' and field_name != 'Property_plant_and_equipment' and field_name != 'Liabilities_directly_associated_with_assets_in_disposal_group_classified_as_held_for_sale' and field_name != 'Expenditure_on_production_transportation_and_other_expenditure_pertaining_to_exploration_and_production_activities' and field_name != 'total_expenditure_on_production_transportation_and_other' and field_name != 'minority_interest_and_profit_from_associates_and_joint_ventures':
                                     value_previous_year = None
                                     value_current_year = None
                                     if not header_found:
@@ -360,7 +1130,8 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,tabl
                                     elif header is not None and isinstance(row[0], (float, int)) and math.isnan(row[0]):
                                         row_values = [value for i, value in enumerate(row) if (
                                                 (isinstance(row[i], (float, int)) and not math.isnan(row[i])) or (
-                                                isinstance(row[i], str) and (row[i] != "NaN" and 'Unnamed' not in row[i])))]
+                                                isinstance(row[i], str) and (row[i] != "NaN" and 'Unnamed' not in row[i]))) and
+                                                    row[i].lower() not in excluded_values]
                                         # logging.info(row_values)
                                         value_current_year = row_values[0]
                                         value_previous_year = row_values[1]
@@ -634,14 +1405,16 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                     nature = None
                 single_df.at[index, 'Value'] = nature
                 continue
-            if parent_node == config_dict['Straight_Keyword']:
-                values = JSONtoDB_AOC_XBRL_straight(cin_column_value,company_name,json_file_path,child_nodes,table_column_check,field_name)
-                logging.info(f"{child_nodes}:{values}")
+            if field_name == 'profit_from_discontinuing_operation_after_tax':
+                child_nodes = 'Total profit (loss) from discontinued operations after tax'
+                values = JSONtoDB_AOC_XBRL_straight(cin_column_value, company_name, json_file_path, child_nodes,
+                                                    table_column_check, field_name)
                 million_keyword = 'Millions of INR'
                 crores_keyword = 'Crores of INR'
                 lakh_keyword = 'Lakhs of INR'
                 billion_keyword = 'Billions of INR'
                 trillion_keyword = 'Trillions of INR'
+                thousand_keyword = 'Thousands of INR'
                 all_none = all(element is None for element in values)
                 if len(values) != 0 and not all_none:
                     if year_category == 'Previous':
@@ -662,6 +1435,9 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                             elif trillion_keyword in filing_standard_check:
                                 logging.info("In trillion")
                                 num_value = (float(values[1]))*1000000000000
+                            elif thousand_keyword in filing_standard_check:
+                                logging.info("In thousands")
+                                num_value = (float(values[1]))*1000
                             else:
                                 logging.info("Normal Value")
                                 num_value = float(values[1])
@@ -686,6 +1462,208 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                             elif trillion_keyword in filing_standard_check:
                                 logging.info("In trillion")
                                 num_value = (float(values[0]))*1000000000000
+                            elif thousand_keyword in filing_standard_check:
+                                logging.info("In thousands")
+                                num_value = (float(values[0]))*1000
+                            else:
+                                logging.info("Normal Value")
+                                num_value = float(values[0])
+                            single_df.at[index, 'Value'] = round(num_value,2)
+                        except Exception as e:
+                            single_df.at[index,'Value'] = values[0]
+                    else:
+                        single_df.at[index, 'Value'] = None
+                    continue
+                else:
+                    child_nodes = 'Profit (loss) from discontinuing operations before tax'
+                    values = JSONtoDB_AOC_XBRL_straight(cin_column_value, company_name, json_file_path, child_nodes,
+                                                        table_column_check, field_name)
+                    all_none = all(element is None for element in values)
+                    if len(values) != 0 and not all_none:
+                        if year_category == 'Previous':
+                            try:
+                                values[1] = values[1].replace(',', '')
+                                if million_keyword in filing_standard_check:
+                                    num_value = (float(values[1])) * 1000000
+                                    logging.info("In Millions")
+                                elif crores_keyword in filing_standard_check:
+                                    logging.info("In Crores")
+                                    num_value = (float(values[1])) * 10000000
+                                elif lakh_keyword in filing_standard_check:
+                                    logging.info("In lakhs")
+                                    num_value = (float(values[1])) * 100000
+                                elif billion_keyword in filing_standard_check:
+                                    logging.info("In Billion")
+                                    num_value = (float(values[1])) * 1000000000
+                                elif trillion_keyword in filing_standard_check:
+                                    logging.info("In trillion")
+                                    num_value = (float(values[1])) * 1000000000000
+                                elif thousand_keyword in filing_standard_check:
+                                    logging.info("In thousands")
+                                    num_value = (float(values[1])) * 1000
+                                else:
+                                    logging.info("Normal Value")
+                                    num_value = float(values[1])
+                                single_df.at[index, 'Value'] = round(num_value, 2)
+                            except Exception as e:
+                                single_df.at[index, 'Value'] = values[1]
+                        elif year_category == 'Current':
+                            try:
+                                values[0] = values[0].replace(',', '')
+                                if million_keyword in filing_standard_check:
+                                    logging.info("In Millions")
+                                    num_value = (float(values[0])) * 1000000
+                                elif crores_keyword in filing_standard_check:
+                                    logging.info("In Crores")
+                                    num_value = (float(values[0])) * 10000000
+                                elif lakh_keyword in filing_standard_check:
+                                    logging.info("In lakhs")
+                                    num_value = (float(values[0])) * 100000
+                                elif billion_keyword in filing_standard_check:
+                                    logging.info("In Billion")
+                                    num_value = (float(values[0])) * 1000000000
+                                elif trillion_keyword in filing_standard_check:
+                                    logging.info("In trillion")
+                                    num_value = (float(values[0])) * 1000000000000
+                                elif thousand_keyword in filing_standard_check:
+                                    logging.info("In thousands")
+                                    num_value = (float(values[0])) * 1000
+                                else:
+                                    logging.info("Normal Value")
+                                    num_value = float(values[0])
+                                single_df.at[index, 'Value'] = round(num_value, 2)
+                            except Exception as e:
+                                single_df.at[index, 'Value'] = values[0]
+                        else:
+                            single_df.at[index, 'Value'] = None
+                        continue
+                    else:
+                        child_nodes = 'Total profit (loss) from discontinuing operation after tax'
+                        values = JSONtoDB_AOC_XBRL_straight(cin_column_value, company_name, json_file_path, child_nodes,
+                                                            table_column_check, field_name)
+                        all_none = all(element is None for element in values)
+                        logging.info(f"New Values {values}")
+                        if len(values) != 0 and not all_none:
+                            if year_category == 'Previous':
+                                try:
+                                    logging.info("Disconinuing operations for Previous year")
+                                    values[1] = values[1].replace(',', '')
+                                    if million_keyword in filing_standard_check:
+                                        num_value = (float(values[1])) * 1000000
+                                        logging.info("In Millions")
+                                    elif crores_keyword in filing_standard_check:
+                                        logging.info("In Crores")
+                                        num_value = (float(values[1])) * 10000000
+                                    elif lakh_keyword in filing_standard_check:
+                                        logging.info("In lakhs")
+                                        num_value = (float(values[1])) * 100000
+                                    elif billion_keyword in filing_standard_check:
+                                        logging.info("In Billion")
+                                        num_value = (float(values[1])) * 1000000000
+                                    elif trillion_keyword in filing_standard_check:
+                                        logging.info("In trillion")
+                                        num_value = (float(values[1])) * 1000000000000
+                                    elif thousand_keyword in filing_standard_check:
+                                        logging.info("In thousands")
+                                        num_value = (float(values[1])) * 1000
+                                    else:
+                                        logging.info("Normal Value")
+                                        num_value = float(values[1])
+                                    single_df.at[index, 'Value'] = round(num_value, 2)
+                                except Exception as e:
+                                    single_df.at[index, 'Value'] = values[1]
+                            elif year_category == 'Current':
+                                try:
+                                    logging.info("Disconinuing operations for current year")
+                                    values[0] = values[0].replace(',', '')
+                                    if million_keyword in filing_standard_check:
+                                        logging.info("In Millions")
+                                        num_value = (float(values[0])) * 1000000
+                                    elif crores_keyword in filing_standard_check:
+                                        logging.info("In Crores")
+                                        num_value = (float(values[0])) * 10000000
+                                    elif lakh_keyword in filing_standard_check:
+                                        logging.info("In lakhs")
+                                        num_value = (float(values[0])) * 100000
+                                    elif billion_keyword in filing_standard_check:
+                                        logging.info("In Billion")
+                                        num_value = (float(values[0])) * 1000000000
+                                    elif trillion_keyword in filing_standard_check:
+                                        logging.info("In trillion")
+                                        num_value = (float(values[0])) * 1000000000000
+                                    elif thousand_keyword in filing_standard_check:
+                                        logging.info("In thousands")
+                                        num_value = (float(values[0])) * 1000
+                                    else:
+                                        logging.info("Normal Value")
+                                        num_value = float(values[0])
+                                    single_df.at[index, 'Value'] = round(num_value, 2)
+                                except Exception as e:
+                                    single_df.at[index, 'Value'] = values[0]
+                            else:
+                                single_df.at[index, 'Value'] = None
+                        else:
+                            single_df.at[index, 'Value'] = None
+                        continue
+            if parent_node == config_dict['Straight_Keyword'] and field_name != 'profit_from_discontinuing_operation_after_tax':
+                values = JSONtoDB_AOC_XBRL_straight(cin_column_value,company_name,json_file_path,child_nodes,table_column_check,field_name)
+                logging.info(f"{child_nodes}:{values}")
+                million_keyword = 'Millions of INR'
+                crores_keyword = 'Crores of INR'
+                lakh_keyword = 'Lakhs of INR'
+                billion_keyword = 'Billions of INR'
+                trillion_keyword = 'Trillions of INR'
+                thousand_keyword = 'Thousands of INR'
+                all_none = all(element is None for element in values)
+                if len(values) != 0 and not all_none:
+                    if year_category == 'Previous':
+                        try:
+                            values[1]=values[1].replace(',','')
+                            if million_keyword in filing_standard_check:
+                                num_value = (float(values[1]))*1000000
+                                logging.info("In Millions")
+                            elif crores_keyword in filing_standard_check:
+                                logging.info("In Crores")
+                                num_value = (float(values[1]))*10000000
+                            elif lakh_keyword in filing_standard_check:
+                                logging.info("In lakhs")
+                                num_value = (float(values[1]))*100000
+                            elif billion_keyword in filing_standard_check:
+                                logging.info("In Billion")
+                                num_value = (float(values[1]))*1000000000
+                            elif trillion_keyword in filing_standard_check:
+                                logging.info("In trillion")
+                                num_value = (float(values[1]))*1000000000000
+                            elif thousand_keyword in filing_standard_check:
+                                logging.info("In thousands")
+                                num_value = (float(values[1]))*1000
+                            else:
+                                logging.info("Normal Value")
+                                num_value = float(values[1])
+                            single_df.at[index, 'Value'] = round(num_value,2)
+                        except Exception as e:
+                            single_df.at[index, 'Value'] = values[1]
+                    elif year_category == 'Current':
+                        try:
+                            values[0]=values[0].replace(',','')
+                            if million_keyword in filing_standard_check:
+                                logging.info("In Millions")
+                                num_value = (float(values[0]))*1000000
+                            elif crores_keyword in filing_standard_check:
+                                logging.info("In Crores")
+                                num_value = (float(values[0]))*10000000
+                            elif lakh_keyword in filing_standard_check:
+                                logging.info("In lakhs")
+                                num_value = (float(values[0]))*100000
+                            elif billion_keyword in filing_standard_check:
+                                logging.info("In Billion")
+                                num_value = (float(values[0]))*1000000000
+                            elif trillion_keyword in filing_standard_check:
+                                logging.info("In trillion")
+                                num_value = (float(values[0]))*1000000000000
+                            elif thousand_keyword in filing_standard_check:
+                                logging.info("In thousands")
+                                num_value = (float(values[0])) * 1000
                             else:
                                 logging.info("Normal Value")
                                 num_value = float(values[0])
@@ -722,6 +1700,9 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                                 elif trillion_keyword in filing_standard_check:
                                     logging.info("In trillion")
                                     num_value = (float(values[0])) * 1000000000000
+                                elif thousand_keyword in filing_standard_check:
+                                    logging.info("In thousands")
+                                    num_value = (float(values[0])) * 1000
                                 else:
                                     logging.info("Normal Value")
                                     num_value = float(values[0])
@@ -729,6 +1710,12 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                                 single_df.at[index, 'Value'] = round(num_value,2)
                             except Exception as e:
                                 single_df.at[index,'Value'] = values[0]
+                    elif year_category == 'Common':
+                        logging.info(f"Going for common{field_name}")
+                        try:
+                            single_df.at[index, 'Value'] = values[0]
+                        except Exception as e:
+                            single_df.at[index, 'Value'] = None
                     else:
                         single_df.at[index, 'Value'] = None
                 else:
@@ -748,6 +1735,7 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                 auditor_value = Auditor_information(auditor_complete_sentence,child_nodes)
                 try:
                     auditor_value = str(auditor_value).replace('\"', '')
+                    auditor_value = str(auditor_value).replace("'","")
                 except Exception as e:
                     pass
                 logging.info(f"{field_name}:{auditor_value}")
@@ -762,6 +1750,10 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
         for _, row in current_year_formula_df.iterrows():
             current_formula = row['Child_Nodes']
             current_formula_field_name = row['Field_Name']
+            if current_formula_field_name == 'difference_value':
+                if str(nature).lower() == 'consolidated':
+                    logging.info("Taking different formula for difference value for consolidated")
+                    current_formula = config_dict['consolidated_difference_value_formula']
             for field_name in current_year_df['Field_Name']:
                 pattern = r'\b' + re.escape(field_name) + r'\b'
                 current_formula = re.sub(pattern, str(
@@ -787,6 +1779,10 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
         for _, row in previous_year_formula_df.iterrows():
             previous_formula = row['Child_Nodes']
             previous_formula_field_name = row['Field_Name']
+            if previous_formula_field_name == 'difference_value':
+                if str(nature).lower() == 'consolidated':
+                    logging.info("Taking different formula for difference value for consolidated")
+                    previous_formula = config_dict['consolidated_difference_value_formula']
             for previous_field_name in previous_year_df['Field_Name']:
                 previous_pattern = r'\b' + re.escape(previous_field_name) + r'\b'
                 previous_formula = re.sub(previous_pattern, str(

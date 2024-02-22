@@ -54,7 +54,7 @@ from AOC4_CFS_XMLToDB import AOC_cfs_xml_to_db
 from DBFunctions import update_locked_by_empty
 import requests
 import json
-
+import time
 
 def sign_out(driver,config_dict,CinData):
     try:
@@ -96,7 +96,7 @@ def Login_and_Download(config_dict,CinData):
         Url = config_dict['Url']
         Cin, CompanyName, User = CinData[2], CinData[3], CinData[15]
         workflow_status = CinData[5]
-        db_insertion_status = CinData[67]
+        db_insertion_status = CinData[68]
         db_config = get_db_credentials(config_dict)
         update_locked_by(db_config,Cin)
         last_logged_in_user = None
@@ -171,12 +171,38 @@ def Login_and_Download(config_dict,CinData):
         download_files = cursor.fetchall()
         cursor.close()
         connection.close()
+        time.sleep(2)
+        connection = mysql.connector.connect(**db_config)
+        cursor = connection.cursor()
+        all_file_details = "select * from documents where cin = %s and form_data_extraction_needed='Y'"
+        cursor.execute(all_file_details, values)
+        all_files = cursor.fetchall()
+        cursor.close()
+        connection.close()
         check_files_and_update(Cin,db_config)
-        if len(download_files) < 10:
-            return True,driver,None
+        time.sleep(2)
+        connection = mysql.connector.connect(**db_config)
+        cursor = connection.cursor()
+        financials_check_query = "select * from documents where cin = %s and form_data_extraction_needed = 'Y' and (document like '%%AOC-4%%' or document like '%%XBRL document in respect Consolidated%%'  or document like '%%XBRL financial statements%%') and document not like '%%AOC-4(XBRL)%%' and document not like '%%AOC-4 XBRL%%' and document not like '%%AOC-4_xbrl%%' and Download_Status = 'Pending'"
+        value = (Cin,)
+        logging.info(financials_check_query % value)
+        cursor.execute(financials_check_query, value)
+        financial_pending_result = cursor.fetchall()
+        cursor.close()
+        connection.close()
+        if len(all_files) < 10:
+            logging.info("Total files are less than 10")
+            if len(download_files) < 2 and len(financial_pending_result) == 0:
+                return True,driver,None
+            else:
+                exception_message = f"Download failed for {Cin}"
+                return False,driver,exception_message
         else:
-            exception_message = f"Download failed for {Cin}"
-            return False,driver,exception_message
+            if len(download_files) < 10 and len(financial_pending_result) == 0:
+                return True,driver,None
+            else:
+                exception_message = f"Download failed for {Cin}"
+                return False,driver,exception_message
     except Exception as e:
         print(f"Exception Occured in downloading Main {e}")
         return False, driver, e
@@ -245,12 +271,11 @@ def XMLGeneration(db_config,CinData,config_dict):
             connection.close()
         except Exception as e:
             print(f"Exception occured in query for XBRL JSON Generation{e}")
-
     except Exception as e:
         print(f"Exception Occured {e}")
         return False,[]
     else:
-        return True, hidden_attachments_list
+        return True,hidden_attachments_list
 
 
 def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
@@ -330,6 +355,12 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                         config_dict_shareholdings, config_status = create_main_config_dictionary(excel_file,Sheet_name_MGT_address)
                         output_directory = os.path.dirname(path)
                         shareholdings = mgt_director_shareholdings_main(db_config,config_dict_shareholdings,output_directory,path,Cin)
+                    else:
+                        update_query = "update orders set director_shareholding_status='Y',director_shareholding_comments = '' where cin = %s"
+                        values_cin = (Cin,)
+                        logging.info(update_query % values_cin)
+                        db_cursor.execute(update_query, values_cin)
+                        db_connection.commit()
                     db_cursor.close()
                     db_connection.close()
                 elif 'MSME'.lower() in str(file_name).lower():
@@ -448,6 +479,16 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     chg_db_insertion = chg1_xml_to_db(db_config,config_dict_CHG,map_file_path_CHG,map_sheet_name_CHG,xml_file_path,output_excel_path,Cin,CompanyName,date,file_name)
                     if chg_db_insertion:
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
+                    else:
+                        logging.info("Going for other type of CHG-1 form")
+                        map_file_path_CHG_old = config_dict_CHG['old_file_config']
+                        logging.info("old file")
+                        map_sheet_name_CHG = config_dict_CHG['mapping_file_sheet_name']
+                        chg_db_insertion_old = chg1_xml_to_db(db_config, config_dict_CHG, map_file_path_CHG_old,
+                                                          map_sheet_name_CHG, xml_file_path, output_excel_path, Cin,
+                                                          CompanyName, date, file_name)
+                        if chg_db_insertion_old:
+                            update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                 elif 'XBRL document in respect Consolidated'.lower() in str(file_name).lower() or 'XBRL financial statements'.lower() in str(file_name).lower():
                     logging.info(f"Going to extract for {file_name}")
                     Sheet_name = "AOC XBRL"
@@ -466,7 +507,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     else:
                         AOC_XBRL_first_file_found = True
                 elif 'DIR'.lower() in str(file_name).lower():
-                    if 'DIR_2'.lower() in file_name.lower() or 'DIR-2'.lower() in file_name.lower() or 'DIR 2'.lower() in file_name.lower() or 'DIR-2-'.lower() in file_name.lower():
+                    if 'DIR_2'.lower() in file_name.lower() or 'DIR-2'.lower() in file_name.lower() or 'DIR 2'.lower() in file_name.lower() or 'DIR-2-'.lower() in file_name.lower() or 'dir2' in str(file_name).lower():
                         logging.info("Going to extract for Dir-2 hidden attachment")
                         Sheet_name = "OpenAI"
                         config_dict_dir, config_status = create_main_config_dictionary(excel_file, Sheet_name)
@@ -481,7 +522,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                         config_dict_DIR,config_status = create_main_config_dictionary(excel_file,Sheet_name)
                         digit_count = sum(c.isdigit() for c in file_name)
                         logging.info(digit_count)
-                        if digit_count == 8:
+                        if digit_count == 8 or digit_count == 9 or digit_count == 14 or digit_count == 15:
                             map_file_path_DIR = config_dict_DIR['Form32_config']
                             logging.info("old file")
                         else:
@@ -680,7 +721,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                                WHERE MONTH(created_date) = MONTH(CURRENT_DATE())
                                 AND YEAR(created_date) = YEAR(CURRENT_DATE()) AND cin=%s AND gst_status='Y'"""
                 cin_value = (Cin,)
-                print(gst_query % cin_value)
+                logging.info(gst_query % cin_value)
                 gst_cursor.execute(gst_query,cin_value)
                 gst_result = gst_cursor.fetchall()
                 gst_cursor.close()
@@ -691,10 +732,14 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     root_path = config_dict['Root path']
                     gst = insert_gst_number(db_config,config_dict_GST,Cin,CompanyName,root_path)
                     if gst:
-                        print("Successfully inserted for GST")
+                        logging.info("Successfully inserted for GST")
                         break
+                    else:
+                        time.sleep(30)
+                        continue
             except Exception as e:
-                print(f"Exception occured while inserting GST {e}")
+                logging.info(f"Exception occured while inserting GST {e}")
+                time.sleep(30)
                 continue
         try:
             sheet_name = 'OpenAI'
@@ -711,7 +756,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                 logging.info(line.strip())
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor()
-        db_insert_check_query = "select * from documents where cin=%s and form_data_extraction_needed='Y' and DB_insertion_status='Pending' and Download_Status='Downloaded'"
+        db_insert_check_query = "select * from documents where cin=%s and form_data_extraction_needed='Y' and DB_insertion_status='Pending' and Download_Status='Downloaded' and document != 'Form 8'"
         values_check = (Cin,)
         print(db_insert_check_query % values_check)
         cursor.execute(db_insert_check_query,values_check)

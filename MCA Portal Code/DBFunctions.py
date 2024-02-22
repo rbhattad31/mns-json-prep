@@ -95,7 +95,7 @@ def update_locked_by(dbconfig,Cin):
     try:
         update_locked_query = "update orders set python_locked_by = %s where cin=%s"
         #user = os.getlogin()
-        user = 'Python-Machine-159'
+        user = 'Python-Machine-141'
         values = (user, Cin)
         cursor.execute(update_locked_query, values)
         connection.commit()

@@ -640,9 +640,9 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                             logging.info(f'Exception {e} occurred while inserting below table row in table '
                                   f'{sql_table_others}- \n', df_row)
                 # hold_sub_assoc_value = 'JOINT'
-                if ((str(hold_sub_assoc_value).lower() == str(config_dict['joint_venture_keyword_in_xml']).lower()) or
-                        (str(hold_sub_assoc_value).lower() in str(config_dict['joint_venture_keyword_in_xml']).lower()) or
-                        (str(config_dict['joint_venture_keyword_in_xml']).lower() in str(hold_sub_assoc_value).lower())):
+                joint_keywords = config_dict['joint_venture_keyword_in_xml'].split(',')
+                joint_keywords_lower = [keyword.strip().lower() for keyword in joint_keywords]
+                if str(hold_sub_assoc_value).lower() in joint_keywords_lower:
                     joint_tables_list = [item for item in sql_tables_list if config_dict['joint_table_keyword'] in
                                          item.lower()]
                     # logging.info(joint_tables_list)
@@ -782,4 +782,3 @@ def mgt7_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, x
         return False
     else:
         return True
-

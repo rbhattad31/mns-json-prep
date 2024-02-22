@@ -13,7 +13,8 @@ import PyPDF2
 from PyPDF2 import PdfReader
 import re
 from CaptureTextUsingOCR import extract_text_from_pdf
-
+import sys
+import traceback
 
 def check_name_probability(db_config,cin,input_name):
     setup_logging()
@@ -24,6 +25,8 @@ def check_name_probability(db_config,cin,input_name):
     logging.info(director_query % value)
     cursor.execute(director_query,value)
     directors = cursor.fetchall()
+    cursor.close()
+    connection.close()
     for director in directors:
         dbname = director[0]
         din = director[1]
@@ -43,7 +46,7 @@ def check_name_probability(db_config,cin,input_name):
         percentage_match = jaccard_similarity * 100
 
         # Output the result as a number
-        logging.info(percentage_match)
+        logging.info(f"Percentage Match of {input_name} is {percentage_match}")
         if percentage_match > 75:
             return dbname,din,designation,director
 
@@ -92,7 +95,7 @@ def update_value_in_db(db_config,name,no_of_shares,cin):
             logging.info(f"Error in calculating percentage holding {e}")
             percentage_holding = None
         try:
-            year_query = "select * from director_shareholdings where cin = %s and din_pan = ''"
+            year_query = "select * from director_shareholdings where cin = %s and (din_pan = '' or din_pan IS NULL)"
             year_values = (cin,)
             logging.info(year_query % year_values)
             db_cursor.execute(year_query,year_values)
@@ -146,6 +149,17 @@ def update_value_in_db(db_config,name,no_of_shares,cin):
         db_connection.close()
     except Exception as e:
         logging.info(f"Exception {e} occured while inserting into db")
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+
+        # Get the formatted traceback as a string
+        traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+        # logging.info the traceback details
+        for line in traceback_details:
+            logging.info(line.strip())
+        return 0
+    else:
+        return percentage_holding
 
 
 def image_to_text(image_path):
@@ -163,7 +177,7 @@ def get_hidden_attachment(input_pdf_path, output_path,file_name_hidden_pdf):
         item_name_dict[each_item] = doc.embfile_info(each_item)["filename"]
 
     for item_name, file_name in item_name_dict.items():
-        if 'shareholders' in str(file_name).lower() or 'shareholder' in str(file_name).lower() or 'share holders' in str(file_name).lower() or 'share holder' in str(file_name).lower() or 'los' in str(file_name).lower():
+        if 'shareholders' in str(file_name).lower() or 'shareholder' in str(file_name).lower() or 'share holders' in str(file_name).lower() or 'share holder' in str(file_name).lower() or 'los' in str(file_name).lower() or 'shareholding' in str(file_name).lower() or 'share' in str(file_name).lower() or 'shl' in str(file_name).lower():
             out_pdf =  output_path + "\\" + file_name
             logging.info(out_pdf)
             fData = doc.embfile_get(item_name)
@@ -239,6 +253,7 @@ def MGT_director_shareholdings_pdf_to_db(pdf_path,config_dict,db_config,cin):
         shareholders_details = eval(shareholders_details)
         salutation_list = str(config_dict['salutation_list']).split(',')
         salutation_list = [str(x).strip() for x in salutation_list]
+        total_percentage_holding = 0
         if len(shareholders_details) != 0:
             for shareholder in shareholders_details:
                 name = shareholder['name']
@@ -259,12 +274,40 @@ def MGT_director_shareholdings_pdf_to_db(pdf_path,config_dict,db_config,cin):
                 no_of_shares = float(no_of_shares)
                 logging.info(name)
                 logging.info(no_of_shares)
-                update_value_in_db(db_config,name,no_of_shares,cin)
+                percentage_holding = update_value_in_db(db_config,name,no_of_shares,cin)
+                try:
+                    percentage_holding = float(percentage_holding)
+                except:
+                    pass
+                total_percentage_holding += percentage_holding
+        logging.info(f"Total percentage holding {total_percentage_holding}")
+        if total_percentage_holding == 100 or total_percentage_holding == 100.0:
+            connection = mysql.connector.connect(**db_config)
+            cursor = connection.cursor()
+            update_query = "update orders set director_shareholding_status='Y',director_shareholding_comments = '' where cin = %s"
+            values_cin = (cin,)
+            logging.info(update_query % values_cin)
+            cursor.execute(update_query, values_cin)
+            connection.commit()
+            cursor.close()
+            connection.close()
+            return True
+        else:
+            logging.info(f"Percentage shareholding is {total_percentage_holding} so not hundred")
+            connection = mysql.connector.connect(**db_config)
+            cursor = connection.cursor()
+            error_message = f'Percentage shareholding is {total_percentage_holding} so not hundred'
+            update_query = "update orders set director_shareholding_status='N',director_shareholding_comments = %s where cin = %s"
+            values_cin = (error_message,cin)
+            logging.info(update_query % values_cin)
+            cursor.execute(update_query, values_cin)
+            connection.commit()
+            cursor.close()
+            connection.close()
+            return False
     except Exception as e:
         logging.info(f"Exception in finding address in MGT{e}")
         return False
-    else:
-        return True
 
 
 def mgt_director_shareholdings_main(db_config,config_dict,output_directory,pdf_path,cin):
@@ -279,4 +322,3 @@ def mgt_director_shareholdings_main(db_config,config_dict,output_directory,pdf_p
         logging.info(f"Exception in fetching address from MGT {e}")
     else:
         return True
-

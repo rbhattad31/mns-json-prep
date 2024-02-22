@@ -29,7 +29,12 @@ from DBFunctions import update_modified_date
 from DBFunctions import update_retry_count
 from DBFunctions import get_retry_count
 from MCAPortalMainFunctions import update_completed_status_api
-
+from FinalEmailTable import FinalTable
+from FinancialsTable import financials_table
+from DirectorsTable import directors_table
+from DirectorsTable import directors_shareholdings_table
+from FilesTable import files_table
+from FinancialsTable import aoc_files_table
 
 
 def main():
@@ -44,6 +49,9 @@ def main():
             while next_cin:
                 connection, cursor = connect_to_database(db_config)
                 download_columnnames, downloadData, downloadFetchStatus = fetch_order_download_data_from_table(connection)
+                cin = None
+                receipt_number = None
+                company_name = None
                 for downloaddata in downloadData:
                     try:
                         cin = downloaddata[2]
@@ -51,7 +59,7 @@ def main():
                         user = downloaddata[15]
                         company_name = downloaddata[3]
                         workflow_status = downloaddata[5]
-                        download_status = downloaddata[66]
+                        download_status = downloaddata[67]
                         logging.info(workflow_status)
                         emails = config_dict['to_email']
                         emails = str(emails).split(',')
@@ -77,26 +85,32 @@ def main():
                                     pass
                             else:
                                 retry_counter_db = get_retry_count(db_config, cin)
-                                if retry_counter_db is None:
+                                if retry_counter_db is not None:
+                                    if retry_counter_db == '':
+                                        retry_counter_db = 0
+                                else:
                                     retry_counter_db = 0
                                 try:
                                     retry_counter_db = int(retry_counter_db)
+                                    retry_counter_db = retry_counter_db + 1
                                 except:
                                     pass
-                                retry_counter_db = retry_counter_db + 1
                                 logging.info("Not Downloaded")
                                 update_locked_by_empty(db_config, cin)
                                 update_modified_date(db_config, cin)
                                 update_retry_count(db_config,cin,retry_counter_db)
-                                try:
-                                    sign_out(driver, config_dict, downloaddata)
-                                except:
-                                    pass
                                 if retry_counter_db > 3:
                                     update_process_status('Exception',db_config,cin)
+                                if str(exception_message).lower() != 'already logged in':
+                                    try:
+                                        sign_out(driver, config_dict, downloaddata)
+                                    except:
+                                        pass
                                 raise Exception(f"Download failed for {cin} {exception_message}")
                     except Exception as e:
                         logging.info(f"Error in downloading{e}")
+                        update_locked_by_empty(db_config,cin)
+                        update_modified_date(db_config,cin)
                 connection, cursor = connect_to_database(db_config)
                 columnnames,CinDBData , CinFetchStatus = fetch_order_data_from_table(connection)
                 if len(CinDBData) < 1:
@@ -115,7 +129,7 @@ def main():
                             user = CinData[15]
                             company_name = CinData[3]
                             workflow_status = CinData[5]
-                            download_status = CinData[66]
+                            download_status = CinData[67]
                             logging.info(workflow_status)
                             emails = config_dict['to_email']
                             emails = str(emails).split(',')
@@ -130,9 +144,7 @@ def main():
                                     update_modified_date(db_config,cin)
                                     update_locked_by_empty(db_config,cin)
                                     logging.info("XML Not Generated successfully")
-                                    if 'driver' in locals():
-                                        sign_out(driver, config_dict, CinData)
-                                    continue
+                                    raise Exception("XML Not Generated successfully")
                             if workflow_status == 'db_insertion_pending':
                                 update_locked_by(db_config, cin)
                                 Insert_fields_into_DB,exception_message_db = insert_fields_into_db(hidden_attachments, config_dict, CinData,excel_file)
@@ -152,7 +164,13 @@ def main():
                                     logging.info("JSON Loader generated succesfully")
                                     update_json_loader_db(CinData, config_dict)
                                     cin_complete_subject = str(config_dict['cin_Completed_subject']).format(cin,receipt_number)
-                                    cin_completed_body = str(config_dict['cin_Completed_body']).format(cin,receipt_number,company_name)
+                                    table = FinalTable(db_config,cin)
+                                    financials_Table = financials_table(db_config,cin)
+                                    directors_Table = directors_table(db_config,cin)
+                                    shareholdings_table = directors_shareholdings_table(db_config,cin)
+                                    files_Table = files_table(db_config,cin)
+                                    aoc_table = aoc_files_table(db_config,cin)
+                                    cin_completed_body = str(config_dict['cin_Completed_body']).format(cin,receipt_number,company_name,table,aoc_table,financials_Table,directors_Table,files_Table,shareholdings_table)
                                     update_process_status('Completed',db_config,cin)
                                     update_locked_by_empty(db_config,cin)
                                     config_transactional_log_path = config_dict['config_transactional_log_path']
@@ -179,13 +197,16 @@ def main():
                                     raise Exception(f"Exception occured for json loader generation {cin} {exception_message}")
                         except Exception as e:
                             retry_counter_db = get_retry_count(db_config, cin)
-                            if retry_counter_db is None:
+                            if retry_counter_db is not None:
+                                if retry_counter_db == '':
+                                    retry_counter_db = 0
+                            else:
                                 retry_counter_db = 0
                             try:
                                 retry_counter_db = int(retry_counter_db)
+                                retry_counter_db = retry_counter_db + 1
                             except:
                                 pass
-                            retry_counter_db = retry_counter_db + 1
                             update_modified_date(db_config,cin)
                             update_retry_count(db_config, cin, retry_counter_db)
                             if retry_counter_db > 3:
@@ -202,11 +223,6 @@ def main():
                                 logging.error(line.strip())
                             exception_subject = str(config_dict['Exception_subject']).format(cin,receipt_number)
                             exception_body = str(config_dict['Exception_message']).format(cin,receipt_number,company_name,e)
-                            try:
-                                if 'driver' in locals():
-                                    sign_out(driver, config_dict, CinData)
-                            except:
-                                pass
                             try:
                                 send_email(config_dict,exception_subject,exception_body,emails,None)
                             except Exception as e:
