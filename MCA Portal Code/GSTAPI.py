@@ -192,7 +192,7 @@ def insert_gst_number(db_config,config_dict,cin,company,root_path):
             raise Exception(f"No Response from API for cin {cin}")
         try:
             json_response = response.json()
-            details = json_response['result']
+            details = json_response['gstinList']
             message = details['message']
             logging.info(message)
             if str(message).lower() == 'gstin not found':
@@ -217,7 +217,7 @@ def insert_gst_number(db_config,config_dict,cin,company,root_path):
         if response.status_code == 200:
             try:
                 json_response = response.json()
-                result = json_response['result']
+                result = json_response['gstinList']
                 logging.info(json_response)
             except Exception as e:
                 logging.info(response)
