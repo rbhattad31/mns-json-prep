@@ -540,7 +540,7 @@ def update_form_extraction_status(db_config, cin, CompanyName):
                                     FROM documents
                                     WHERE document LIKE '%MGT%' AND `cin` = '{}' AND `company` = '{}' AND Category = 'Annual Returns and Balance Sheet eForms'
                                     ORDER BY STR_TO_DATE(document_date_year, '%d-%m-%Y') DESC
-                                    LIMIT 1
+                                    LIMIT 2
                                     FOR UPDATE
                                 ) AS t2 ON t1.id = t2.id
                                 SET t1.form_data_extraction_needed = 'Y'
@@ -583,13 +583,20 @@ WHERE d1.cin = '{}' AND d1.document LIKE '%MSME%';""".format(cin, cin)
 JOIN (
     SELECT MAX(STR_TO_DATE(document_date_year, '%d-%m-%Y')) AS latest_date
     FROM documents
-    WHERE cin = '{}' AND document LIKE '%AOC-4%' AND document not like '%AOC-4 CSR%' AND document not like '%AOC-4(XBRL)%'
+    WHERE cin = '{}' 
+    AND document LIKE '%AOC-4%' 
+    AND document NOT LIKE '%AOC-4 CSR%' 
+    AND document NOT LIKE '%AOC-4(XBRL)%'
     GROUP BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y'))
     ORDER BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y')) DESC
     LIMIT 4
-) AS d2 ON STR_TO_DATE(d1.document_date_year, '%d-%m-%Y') = d2.latest_date
+) AS d2 ON YEAR(STR_TO_DATE(d1.document_date_year, '%d-%m-%Y')) = YEAR(d2.latest_date)
 SET d1.form_data_extraction_needed = 'Y'
-WHERE d1.cin = '{}' AND d1.document LIKE '%AOC-4%' AND d1.document not LIKE '%AOC-4 CSR%' AND d1.document not LIKE '%AOC-4(XBRL)%';""".format(cin, cin)
+WHERE d1.cin = '{}' 
+AND d1.document LIKE '%AOC-4%' 
+AND d1.document NOT LIKE '%AOC-4 CSR%' 
+AND d1.document NOT LIKE '%AOC-4(XBRL)%';
+""".format(cin, cin)
             logging.info(update_query_AOC)
             cursor.execute(update_query_AOC)
             connection.commit()
@@ -602,16 +609,21 @@ WHERE d1.cin = '{}' AND d1.document LIKE '%AOC-4%' AND d1.document not LIKE '%AO
             connection = mysql.connector.connect(**db_config)
             cursor = connection.cursor()
             update_query_AOC_xbrl = """UPDATE documents AS d1
-        JOIN (
-            SELECT MAX(STR_TO_DATE(document_date_year, '%d-%m-%Y')) AS latest_date
-            FROM documents
-            WHERE cin = '{}' AND document LIKE '%AOC-4(XBRL)%' AND document not like '%AOC-4 CSR%'
-            GROUP BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y'))
-            ORDER BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y')) DESC
-            LIMIT 4
-        ) AS d2 ON STR_TO_DATE(d1.document_date_year, '%d-%m-%Y') = d2.latest_date
-        SET d1.form_data_extraction_needed = 'Y'
-        WHERE d1.cin = '{}' AND d1.document LIKE '%AOC-4(XBRL)%' AND d1.document not LIKE '%AOC-4 CSR%';""".format(cin, cin)
+JOIN (
+    SELECT MAX(STR_TO_DATE(document_date_year, '%d-%m-%Y')) AS latest_date
+    FROM documents
+    WHERE cin = '{}'
+    AND document LIKE '%AOC-4(XBRL)%'
+    AND document NOT LIKE '%AOC-4 CSR%'
+    GROUP BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y'))
+    ORDER BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y')) DESC
+    LIMIT 4
+) AS d2 ON YEAR(STR_TO_DATE(d1.document_date_year, '%d-%m-%Y')) = YEAR(d2.latest_date)
+SET d1.form_data_extraction_needed = 'Y'
+WHERE d1.cin = '{}'
+AND d1.document LIKE '%AOC-4(XBRL)%'
+AND d1.document NOT LIKE '%AOC-4 CSR%';
+""".format(cin, cin)
             logging.info(update_query_AOC_xbrl)
             cursor.execute(update_query_AOC_xbrl)
             connection.commit()
@@ -648,13 +660,16 @@ WHERE d1.cin = '{}' AND d1.document LIKE '%AOC-4%' AND d1.document not LIKE '%AO
 JOIN (
     SELECT MAX(STR_TO_DATE(document_date_year, '%d-%m-%Y')) AS latest_date
     FROM documents
-    WHERE cin = '{}' AND document LIKE '%XBRL document in respect Consolidated%'
+    WHERE cin = '{}'
+    AND document LIKE '%XBRL document in respect Consolidated%'
     GROUP BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y'))
     ORDER BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y')) DESC
     LIMIT 4
-) AS d2 ON STR_TO_DATE(d1.document_date_year, '%d-%m-%Y') = d2.latest_date
+) AS d2 ON YEAR(STR_TO_DATE(d1.document_date_year, '%d-%m-%Y')) = YEAR(d2.latest_date)
 SET d1.form_data_extraction_needed = 'Y'
-WHERE d1.cin = '{}' AND d1.document LIKE '%XBRL document in respect Consolidated%';""".format(cin, cin)
+WHERE d1.cin = '{}'
+AND d1.document LIKE '%XBRL document in respect Consolidated%'
+""".format(cin, cin)
             logging.info(update_query_Xbrl_consolidated)
             cursor.execute(update_query_Xbrl_consolidated)
             connection.commit()
@@ -662,13 +677,16 @@ WHERE d1.cin = '{}' AND d1.document LIKE '%XBRL document in respect Consolidated
 JOIN (
     SELECT MAX(STR_TO_DATE(document_date_year, '%d-%m-%Y')) AS latest_date
     FROM documents
-    WHERE cin = '{}' AND document LIKE '%XBRL financial statements%'
+    WHERE cin = '{}'
+    AND document LIKE '%XBRL financial statements%'
     GROUP BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y'))
     ORDER BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y')) DESC
     LIMIT 4
-) AS d2 ON STR_TO_DATE(d1.document_date_year, '%d-%m-%Y') = d2.latest_date
+) AS d2 ON YEAR(STR_TO_DATE(d1.document_date_year, '%d-%m-%Y')) = YEAR(d2.latest_date)
 SET d1.form_data_extraction_needed = 'Y'
-WHERE d1.cin = '{}' AND d1.document LIKE '%XBRL financial statements%';""".format(cin, cin)
+WHERE d1.cin = '{}'
+AND d1.document LIKE '%XBRL financial statements%'
+""".format(cin, cin)
             logging.info(update_query_Xbrl)
             cursor.execute(update_query_Xbrl)
             connection.commit()

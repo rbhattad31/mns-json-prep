@@ -103,6 +103,7 @@ def fresh_name_pdf_to_db(pdf_path,config_dict,db_config,cin):
     else:
         return True
 
+
 def fresh_name_main(db_config,config_dict,pdf_path,cin):
     try:
         address = fresh_name_pdf_to_db(pdf_path,config_dict,db_config,cin)

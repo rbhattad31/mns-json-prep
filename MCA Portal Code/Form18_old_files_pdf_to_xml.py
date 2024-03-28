@@ -49,9 +49,23 @@ def extract_form_data(pdf_path, output_xml_path):
                                     field_element.text = 'No'
                                 else:
                                     field_element.text = 'Yes'
+                    elif widget.field_type_string == 'CheckBox':
+                        print("Check Box")
+                        field_name = widget.field_name
+                        print(field_name)
+                        if widget.field_value:
+                            field_value = widget.field_value
+                            print(field_value)
+                        else:
+                            field_value = ''
+                        # Sanitize the field name to create a valid XML node name
+                        sanitized_name = sanitize_xml_node_name(field_name)
+
+                        # Create a new XML element for the field
+                        field_element = ET.SubElement(root, sanitized_name)
+                        field_element.text = field_value
                     else:
                         field_name = widget.field_name
-
                         # Use the page object to get the text from the widget
                         field_value = page.get_text("text", clip=widget.rect)
 

@@ -55,6 +55,8 @@ from DBFunctions import update_locked_by_empty
 import requests
 import json
 import time
+from AOC_XBRL_HiddenAttachment_Generation import xbrl_xml_attachment
+
 
 def sign_out(driver,config_dict,CinData):
     try:
@@ -159,6 +161,10 @@ def Login_and_Download(config_dict,CinData):
                     continue
                 if file_download:
                     print(f"Downloaded for {category} ")
+                    if category == 'Annual Returns and Balance Sheet eForms':
+                        xbrl_attachment = xbrl_xml_attachment(db_config,Cin,CompanyName)
+                        if xbrl_attachment:
+                            logging.info(f"Successfully inserted XBRL Hidden attachments for {Cin}")
                 else:
                     continue
             except Exception as e:
@@ -208,6 +214,7 @@ def Login_and_Download(config_dict,CinData):
         return False, driver, e
     else:
         return True,driver,None
+
 
 def XMLGeneration(db_config,CinData,config_dict):
     try:
@@ -308,7 +315,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
         AOC_XBRL_first_file_found = False
         AOC_4_NBFC_first_file_found = False
         Form8_first_file_found = False
-
+        mgt_processed = False
         for xml in xml_files_to_insert:
             try:
                 path = xml[8]
@@ -316,7 +323,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                 file_name = xml[4]
                 xml_file_path = str(path).replace('.pdf', '.xml')
                 output_excel_path = str(path).replace('.pdf', '.xlsx')
-                if 'MGT'.lower() in str(file_name).lower():
+                if 'MGT'.lower() in str(file_name).lower() and not mgt_processed:
                     logging.info(f"Going to extract for {file_name}")
                     Sheet_name = "MGT"
                     config_dict_MGT, config_status = create_main_config_dictionary(excel_file, Sheet_name)
@@ -328,6 +335,14 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     mgt_7_db_insertion = mgt7_xml_to_db(db_config, config_dict_MGT, map_file_path, map_file_sheet_name, xml_file_path,output_excel_path, Cin, CompanyName)
                     if mgt_7_db_insertion:
                         update_db_insertion_status(Cin,file_name,config_dict,'Success')
+                        mgt_processed = True
+                        db_connection = mysql.connector.connect(**db_config)
+                        db_cursor = db_connection.cursor()
+                        mgt_update_query = "update documents set DB_insertion_status='Success' where document like '%MGT%' and cin='{}' and form_data_extraction_needed = 'Y'".format(Cin)
+                        logging.info(mgt_update_query)
+                        db_cursor.execute(mgt_update_query)
+                        db_cursor.close()
+                        db_connection.close()
                     db_connection = mysql.connector.connect(**db_config)
                     db_cursor = db_connection.cursor()
                     dir_check_query = "select * from documents where cin = %s and form_data_extraction_needed = 'Y' and LOWER(document) like '%%dir-12%%'"

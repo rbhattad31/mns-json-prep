@@ -11,6 +11,71 @@ import traceback
 from datetime import datetime
 import logging
 from logging_config import setup_logging
+import xml.etree.ElementTree as Et
+
+
+def get_single_value_from_xml(xml_root, parent_node, child_node):
+    try:
+        setup_logging()
+        if child_node == 'nan':
+            elements = xml_root.findall(f'.//{parent_node}')
+        else:
+            elements = xml_root.findall(f'.//{parent_node}//{child_node}')
+
+        for element in elements:
+            if element.text is None:
+                continue
+            if element.text is not None:
+                if '\r' in str(element.text):
+                    return str(element.text).replace('\r', '\n')
+                else:
+                    return str(element.text)
+        return None
+    except Exception as e:
+        logging.info(f"An error occurred: {e}")
+        return None
+
+
+def get_pan_number_second_file(db_config,cin):
+    try:
+        setup_logging()
+        connection = mysql.connector.connect(**db_config)
+        cursor = connection.cursor()
+        connection.autocommit = True
+        mgt_file_query = "select * from documents where cin = %s and form_data_extraction_needed = 'Y' and document like '%%MGT%%' and form_data_extraction_status = 'Success'"
+        values = (cin,)
+        logging.info(mgt_file_query % values)
+        cursor.execute(mgt_file_query,values)
+        mgt_result = cursor.fetchall()
+        cursor.close()
+        connection.close()
+        if len(mgt_result) == 2:
+            logging.info("Fetching pan number from second file")
+            second_file = mgt_result[1]
+            logging.info(second_file)
+            path = second_file[8]
+            xml_file_path = str(path).replace('.pdf','.xml')
+            filename = second_file[4]
+            if 'MGT-7A'.lower() in str(filename).lower():
+                parent_node = 'ZMCA_MGT_7A'
+                child_node = 'IT_PAN_OF_COMPNY'
+            else:
+                parent_node = 'ZMCA_NCA_MGT_7'
+                child_node = 'IT_PAN_OF_COMPNY'
+            try:
+                xml_tree = Et.parse(xml_file_path)
+                xml_root = xml_tree.getroot()
+                # xml_str = Et.tostring(xml_root, encoding='unicode')
+            except Exception as e:
+                raise Exception("Below exception occurred while reading xml file " + '\n' + str(e))
+            pan_number = get_single_value_from_xml(xml_root,parent_node,child_node)
+            return pan_number
+        else:
+            logging.info(f"Only one Success MGT File found for {cin}")
+            return None
+    except Exception as e:
+        logging.error(f"Error in fetching pan number from second file {e}")
+        return None
 
 
 def update_database_single_value_GST(db_config, table_name, cin_column_name, cin_value,company_name_column_name,company_name, column_name, column_value,gst_number):
@@ -125,6 +190,30 @@ def insert_gst_number(db_config,config_dict,cin,company,root_path):
         if response == '':
             logging.info(f"No response from API")
             raise Exception(f"No Response from API for cin {cin}")
+        try:
+            json_response = response.json()
+            details = json_response['result']
+            message = details['message']
+            logging.info(message)
+            if str(message).lower() == 'gstin not found':
+                logging.info("GSTin not found so fetching pan number from second file")
+                new_pan_number = get_pan_number_second_file(db_config,cin)
+                logging.info(f"New Pan Number {new_pan_number}")
+                if new_pan_number is not None:
+                    payload = json.dumps({
+                        "panNumber": new_pan_number
+                    })
+                    headers = {
+                        'Subscriptionkey': config_dict['api_subscription_key'],
+                        'Content-Type': 'application/json'
+                    }
+                    response = requests.request("POST", url, headers=headers, data=payload)
+                    if response == '':
+                        logging.info(f"No response from API")
+                        raise Exception(f"No Response from API for cin {cin}")
+        except Exception as e:
+            logging.info(f"Exception in fetching gst number from second pan number {e}")
+
         if response.status_code == 200:
             try:
                 json_response = response.json()

@@ -36,6 +36,7 @@ from DirectorsTable import directors_shareholdings_table
 from FilesTable import files_table
 from FinancialsTable import aoc_files_table
 from FilesTable import change_of_name_table
+from InsertDocumentDetailsFromFolder import insert_document_details
 
 
 def main():
@@ -53,6 +54,9 @@ def main():
                 cin = None
                 receipt_number = None
                 company_name = None
+                driver = None
+                exception_message = ''
+                root_path = config_dict['Root path']
                 for downloaddata in downloadData:
                     try:
                         cin = downloaddata[2]
@@ -61,19 +65,23 @@ def main():
                         company_name = downloaddata[3]
                         workflow_status = downloaddata[5]
                         download_status = downloaddata[67]
+                        manual_download_status = downloaddata[77]
                         logging.info(workflow_status)
                         emails = config_dict['to_email']
                         emails = str(emails).split(',')
                         if (workflow_status == 'Payment_success' or workflow_status == 'XML_Pending') and download_status == 'N':
                             logging.info(f"Starting to download for {cin}")
                             update_locked_by(db_config, cin)
-                            subject_start = str(config_dict['subject_start']).format(cin, receipt_number)
-                            body_start = str(config_dict['Body_start']).format(cin, receipt_number, company_name)
-                            try:
-                                send_email(config_dict, subject_start, body_start, emails, None)
-                            except Exception as e:
-                                logging.info(f"Error sending email {e}")
-                            Download_Status, driver, exception_message = Login_and_Download(config_dict, downloaddata)
+                            if manual_download_status == 'Y':
+                                Download_Status = insert_document_details(db_config,cin,root_path,company_name)
+                            else:
+                                subject_start = str(config_dict['subject_start']).format(cin, receipt_number)
+                                body_start = str(config_dict['Body_start']).format(cin, receipt_number, company_name)
+                                try:
+                                    send_email(config_dict, subject_start, body_start, emails, None)
+                                except Exception as e:
+                                    logging.info(f"Error sending email {e}")
+                                Download_Status, driver, exception_message = Login_and_Download(config_dict, downloaddata)
                             if Download_Status:
                                 logging.info("Downloaded Successfully")
                                 # update_status(user,'XML_Pending',db_config,cin)

@@ -295,6 +295,26 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
                 single_df.at[index, 'Value'] = value
         elif field_name == 'phoneNumber' or field_name == 'cin_registrar' or field_name == 'name_registrar' or field_name == 'registrar_address' or field_name == 'pan' or field_name == 'website':
             single_df.at[index, 'Value'] = value
+        elif field_name == 'Email':
+            connection = mysql.connector.connect(**db_config)
+            cursor = connection.cursor()
+            email_check_query = "select email from company where cin = '{}'".format(cin_column_value)
+            logging.info(email_check_query)
+            cursor.execute(email_check_query)
+            email_db = cursor.fetchone()[0]
+            logging.info(email_db)
+            cursor.close()
+            connection.close()
+            if email_db is not None:
+                if '*' in email_db:
+                    logging.info("* is there in email so taking email from MGT")
+                    single_df.at[index, 'Value'] = value
+                else:
+                    logging.info("Email found so skipping")
+                    single_df = single_df[single_df['Field_Name'] != 'Email']
+            else:
+                logging.info("No email found so taking email from MGT")
+                single_df.at[index, 'Value'] = value
         else:
             if value is not None:
                 if all(char == '0' for char in value):
