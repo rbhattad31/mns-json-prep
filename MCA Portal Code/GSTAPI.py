@@ -180,7 +180,7 @@ def insert_gst_number(db_config,config_dict,cin,company,root_path):
             raise Exception(error_message)
 
         payload = json.dumps({
-            "panNumber": pan_number
+            "pan": pan_number
         })
         headers = {
             'Subscriptionkey': config_dict['api_subscription_key'],
@@ -201,7 +201,7 @@ def insert_gst_number(db_config,config_dict,cin,company,root_path):
                 logging.info(f"New Pan Number {new_pan_number}")
                 if new_pan_number is not None:
                     payload = json.dumps({
-                        "panNumber": new_pan_number
+                        "pan": new_pan_number
                     })
                     headers = {
                         'Subscriptionkey': config_dict['api_subscription_key'],
@@ -391,3 +391,4 @@ def fetch_gst_details(config_dict,gst_number,status):
             return df_map
     except Exception as e:
         logging.error(f"Error in fetching GST Details {e}")
+
