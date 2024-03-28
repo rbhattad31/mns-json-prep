@@ -27,7 +27,7 @@ def insert_document_details(db_config,cin,root_path,company_name):
         cin_folder_path = os.path.join(root_path,cin)
         if os.path.exists(cin_folder_path):
             folders = [folder for folder in os.listdir(cin_folder_path) if os.path.isdir(os.path.join(cin_folder_path, folder))]
-            if len(folders) == 1:
+            if len(folders) <= 1:
                 raise Exception(f"No Files found for {cin}")
             for folder in folders:
                 try:
