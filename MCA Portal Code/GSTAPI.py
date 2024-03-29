@@ -288,6 +288,7 @@ def insert_gst_number(db_config,config_dict,cin,company,root_path):
             connection = mysql.connector.connect(**db_config)
             cursor = connection.cursor()
             update_query = "update orders set gst_exception_message = %s where cin = %s"
+            error = str(error)
             values_cin = (error, cin)
             logging.info(update_query % values_cin)
             cursor.execute(update_query, values_cin)
@@ -334,27 +335,28 @@ def fetch_gst_details(config_dict,gst_number,status):
         response = requests.request("POST", url, headers=headers, data=payload)
         if response.status_code == 200:
             gst_json_response = response.json()
-            gst_details_result = gst_json_response[config_dict['gst_result_keyword']][config_dict['gst_result_keyword']][config_dict['gstn_detailed_keyword']]
+            gst_details_result = gst_json_response[config_dict['gst_result_keyword']]
             for index,row in df_map.iterrows():
                 field_name = str(row.iloc[0]).strip()
                 json_node = str(row.iloc[1]).strip()
                 table = str(row.iloc[2]).strip()
                 column = str(row.iloc[3]).strip()
                 if field_name == config_dict['filings_keyword']:
-                    value = gst_json_response[config_dict['gst_result_keyword']][config_dict['gst_result_keyword']][json_node]
+                    value = gst_json_response[config_dict['filing_node_keyword']][json_node][0]
                     for entry in value:
                         # Convert the dateOfFiling to yyyy-mm-dd format
                         try:
-                            entry["dateOfFiling"] = datetime.strptime(entry["dateOfFiling"], "%d/%m/%Y").strftime(
+                            entry["DateOfFiling"] = datetime.strptime(entry["DateOfFiling"], "%d/%m/%Y").strftime(
                                 "%Y-%m-%d")
                         except:
                             pass
                         try:
-                            entry["return_type"] = entry.pop("gstType", entry["gstType"])
-                            entry["date_of_filing"] = entry.pop("dateOfFiling", entry["dateOfFiling"])
-                            entry["financial_year"] = entry.pop("filingYear", entry["filingYear"])
-                            entry["tax_period"] = entry.pop("monthOfFiling", entry["monthOfFiling"])
-                            entry["status"] = entry.pop("gstStatus", entry["gstStatus"])
+                            entry["return_type"] = entry.pop("ReturnType", entry["ReturnType"])
+                            entry["date_of_filing"] = entry.pop("DateOfFiling", entry["DateOfFiling"])
+                            entry["financial_year"] = entry.pop("FinYear", entry["FinYear"])
+                            entry["tax_period"] = entry.pop("ReturnPeriod", entry["ReturnPeriod"])
+                            entry["methodOfFilling"] = entry.pop("ModeOfFiling", entry["ModeOfFiling"])
+                            #entry["status"] = entry.pop("gstStatus", entry["gstStatus"])
                         except Exception as e:
                             logging.info(f"Exception in updating key names {e}")
                             continue
@@ -367,14 +369,14 @@ def fetch_gst_details(config_dict,gst_number,status):
                 else:
                     value = gst_details_result[json_node]
                     if field_name == config_dict['state_keyword'] or field_name == config_dict['state_jurisdiction_keyword']:
-                        pattern = re.compile(r'STATE - ([\w\s]+)(?:,|$)')
+                        pattern = re.compile(r'State - ([\w\s]+)(?:,|$)')
                         # Use the findall method to extract the state information
                         matches = pattern.findall(value)
                         # logging.info the result
                         if matches:
                             value = matches[0]
                     elif field_name == config_dict['centre_jurisdiction_keyword']:
-                        pattern = re.compile(r'COMMISSIONERATE - (\w+)')
+                        pattern = re.compile(r'Commissionerate - (\w+)')
                         # Use the findall method to extract the state information
                         matches = pattern.findall(value)
                         # logging.info the result
@@ -382,6 +384,12 @@ def fetch_gst_details(config_dict,gst_number,status):
                             value = matches[0]
                     elif field_name == config_dict['nature_of_business_activities_keyword']:
                         value = '\n'.join(value)
+                    elif field_name == 'date_of_registration':
+                        try:
+                            value = datetime.strptime(value, "%d/%m/%Y").strftime(
+                                "%Y-%m-%d")
+                        except:
+                            pass
                     elif field_name == 'legal_business_name' or field_name == 'trade_name':
                         try:
                             value = value.replace("'", '')
@@ -391,4 +399,3 @@ def fetch_gst_details(config_dict,gst_number,status):
             return df_map
     except Exception as e:
         logging.error(f"Error in fetching GST Details {e}")
-
