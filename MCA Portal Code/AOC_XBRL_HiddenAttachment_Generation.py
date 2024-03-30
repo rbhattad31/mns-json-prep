@@ -26,7 +26,7 @@ def check_missing_years(db_config,cin):
                             WHERE cin = '{}'
                               AND form_data_extraction_needed = 'Y'
                               AND document LIKE '%AOC-4(XBRL)%'
-                              AND Category = 'Annual Returns and Balance Sheet eForms'
+                              AND LOWER(Category) LIKE '%annual returns%'
                               AND YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y')) NOT IN (
                                 SELECT DISTINCT YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y'))
                                 FROM documents
