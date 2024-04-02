@@ -1733,7 +1733,7 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                         try:
                             values[0] = str(values[0]).replace('\"', '')
                             values[0] = str(values[0]).replace("'", "")
-                            values[0] = str(values[0]).replace('\r','')
+                            values[0] = str(values[0]).replace('\r',' ')
                         except Exception as e:
                             pass
                         try:
