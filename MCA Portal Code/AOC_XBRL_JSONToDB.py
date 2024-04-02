@@ -1731,6 +1731,12 @@ def AOC_XBRL_JSON_to_db(db_config, config_dict, map_file_path, map_file_sheet_na
                     elif year_category == 'Common':
                         logging.info(f"Going for common{field_name}")
                         try:
+                            values[0] = str(values[0]).replace('\"', '')
+                            values[0] = str(values[0]).replace("'", "")
+                            values[0] = str(values[0]).replace('\r','')
+                        except Exception as e:
+                            pass
+                        try:
                             single_df.at[index, 'Value'] = values[0]
                         except Exception as e:
                             single_df.at[index, 'Value'] = None
