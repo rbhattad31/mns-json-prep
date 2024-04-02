@@ -17,6 +17,7 @@ user_name = os.getlogin()
 
 
 def check_missing_years(db_config,cin):
+    setup_logging()
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
     connection.autocommit = True
@@ -27,18 +28,19 @@ def check_missing_years(db_config,cin):
                               AND form_data_extraction_needed = 'Y'
                               AND document LIKE '%AOC-4(XBRL)%'
                               AND LOWER(Category) LIKE '%annual returns%'
-                              AND YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y')) NOT IN (
-                                SELECT DISTINCT YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y'))
-                                FROM documents
-                                WHERE Category = 'Other Attachments'
-                                  AND cin = '{}'
+                              AND NOT EXISTS (
+                                SELECT 1
+                                FROM documents d2
+                                WHERE d2.Category = 'Other Attachments'
+                                  AND d2.cin = '{}'
                                   AND (
-                                    document LIKE '%XBRL document in respect Consolidated%'
-                                    OR document LIKE '%XBRL financial statements%'
+                                    d2.document LIKE '%XBRL document in respect Consolidated%'
+                                    OR d2.document LIKE '%XBRL financial statements%'
                                   )
+                                  AND YEAR(STR_TO_DATE(d2.document_date_year, '%d-%m-%Y')) = YEAR(STR_TO_DATE(documents.document_date_year, '%d-%m-%Y'))
                               );
                                 """.format(cin,cin)
-    print(missing_years_query)
+    logging.info(missing_years_query)
     cursor.execute(missing_years_query)
     missing_year_result = cursor.fetchall()
     cursor.close()
