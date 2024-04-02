@@ -538,13 +538,13 @@ def update_form_extraction_status(db_config, cin, CompanyName):
                                 JOIN (
                                     SELECT id
                                     FROM documents
-                                    WHERE document LIKE '%MGT%' AND `cin` = '{}' AND `company` = '{}' AND Category = 'Annual Returns and Balance Sheet eForms'
+                                    WHERE document LIKE '%MGT%' AND `cin` = '{}' AND `company` = '{}' AND LOWER(Category) like '%annual returns%'
                                     ORDER BY STR_TO_DATE(document_date_year, '%d-%m-%Y') DESC
                                     LIMIT 2
                                     FOR UPDATE
                                 ) AS t2 ON t1.id = t2.id
                                 SET t1.form_data_extraction_needed = 'Y'
-                                WHERE t1.document LIKE '%MGT%' AND `cin` = '{}' AND `company` = '{}' AND Category = 'Annual Returns and Balance Sheet eForms';
+                                WHERE t1.document LIKE '%MGT%' AND `cin` = '{}' AND `company` = '{}' AND LOWER(Category) like '%annual returns%;
 
                                 COMMIT;""".format(cin, CompanyName, cin, CompanyName)
             logging.info(update_query_MGT)

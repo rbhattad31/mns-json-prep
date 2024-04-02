@@ -36,6 +36,10 @@ def insert_document_details(db_config,cin,root_path,company_name):
                     for file in files:
                         try:
                             file_path = os.path.join(folder_path,file)
+                            if '.pdf' not in file_path:
+                                new_file_path = file_path + '.pdf'
+                                os.rename(file_path,new_file_path)
+                                file_path = new_file_path
                             pattern = r'(?<=[-_])(?:0[1-9]|[12][0-9]|3[01])(?:0[1-9]|1[0-2])(?:\d{4}|\d{2})'
                             matches = re.findall(pattern, file)
                             print(matches)
