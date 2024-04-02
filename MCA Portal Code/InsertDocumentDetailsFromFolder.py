@@ -6,6 +6,7 @@ import re
 import sys
 import traceback
 from DownloadFile import update_form_extraction_status
+from DBFunctions import get_run_xbrl_status
 from AOC_XBRL_HiddenAttachment_Generation import xbrl_xml_attachment
 current_date = datetime.datetime.now()
 today_date = current_date.strftime("%d/%m/%Y %H:%M:%S'")
@@ -83,11 +84,15 @@ def insert_document_details(db_config,cin,root_path,company_name):
                 except Exception as e:
                     print(f"Exception occurred in folder {folder} {e}")
             update_extraction_status = update_form_extraction_status(db_config, cin, company_name)
-            xbrl_hidden_xml_attachment = xbrl_xml_attachment(db_config,cin,company_name)
+            run_xbrl_status = get_run_xbrl_status(db_config,cin)
+            if str(run_xbrl_status).lower() != 'y':
+                xbrl_hidden_xml_attachment = xbrl_xml_attachment(db_config,cin,company_name)
+                if xbrl_hidden_xml_attachment:
+                    print("Successfully XBRL hidden attachments generated")
+            else:
+                print("XBRL hidden attachments already generated")
             if update_extraction_status:
                 print("Successfully changed form extraction status")
-            if xbrl_hidden_xml_attachment:
-                print("Successfully XBRL hidden attachments generated")
         else:
             raise Exception(f"Folder not found for cin {cin}")
     except Exception as e:

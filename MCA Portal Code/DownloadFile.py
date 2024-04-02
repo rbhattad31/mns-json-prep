@@ -544,7 +544,7 @@ def update_form_extraction_status(db_config, cin, CompanyName):
                                     FOR UPDATE
                                 ) AS t2 ON t1.id = t2.id
                                 SET t1.form_data_extraction_needed = 'Y'
-                                WHERE t1.document LIKE '%MGT%' AND `cin` = '{}' AND `company` = '{}' AND LOWER(Category) like '%annual returns%;
+                                WHERE t1.document LIKE '%MGT%' AND `cin` = '{}' AND `company` = '{}' AND LOWER(Category) like '%annual returns%';
 
                                 COMMIT;""".format(cin, CompanyName, cin, CompanyName)
             logging.info(update_query_MGT)
