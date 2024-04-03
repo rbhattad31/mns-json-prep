@@ -338,6 +338,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                         mgt_processed = True
                         db_connection = mysql.connector.connect(**db_config)
                         db_cursor = db_connection.cursor()
+                        db_connection.autocommit = True
                         mgt_update_query = "update documents set DB_insertion_status='Success' where document like '%MGT%' and cin='{}' and form_data_extraction_needed = 'Y'".format(Cin)
                         logging.info(mgt_update_query)
                         db_cursor.execute(mgt_update_query)
