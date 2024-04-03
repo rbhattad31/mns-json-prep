@@ -33,7 +33,7 @@ def insert_document_details(db_config,cin,root_path,company_name):
             for folder in folders:
                 try:
                     folder_path = os.path.join(cin_folder_path,folder)
-                    files = [files for files in os.listdir(folder_path) if not (files.endswith('.xml') or files.endswith('.json') or files.endswith('.xlsx'))]
+                    files = [files for files in os.listdir(folder_path) if not (files.endswith('.xml') or files.endswith('.json') or files.endswith('.xlsx') or files.endswith('.png') or files.endswith('.jpg'))]
                     for file in files:
                         try:
                             file_path = os.path.join(folder_path,file)
