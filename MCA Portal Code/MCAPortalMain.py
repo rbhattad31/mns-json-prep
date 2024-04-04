@@ -73,7 +73,13 @@ def main():
                             logging.info(f"Starting to download for {cin}")
                             update_locked_by(db_config, cin)
                             if manual_download_status == 'Y':
-                                Download_Status = insert_document_details(db_config,cin,root_path,company_name)
+                                subject_start = str(config_dict['subject_start_manual']).format(cin,receipt_number)
+                                body_start = str(config_dict['Body_start']).format(cin, receipt_number, company_name)
+                                try:
+                                    send_email(config_dict, subject_start, body_start, emails, None)
+                                except Exception as e:
+                                    logging.info(f"Error sending email {e}")
+                                Download_Status,exception_message = insert_document_details(db_config,cin,root_path,company_name)
                             else:
                                 subject_start = str(config_dict['subject_start']).format(cin, receipt_number)
                                 body_start = str(config_dict['Body_start']).format(cin, receipt_number, company_name)
@@ -92,6 +98,17 @@ def main():
                                     sign_out(driver, config_dict, downloaddata)
                                 except:
                                     pass
+                                if manual_download_status == 'Y':
+                                    subject_end = str(config_dict['subject_end_manual']).format(cin, receipt_number)
+                                    body_end = str(config_dict['Body_end_manual']).format(cin, receipt_number, company_name)
+                                else:
+                                    subject_end = str(config_dict['subject_end']).format(cin, receipt_number)
+                                    body_end = str(config_dict['Body_end']).format(cin, receipt_number,
+                                                                                          company_name)
+                                try:
+                                    send_email(config_dict, subject_end, body_end, emails, None)
+                                except Exception as e:
+                                    logging.info(f"Error sending email {e}")
                             else:
                                 retry_counter_db = get_retry_count(db_config, cin)
                                 if retry_counter_db is not None:
@@ -110,6 +127,14 @@ def main():
                                 update_retry_count(db_config,cin,retry_counter_db)
                                 if retry_counter_db > 3:
                                     update_process_status('Exception',db_config,cin)
+                                    exception_subject = str(config_dict['Exception_subject']).format(cin,
+                                                                                                     receipt_number)
+                                    exception_body = str(config_dict['Exception_message']).format(cin, receipt_number,
+                                                                                                  company_name, exception_message)
+                                    try:
+                                        send_email(config_dict, exception_subject, exception_body, emails, None)
+                                    except Exception as e:
+                                        logging.info(f"Error sending email {e}")
                                 if str(exception_message).lower() != 'already logged in':
                                     try:
                                         sign_out(driver, config_dict, downloaddata)

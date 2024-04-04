@@ -97,6 +97,6 @@ def insert_document_details(db_config,cin,root_path,company_name):
             raise Exception(f"Folder not found for cin {cin}")
     except Exception as e:
         print(f"Exception occurred in inserting document details {e}")
-        return False
+        return False,e
     else:
-        return True
+        return True,None
