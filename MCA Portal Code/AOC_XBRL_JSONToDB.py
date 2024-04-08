@@ -1287,18 +1287,21 @@ def JSONtoDB_AOC_XBRL_straight(Cin,CompanyName,json_file_path,target_header,tabl
                                             previous_year_value = row_values[2]
                                         except Exception as e:
                                             print(f"Exception in straight values {e} for {target_header}")
-                                            next_row = table_data[r + 1]
-                                            print(next_row)
-                                            if str(next_row[0]).lower() == 'nan':
-                                                try:
-                                                    if str(next_row[1]).lower() != 'nan':
-                                                        previous_year_value = next_row[1]
-                                                    else:
-                                                        previous_year_value = next_row[2]
-                                                    logging.info(f"Have taken previous year value from next row {previous_year_value}")
-                                                except Exception as e:
+                                            try:
+                                                next_row = table_data[r + 1]
+                                                print(next_row)
+                                                if str(next_row[0]).lower() == 'nan':
+                                                    try:
+                                                        if str(next_row[1]).lower() != 'nan':
+                                                            previous_year_value = next_row[1]
+                                                        else:
+                                                            previous_year_value = next_row[2]
+                                                        logging.info(f"Have taken previous year value from next row {previous_year_value}")
+                                                    except Exception as e:
+                                                        previous_year_value = None
+                                                else:
                                                     previous_year_value = None
-                                            else:
+                                            except Exception as e:
                                                 previous_year_value = None
                                 except Exception as e:
                                     logging.info(f"Exception occured at line 196 {e}")
