@@ -37,6 +37,7 @@ from FilesTable import files_table
 from FinancialsTable import aoc_files_table
 from FilesTable import change_of_name_table
 from InsertDocumentDetailsFromFolder import insert_document_details
+from MCAPortalMainFunctions import open_onedrive
 
 
 def main():
@@ -72,6 +73,11 @@ def main():
                         if (workflow_status == 'Payment_success' or workflow_status == 'XML_Pending') and download_status == 'N':
                             logging.info(f"Starting to download for {cin}")
                             update_locked_by(db_config, cin)
+                            try:
+                                one_drive_path = config_dict['one_drive_path']
+                                open_onedrive(one_drive_path)
+                            except Exception as e:
+                                logging.info(f"Error opening one drive {e}")
                             if manual_download_status == 'Y':
                                 subject_start = str(config_dict['subject_start_manual']).format(cin,receipt_number)
                                 body_start = str(config_dict['Body_start']).format(cin, receipt_number, company_name)

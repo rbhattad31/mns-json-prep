@@ -56,6 +56,8 @@ import requests
 import json
 import time
 from AOC_XBRL_HiddenAttachment_Generation import xbrl_xml_attachment
+import subprocess
+import pyautogui
 
 
 def sign_out(driver,config_dict,CinData):
@@ -901,6 +903,19 @@ def update_completed_status_api(orderid,config_dict):
         return True
 
 
+def open_onedrive(one_drive_path):
+    try:
+        # Open OneDrive application
+        subprocess.Popen([one_drive_path])  # Replace "/path/to/onedrive.exe" with the actual path to your OneDrive executable
 
+        # Wait for 2 minutes (120 seconds)
+        time.sleep(10)
+
+        # Simulate Alt + F4 keyboard shortcut to close the window
+        pyautogui.hotkey('alt', 'f4')
+
+        print("OneDrive window closed successfully.")
+    except Exception as e:
+        print("An error occurred:", str(e))
 
 
