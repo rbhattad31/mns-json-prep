@@ -58,7 +58,7 @@ import time
 from AOC_XBRL_HiddenAttachment_Generation import xbrl_xml_attachment
 import subprocess
 import pyautogui
-
+from DBFunctions import get_run_xbrl_status
 
 def sign_out(driver,config_dict,CinData):
     try:
@@ -164,9 +164,11 @@ def Login_and_Download(config_dict,CinData):
                 if file_download:
                     print(f"Downloaded for {category} ")
                     if category == 'Annual Returns and Balance Sheet eForms':
-                        xbrl_attachment = xbrl_xml_attachment(db_config,Cin,CompanyName)
-                        if xbrl_attachment:
-                            logging.info(f"Successfully inserted XBRL Hidden attachments for {Cin}")
+                        run_xbrl_status = get_run_xbrl_status(db_config, Cin)
+                        if str(run_xbrl_status).lower() != 'y':
+                            xbrl_attachment = xbrl_xml_attachment(db_config,Cin,CompanyName)
+                            if xbrl_attachment:
+                                logging.info(f"Successfully inserted XBRL Hidden attachments for {Cin}")
                 else:
                     continue
             except Exception as e:
