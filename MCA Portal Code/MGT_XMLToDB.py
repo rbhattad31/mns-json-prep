@@ -90,7 +90,7 @@ def update_datatable_single_value(config_dict, db_config, table_name, cin_column
     if column_name == config_dict['registered_full_address_column_name']:
         logging.info(column_value)
         # query to check if address exist in db with cin
-        query = 'SELECT {} FROM {} WHERE {} = "{}"'.format(column_name, table_name, cin_column_name, cin_value)
+        query = "SELECT {} FROM {} WHERE {} = '{}'".format(column_name, table_name, cin_column_name, cin_value)
 
         try:
             db_cursor.execute(query)
@@ -105,7 +105,7 @@ def update_datatable_single_value(config_dict, db_config, table_name, cin_column
             value_in_column = row[column_index_to_check]
             if value_in_column is None or value_in_column == '' or value_in_column == 'null':
                 # if not found update address for cin in Company table
-                update_query = 'UPDATE {} SET {} = "{}" WHERE {} = "{}"'.format(table_name,
+                update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}'".format(table_name,
                                                                                 column_name,
                                                                                 column_value,
                                                                                 cin_column_name,
@@ -122,7 +122,7 @@ def update_datatable_single_value(config_dict, db_config, table_name, cin_column
                 return
 
     # check if there is already entry with cin
-    query = 'SELECT * FROM {} WHERE {} = "{}"'.format(table_name, cin_column_name, cin_value)
+    query = "SELECT * FROM {} WHERE {} = '{}'".format(table_name, cin_column_name, cin_value)
     logging.info(query)
     try:
         db_cursor.execute(query)
@@ -133,7 +133,7 @@ def update_datatable_single_value(config_dict, db_config, table_name, cin_column
     logging.info(column_value)
     # if cin value already exists
     if len(result) > 0:
-        update_query = 'UPDATE {} SET {} = "{}" WHERE {} = "{}"'.format(table_name, column_name,
+        update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}'".format(table_name, column_name,
                                                                                       column_value, cin_column_name,
                                                                                       cin_value
                                                                                       )
@@ -141,7 +141,7 @@ def update_datatable_single_value(config_dict, db_config, table_name, cin_column
         db_cursor.execute(update_query)
     # if cin value doesn't exist
     else:
-        insert_query = 'INSERT INTO {} ({}, {}, {}) VALUES ("{}", "{}", "{}")'.format(table_name, cin_column_name,
+        insert_query = "INSERT INTO {} ({}, {}, {}) VALUES ('{}', '{}', '{}')".format(table_name, cin_column_name,
                                                                                       company_name_column_name,
                                                                                       column_name,
                                                                                       cin_value,
@@ -167,7 +167,7 @@ def insert_datatable_with_table(db_config, sql_table_name, column_names_list, df
     where_clause = f'SELECT * FROM {sql_table_name} WHERE '
     for key, value in result_dict.items():
         if value is not None:
-            where_clause += f'`{key}` = "{value}" AND '
+            where_clause += f"`{key}` = '{value}' AND "
         else:
             where_clause += f"(`{key}` is NULL OR `{key}` = '') AND "
 
@@ -183,7 +183,7 @@ def insert_datatable_with_table(db_config, sql_table_name, column_names_list, df
             if value is None:
                 insert_query += f"`{key}` = NULL , "
             else:
-                insert_query += f'`{key}` = "{value}" , '
+                insert_query += f"`{key}` = '{value}' , "
         insert_query = insert_query[:-2]
         logging.info(insert_query)
         db_cursor.execute(insert_query)

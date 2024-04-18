@@ -51,7 +51,7 @@ def update_database_single_value_AOC(db_config, table_name, cin_column_name, cin
         column_value = json.dumps(json_dict)
 
     # check if there is already entry with cin
-    query = 'SELECT * FROM {} WHERE {} = "{}" and {}="{}" and {}="{}" and {} = "{}"'.format(table_name, cin_column_name, cin_value,company_name_column_name,company_name,'year',year,'nature',nature)
+    query = "SELECT * FROM {} WHERE {} = '{}' and {}='{}' and {}='{}' and {} = '{}'".format(table_name, cin_column_name, cin_value,company_name_column_name,company_name,'year',year,'nature',nature)
     logging.info(query)
     try:
         db_cursor.execute(query)
@@ -62,7 +62,7 @@ def update_database_single_value_AOC(db_config, table_name, cin_column_name, cin
 
     # if cin value already exists
     if len(result) > 0:
-        update_query = 'UPDATE {} SET {} = "{}" WHERE {} = "{}" AND {} = "{}" AND {}="{}" AND {} = "{}"'.format(table_name, column_name,
+        update_query = "UPDATE {} SET {} = '{}' WHERE {} = '{}' AND {} = '{}' AND {}='{}' AND {} = '{}'".format(table_name, column_name,
                                                                                       column_value, cin_column_name,
                                                                                       cin_value,
                                                                                       company_name_column_name,
@@ -77,7 +77,7 @@ def update_database_single_value_AOC(db_config, table_name, cin_column_name, cin
 
     # if cin value doesn't exist
     else:
-        insert_query = 'INSERT INTO {} ({}, {}, {},{}) VALUES ("{}", "{}", "{}","{}")'.format(table_name, cin_column_name,
+        insert_query = "INSERT INTO {} ({}, {}, {},{}) VALUES ('{}', '{}', '{}','{}')".format(table_name, cin_column_name,
                                                                                       company_name_column_name,
                                                                                       column_name,
                                                                                       'nature',
@@ -109,7 +109,7 @@ def insert_datatable_with_table(db_config, sql_table_name, column_names_list, df
     where_clause = f'SELECT * FROM {sql_table_name} WHERE '
     for key, value in result_dict.items():
         if value is not None:
-            where_clause += f'`{key}` = "{value}" AND '
+            where_clause += f"`{key}` = '{value}' AND "
         else:
             where_clause += f"(`{key}` is NULL OR `{key}` = '') AND "
 
@@ -125,7 +125,7 @@ def insert_datatable_with_table(db_config, sql_table_name, column_names_list, df
             if value is None:
                 insert_query += f"`{key}` = NULL , "
             else:
-                insert_query += f'`{key}` = "{value}" , '
+                insert_query += f"`{key}` = '{value}' , "
         insert_query = insert_query[:-2]
         logging.info(insert_query)
         db_cursor.execute(insert_query)
