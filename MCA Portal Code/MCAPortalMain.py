@@ -116,32 +116,34 @@ def main():
                                 except Exception as e:
                                     logging.info(f"Error sending email {e}")
                             else:
-                                retry_counter_db = get_retry_count(db_config, cin)
-                                if retry_counter_db is not None:
-                                    if retry_counter_db == '':
-                                        retry_counter_db = 0
-                                else:
-                                    retry_counter_db = 0
-                                try:
-                                    retry_counter_db = int(retry_counter_db)
-                                    retry_counter_db = retry_counter_db + 1
-                                except:
-                                    pass
-                                logging.info("Not Downloaded")
-                                update_locked_by_empty(db_config, cin)
                                 update_modified_date(db_config, cin)
-                                update_retry_count(db_config,cin,retry_counter_db)
-                                if retry_counter_db > 3:
-                                    update_process_status('Exception',db_config,cin)
-                                    exception_subject = str(config_dict['Exception_subject']).format(cin,
-                                                                                                     receipt_number)
-                                    exception_body = str(config_dict['Exception_message']).format(cin, receipt_number,
-                                                                                                  company_name, exception_message)
-                                    try:
-                                        send_email(config_dict, exception_subject, exception_body, emails, None)
-                                    except Exception as e:
-                                        logging.info(f"Error sending email {e}")
+                                update_locked_by_empty(db_config, cin)
                                 if str(exception_message).lower() != 'already logged in':
+                                    retry_counter_db = get_retry_count(db_config, cin)
+                                    if retry_counter_db is not None:
+                                        if retry_counter_db == '':
+                                            retry_counter_db = 0
+                                    else:
+                                        retry_counter_db = 0
+                                    try:
+                                        retry_counter_db = int(retry_counter_db)
+                                        retry_counter_db = retry_counter_db + 1
+                                    except:
+                                        pass
+                                    logging.info("Not Downloaded")
+                                    update_retry_count(db_config, cin, retry_counter_db)
+                                    if retry_counter_db > 3:
+                                        update_process_status('Exception', db_config, cin)
+                                        exception_subject = str(config_dict['Exception_subject']).format(cin,
+                                                                                                         receipt_number)
+                                        exception_body = str(config_dict['Exception_message']).format(cin,
+                                                                                                      receipt_number,
+                                                                                                      company_name,
+                                                                                                      exception_message)
+                                        try:
+                                            send_email(config_dict, exception_subject, exception_body, emails, None)
+                                        except Exception as e:
+                                            logging.info(f"Error sending email {e}")
                                     try:
                                         sign_out(driver, config_dict, downloaddata)
                                     except:
