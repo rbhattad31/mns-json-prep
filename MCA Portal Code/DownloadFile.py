@@ -870,7 +870,7 @@ WHERE d1.cin = '{}' AND d1.document LIKE '%Form8%' AND Category = 'Annual Return
         try:
             connection = mysql.connector.connect(**db_config)
             cursor = connection.cursor()
-            copy_financial_query = "UPDATE documents set form_data_extraction_needed = 'Y' where LOWER(document) LIKE '%%copy of financial statements%%' and `cin`=%s"
+            copy_financial_query = "UPDATE documents set form_data_extraction_needed = 'Y' where LOWER(document) LIKE '%%copy of financial%%' and `cin`=%s"
             value_copy_financial_query = (cin,)
             logging.info(copy_financial_query % value_copy_financial_query)
             cursor.execute(copy_financial_query, value_copy_financial_query)
@@ -1053,7 +1053,7 @@ def download_captcha_and_enter_text(CompanyName, driver, file_path, filename, Ci
             connection.close()
             return True
         else:
-            if 'XBRL financial statements' in filename or 'copy of financial statements' in str(filename).lower():
+            if 'XBRL financial statements' in filename or 'copy of financial' in str(filename).lower():
                 other_attachments_directory = os.path.dirname(file_path)
                 if os.path.exists(other_attachments_directory):
                     files = [os.path.join(other_attachments_directory, file) for file in os.listdir(other_attachments_directory)]
