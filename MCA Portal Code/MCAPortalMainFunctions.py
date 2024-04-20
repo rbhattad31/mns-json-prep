@@ -175,7 +175,7 @@ def Login_and_Download(config_dict,CinData):
                 print(f"Excpetion occured while downloading{e}")
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor()
-        download_file_details = "select * from documents where cin = %s and form_data_extraction_needed='Y' and Download_Status='Pending'"
+        download_file_details = "select * from documents where cin = %s and form_data_extraction_needed='Y' and Download_Status='Pending' and LOWER(document) NOT LIKE '%%copy of financial%%'"
         values = (Cin,)
         cursor.execute(download_file_details,values)
         download_files = cursor.fetchall()
@@ -184,7 +184,7 @@ def Login_and_Download(config_dict,CinData):
         time.sleep(2)
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor()
-        all_file_details = "select * from documents where cin = %s and form_data_extraction_needed='Y'"
+        all_file_details = "select * from documents where cin = %s and form_data_extraction_needed='Y'  and LOWER(document) NOT LIKE '%%copy of financial%%'"
         cursor.execute(all_file_details, values)
         all_files = cursor.fetchall()
         cursor.close()
