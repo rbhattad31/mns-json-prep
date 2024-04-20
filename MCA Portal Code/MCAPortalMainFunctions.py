@@ -244,6 +244,10 @@ def XMLGeneration(db_config,CinData,config_dict):
                     if 'Fresh Certificate of Incorporation'.lower() in str(file_name).lower():
                         update_xml_extraction_status(Cin, file_name, config_dict, 'Success')
                         continue
+                    if 'copy of financial statements' in str(file_name).lower():
+                        update_xml_extraction_status(Cin, file_name, config_dict, 'Success')
+                        update_db_insertion_status(Cin, file_name, config_dict, 'Success')
+                        continue
                     folder_path = os.path.dirname(pdf_path)
                     xml_file_path, PDF_to_XML = PDFtoXML(pdf_path, file_name)
                     if PDF_to_XML:
