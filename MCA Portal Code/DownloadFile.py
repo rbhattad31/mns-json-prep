@@ -1132,7 +1132,7 @@ def download_captcha_and_enter_text(CompanyName, driver, file_path, filename, Ci
                         connection.close()
                         return True
                     else:
-                        file_path = str(file_path).replace('.pdf', '.OCT')
+                        file_path = str(file_path).replace('.PDF', '.OCT')
                         if os.path.exists(file_path):
                             connection = mysql.connector.connect(**dbconfig)
                             cursor = connection.cursor()
