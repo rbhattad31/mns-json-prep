@@ -1132,8 +1132,24 @@ def download_captcha_and_enter_text(CompanyName, driver, file_path, filename, Ci
                         connection.close()
                         return True
                     else:
-                        logging.info("Not Downloaded successfully")
-                        return False
+                        file_path = str(file_path).replace('.pdf', '.OCT')
+                        if os.path.exists(file_path):
+                            connection = mysql.connector.connect(**dbconfig)
+                            cursor = connection.cursor()
+                            update_query = 'update documents set Download_Status=%s where cin=%s and document=%s and company=%s and path_index IS NULL'
+                            path_update_query = 'update documents set document_download_path=%s where cin=%s and document=%s and company=%s and path_index IS NULL'
+                            values_update = ('Downloaded', Cin, filename, CompanyName)
+                            values_path_update = (file_path, Cin, filename, CompanyName)
+                            logging.info(values_update)
+                            cursor.execute(update_query, values_update)
+                            cursor.execute(path_update_query, values_path_update)
+                            connection.commit()
+                            cursor.close()
+                            connection.close()
+                            return True
+                        else:
+                            logging.info("Not Downloaded successfully")
+                            return False
                 except Exception as e:
                     logging.info("Not Downloaded successfully")
                     return False
