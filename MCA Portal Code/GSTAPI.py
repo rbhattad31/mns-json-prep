@@ -239,6 +239,7 @@ def insert_gst_number(db_config,config_dict,cin,company,root_path):
             cin_column_name = config_dict['cin_column_name']
             company_column_name = config_dict['company_column_name']
             for df in output_df:
+                logging.info(df)
                 gstin = df[df['Field_name'] == 'gstin']['Value'].values[0]
                 tables_list = df[df.columns[2]].unique()
                 for table in tables_list:
@@ -342,26 +343,29 @@ def fetch_gst_details(config_dict,gst_number,status):
                 table = str(row.iloc[2]).strip()
                 column = str(row.iloc[3]).strip()
                 if field_name == config_dict['filings_keyword']:
-                    value = gst_json_response[config_dict['filing_node_keyword']][json_node][0]
-                    for entry in value:
-                        # Convert the dateOfFiling to yyyy-mm-dd format
-                        try:
-                            entry["DateOfFiling"] = datetime.strptime(entry["DateOfFiling"], "%d/%m/%Y").strftime(
-                                "%Y-%m-%d")
-                        except:
-                            pass
-                        try:
-                            entry["return_type"] = entry.pop("ReturnType", entry["ReturnType"])
-                            entry["date_of_filing"] = entry.pop("DateOfFiling", entry["DateOfFiling"])
-                            entry["financial_year"] = entry.pop("FinYear", entry["FinYear"])
-                            entry["tax_period"] = entry.pop("ReturnPeriod", entry["ReturnPeriod"])
-                            entry["methodOfFilling"] = entry.pop("ModeOfFiling", entry["ModeOfFiling"])
-                            #entry["status"] = entry.pop("gstStatus", entry["gstStatus"])
-                        except Exception as e:
-                            logging.info(f"Exception in updating key names {e}")
-                            continue
-                    value = json.dumps(value)
-                    value = value.replace("'", '"')
+                    try:
+                        value = gst_json_response[config_dict['filing_node_keyword']][json_node][0]
+                        for entry in value:
+                            # Convert the dateOfFiling to yyyy-mm-dd format
+                            try:
+                                entry["DateOfFiling"] = datetime.strptime(entry["DateOfFiling"], "%d/%m/%Y").strftime(
+                                    "%Y-%m-%d")
+                            except:
+                                pass
+                            try:
+                                entry["return_type"] = entry.pop("ReturnType", entry["ReturnType"])
+                                entry["date_of_filing"] = entry.pop("DateOfFiling", entry["DateOfFiling"])
+                                entry["financial_year"] = entry.pop("FinYear", entry["FinYear"])
+                                entry["tax_period"] = entry.pop("ReturnPeriod", entry["ReturnPeriod"])
+                                entry["methodOfFilling"] = entry.pop("ModeOfFiling", entry["ModeOfFiling"])
+                                #entry["status"] = entry.pop("gstStatus", entry["gstStatus"])
+                            except Exception as e:
+                                logging.info(f"Exception in updating key names {e}")
+                                continue
+                        value = json.dumps(value)
+                        value = value.replace("'", '"')
+                    except Exception as e:
+                        value = []
                 elif field_name == config_dict['gstin_keyword']:
                     value = gst_number
                 elif field_name == config_dict['status_keyword']:
