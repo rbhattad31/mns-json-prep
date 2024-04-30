@@ -166,8 +166,10 @@ def main():
                     emails = []
                     for CinLock in CinDBData:
                         try:
+                            download_status = CinLock[67]
                             cin = CinLock[2]
-                            update_locked_by(db_config, cin)
+                            if download_status == 'Y':
+                                update_locked_by(db_config, cin)
                         except:
                             continue
                     for CinData in CinDBData:
