@@ -164,6 +164,12 @@ def main():
                     company_name = None
                     hidden_attachments = []
                     emails = []
+                    for CinLock in CinDBData:
+                        try:
+                            cin = CinLock[2]
+                            update_locked_by(db_config, cin)
+                        except:
+                            continue
                     for CinData in CinDBData:
                         try:
                             cin = CinData[2]
