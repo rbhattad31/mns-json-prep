@@ -59,6 +59,8 @@ from AOC_XBRL_HiddenAttachment_Generation import xbrl_xml_attachment
 import subprocess
 import pyautogui
 from DBFunctions import get_run_xbrl_status
+from ReInitialize_Session import session_restart
+
 
 def sign_out(driver,config_dict,CinData):
     try:
@@ -134,6 +136,15 @@ def Login_and_Download(config_dict,CinData):
         if db_insertion_status != 'Y':
             for item in category_list:
                 try:
+                    try:
+                        username_input = driver.find_element(By.XPATH, '//input[@type="text" and @id="userName"]')
+                        if username_input:
+                            logging.info(f"Session expired so logging again")
+                            reinitialize_session = session_restart(Url,chrome_driver_path,username,password,db_config,Cin,CompanyName)
+                            if reinitialize_session:
+                                logging.info(f"Reinitialized session")
+                    except Exception as e:
+                        pass
                     category_selection = select_category(item,driver)
                     if category_selection:
                         download_status = insert_Download_Details(driver, Cin, CompanyName, db_config, item)
