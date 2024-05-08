@@ -167,6 +167,16 @@ def Login_and_Download(config_dict,CinData):
                 logging.info("Successfully changed form extraction status")
         for category in category_list:
             try:
+                try:
+                    username_input = driver.find_element(By.XPATH, '//input[@type="text" and @id="userName"]')
+                    if username_input:
+                        logging.info(f"Session expired so logging again")
+                        reinitialize_session, driver = session_restart(Url, chrome_driver_path, username, password,
+                                                                       db_config, Cin, CompanyName)
+                        if reinitialize_session:
+                            logging.info(f"Reinitialized session")
+                except Exception as e:
+                    pass
                 category_selection = select_category(category, driver)
                 if category_selection:
                     file_download = download_documents(driver, db_config, Cin, CompanyName, category, root_path, options)
