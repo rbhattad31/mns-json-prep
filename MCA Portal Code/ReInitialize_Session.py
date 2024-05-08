@@ -15,7 +15,7 @@ def session_restart(Url, chrome_driver_path, username, password, db_config,Cin,C
                 logging.info(f"Navigated successfully to {CompanyName}")
     except Exception as e:
         logging.error(f"Exception {e} occurred while reinstalling session")
-        return False
+        return False,None
     else:
-        return True
+        return True,driver
 
