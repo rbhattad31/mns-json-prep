@@ -131,7 +131,7 @@ def Login_and_Download(config_dict,CinData):
             logging.info(f"Navigated succesfully to {CompanyName}")
         else:
             raise Exception(f"Failed to Navigate to {CompanyName}")
-        category_list = ['Annual Returns and Balance Sheet eForms','Certificates','Charge Documents','Change in Directors','Incorporation Documents','LLP Forms(Conversion of company to LLP)','Other eForm Documents','Other Attachments']
+        category_list = ['Annual Returns and Balance Sheet eForms','Certificates','Other Attachments','Change in Directors','Incorporation Documents','LLP Forms(Conversion of company to LLP)','Other eForm Documents','Charge Documents']
         insertion_counter = 0
         if db_insertion_status != 'Y':
             for item in category_list:
@@ -801,7 +801,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                 logging.info(line.strip())
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor()
-        db_insert_check_query = "select * from documents where cin=%s and form_data_extraction_needed='Y' and DB_insertion_status='Pending' and Download_Status='Downloaded' and document != 'Form 8'"
+        db_insert_check_query = "select * from documents where cin=%s and form_data_extraction_needed='Y' and DB_insertion_status='Pending' and Download_Status='Downloaded' and document != 'Form 8' and document_download_path not like '%.OCT%'"
         values_check = (Cin,)
         print(db_insert_check_query % values_check)
         cursor.execute(db_insert_check_query,values_check)
