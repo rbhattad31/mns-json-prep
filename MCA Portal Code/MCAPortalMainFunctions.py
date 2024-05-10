@@ -60,6 +60,45 @@ import subprocess
 import pyautogui
 from DBFunctions import get_run_xbrl_status
 from ReInitialize_Session import session_restart
+from datetime import datetime
+
+
+def update_start_time(db_config,cin):
+    try:
+        current_datetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        connection = mysql.connector.connect(**db_config)
+        cursor = connection.cursor()
+        connection.autocommit = True
+        check_query = f"SELECT python_pro_startdate FROM orders WHERE cin = '{cin}'"
+        cursor.execute(check_query)
+        result = cursor.fetchone()
+        if result is not None and result[0] is None:
+            update_query = f"update orders set python_pro_startdate = '{current_datetime}' where cin = '{cin}'"
+            print(update_query)
+            cursor.execute(update_query)
+        cursor.close()
+        connection.close()
+    except Exception as e:
+        print(f"Error updating start time {e}")
+
+
+def update_end_time(db_config,cin):
+    try:
+        current_datetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        connection = mysql.connector.connect(**db_config)
+        cursor = connection.cursor()
+        connection.autocommit = True
+        check_query = f"SELECT python_pro_enddate FROM orders WHERE cin = '{cin}'"
+        cursor.execute(check_query)
+        result = cursor.fetchone()
+        if result is not None and result[0] is None:
+            update_query = f"update orders set python_pro_enddate = '{current_datetime}' where cin = '{cin}'"
+            print(update_query)
+            cursor.execute(update_query)
+        cursor.close()
+        connection.close()
+    except Exception as e:
+        print(f"Error updating end time {e}")
 
 
 def sign_out(driver,config_dict,CinData):
@@ -109,6 +148,10 @@ def Login_and_Download(config_dict,CinData):
         if last_logged_in_user is None or last_logged_in_user != User:
             username, password, Status = fetch_user_credentials_from_db(db_config, User)
             if Status == "Pass":
+                try:
+                    update_start_time(db_config,Cin)
+                except Exception as e:
+                    print(f"Exception occurred while updating start time {e}")
                 Login, driver,options,exception_message = login_to_website(Url, chrome_driver_path, username, password, db_config)
             else:
                 logging.warning("Already Logged in")

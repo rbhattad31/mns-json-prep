@@ -1,6 +1,6 @@
 import traceback
 import os
-import datetime
+from datetime import datetime
 from DBFunctions import connect_to_database
 from DBFunctions import fetch_order_data_from_table
 from DBFunctions import get_db_credentials
@@ -38,6 +38,7 @@ from FinancialsTable import aoc_files_table
 from FilesTable import change_of_name_table
 from InsertDocumentDetailsFromFolder import insert_document_details
 from MCAPortalMainFunctions import open_onedrive
+from MCAPortalMainFunctions import update_end_time
 
 
 def main():
@@ -213,6 +214,10 @@ def main():
                                 if json_loader:
                                     logging.info("JSON Loader generated succesfully")
                                     update_json_loader_db(CinData, config_dict)
+                                    try:
+                                        update_end_time(db_config,cin)
+                                    except Exception as e:
+                                        print(f"Exception occurred while updating end time {e}")
                                     cin_complete_subject = str(config_dict['cin_Completed_subject']).format(cin,receipt_number)
                                     table = FinalTable(db_config,cin)
                                     financials_Table = financials_table(db_config,cin)
