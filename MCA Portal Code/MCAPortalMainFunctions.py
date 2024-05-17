@@ -989,3 +989,15 @@ def open_onedrive(one_drive_path):
         print("An error occurred:", str(e))
 
 
+def update_exception_order(db_config,cin,exception_message):
+    try:
+        connection = mysql.connector.connect(**db_config)
+        cursor = connection.cursor()
+        connection.autocommit = True
+        query = f"Update orders set bot_comments = '{exception_message}' where cin = '{cin}'"
+        cursor.execute(query)
+        cursor.close()
+        connection.close()
+    except Exception as e:
+        print(f"Exception {e} occurred while updating")
+

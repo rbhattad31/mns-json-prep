@@ -39,6 +39,7 @@ from FilesTable import change_of_name_table
 from InsertDocumentDetailsFromFolder import insert_document_details
 from MCAPortalMainFunctions import open_onedrive
 from MCAPortalMainFunctions import update_end_time
+from MCAPortalMainFunctions import update_exception_order
 
 
 def main():
@@ -119,6 +120,7 @@ def main():
                             else:
                                 update_modified_date(db_config, cin)
                                 update_locked_by_empty(db_config, cin)
+                                update_exception_order(db_config,cin,exception_message)
                                 if str(exception_message).lower() != 'already logged in':
                                     retry_counter_db = get_retry_count(db_config, cin)
                                     if retry_counter_db is not None:
