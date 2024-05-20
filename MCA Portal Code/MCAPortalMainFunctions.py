@@ -308,7 +308,7 @@ def XMLGeneration(db_config,CinData,config_dict):
                     if 'Fresh Certificate of Incorporation'.lower() in str(file_name).lower():
                         update_xml_extraction_status(Cin, file_name, config_dict, 'Success')
                         continue
-                    if 'copy of financial' in str(file_name).lower():
+                    if 'copy of financial' in str(file_name).lower() or 'pas-3' in str(file_name).lower() or 'sh-7' in str(file_name).lower() or 'inc-28' in str(file_name).lower() or 'aoa' in str(file_name).lower() or 'moa' in str(file_name).lower():
                         update_xml_extraction_status(Cin, file_name, config_dict, 'Success')
                         update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                         continue
@@ -492,6 +492,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                         else:
                             AOC_4_NBFC_first_file_found = True
                     elif 'AOC-4 CSR'.lower() in str(file_name).lower():
+                        update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                         continue
                     elif 'CFS'.lower() in str(file_name).lower():
                         logging.info("Going to AOC 4 CFS")

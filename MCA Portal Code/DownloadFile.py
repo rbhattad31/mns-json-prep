@@ -844,7 +844,7 @@ WHERE d1.cin = '{}' AND d1.document LIKE '%Form8%' AND Category = 'Annual Return
         try:
             connection = mysql.connector.connect(**db_config)
             cursor = connection.cursor()
-            Certificate_of_Incorporation_Consequent_query = "UPDATE documents set form_data_extraction_needed = 'Y' where LOWER(document) LIKE '%%certificate of incorporation consequent%%' and `cin`=%s"
+            Certificate_of_Incorporation_Consequent_query = "UPDATE documents set form_data_extraction_needed = 'Y' where LOWER(document) LIKE '%%certificate of incorporation%%' and `cin`=%s"
             value_Certificate_of_Incorporation = (cin,)
             logging.info(Certificate_of_Incorporation_Consequent_query % value_Certificate_of_Incorporation)
             cursor.execute(Certificate_of_Incorporation_Consequent_query, value_Certificate_of_Incorporation)
@@ -857,7 +857,7 @@ WHERE d1.cin = '{}' AND d1.document LIKE '%Form8%' AND Category = 'Annual Return
         try:
             connection = mysql.connector.connect(**db_config)
             cursor = connection.cursor()
-            INC22_query = "UPDATE documents set form_data_extraction_needed = 'Y' where document LIKE '%%INC-22%%' and `cin`=%s"
+            INC22_query = "UPDATE documents set form_data_extraction_needed = 'Y' where (document LIKE '%%INC-22%%' or document LIKE '%%INC-28%%') and `cin`=%s"
             value_INC22_query = (cin,)
             logging.info(INC22_query % value_INC22_query)
             cursor.execute(INC22_query, value_INC22_query)
@@ -879,6 +879,95 @@ WHERE d1.cin = '{}' AND d1.document LIKE '%Form8%' AND Category = 'Annual Return
             connection.close()
         except Exception as e:
             logging.info(f"Exception occured for form 18  status updating {e}")
+
+        try:
+            connection = mysql.connector.connect(**db_config)
+            cursor = connection.cursor()
+            update_query_AOC_cfs = """UPDATE documents AS d1
+    JOIN (
+        SELECT MAX(STR_TO_DATE(document_date_year, '%d-%m-%Y')) AS latest_date
+        FROM documents
+        WHERE cin = '{}'
+        AND document LIKE '%AOC-4 CSR%'
+        GROUP BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y'))
+        ORDER BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y')) DESC
+        LIMIT 4
+    ) AS d2 ON YEAR(STR_TO_DATE(d1.document_date_year, '%d-%m-%Y')) = YEAR(d2.latest_date)
+    SET d1.form_data_extraction_needed = 'Y'
+    WHERE d1.cin = '{}'
+    AND d1.document LIKE '%AOC-4 CSR%';
+    """.format(cin, cin)
+            logging.info(update_query_AOC_cfs)
+            cursor.execute(update_query_AOC_cfs)
+            connection.commit()
+            cursor.close()
+            connection.close()
+        except Exception as e:
+            logging.info(f"Exception occured for AOC{e}")
+
+        try:
+            connection = mysql.connector.connect(**db_config)
+            cursor = connection.cursor()
+            update_query_pas = """UPDATE documents AS d1
+    JOIN (
+        SELECT MAX(STR_TO_DATE(document_date_year, '%d-%m-%Y')) AS latest_date
+        FROM documents
+        WHERE cin = '{}'
+        AND document LIKE '%PAS-3%'
+        GROUP BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y'))
+        ORDER BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y')) DESC
+        LIMIT 2
+    ) AS d2 ON YEAR(STR_TO_DATE(d1.document_date_year, '%d-%m-%Y')) = YEAR(d2.latest_date)
+    SET d1.form_data_extraction_needed = 'Y'
+    WHERE d1.cin = '{}'
+    AND d1.document LIKE '%PAS-3%';
+    """.format(cin, cin)
+            logging.info(update_query_pas)
+            cursor.execute(update_query_pas)
+            connection.commit()
+            cursor.close()
+            connection.close()
+        except Exception as e:
+            logging.info(f"Exception occured for AOC{e}")
+
+        try:
+            connection = mysql.connector.connect(**db_config)
+            cursor = connection.cursor()
+            update_query_sh = """UPDATE documents AS d1
+    JOIN (
+        SELECT MAX(STR_TO_DATE(document_date_year, '%d-%m-%Y')) AS latest_date
+        FROM documents
+        WHERE cin = '{}'
+        AND document LIKE '%SH-7%'
+        GROUP BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y'))
+        ORDER BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y')) DESC
+        LIMIT 2
+    ) AS d2 ON YEAR(STR_TO_DATE(d1.document_date_year, '%d-%m-%Y')) = YEAR(d2.latest_date)
+    SET d1.form_data_extraction_needed = 'Y'
+    WHERE d1.cin = '{}'
+    AND d1.document LIKE '%SH-7%';
+    """.format(cin, cin)
+            logging.info(update_query_sh)
+            cursor.execute(update_query_sh)
+            connection.commit()
+            cursor.close()
+            connection.close()
+        except Exception as e:
+            logging.info(f"Exception occured for AOC{e}")
+
+        try:
+            connection = mysql.connector.connect(**db_config)
+            cursor = connection.cursor()
+            aoa_query = "UPDATE documents set form_data_extraction_needed = 'Y' where (LOWER(document) LIKE '%%aoa%%' or LOWER(document) LIKE '%%moa%%') and `cin`=%s"
+            value_aoa_query = (cin,)
+            logging.info(aoa_query % value_aoa_query)
+            cursor.execute(aoa_query, value_aoa_query)
+            connection.commit()
+            cursor.close()
+            connection.close()
+        except Exception as e:
+            logging.info(f"Exception occured for form 18  status updating {e}")
+
     except Exception as e:
         logging.info(f"Error updating login status in the database: {str(e)}")
         return False
