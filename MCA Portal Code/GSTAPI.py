@@ -11,6 +11,71 @@ import traceback
 from datetime import datetime
 import logging
 from logging_config import setup_logging
+import xml.etree.ElementTree as Et
+
+
+def get_single_value_from_xml(xml_root, parent_node, child_node):
+    try:
+        setup_logging()
+        if child_node == 'nan':
+            elements = xml_root.findall(f'.//{parent_node}')
+        else:
+            elements = xml_root.findall(f'.//{parent_node}//{child_node}')
+
+        for element in elements:
+            if element.text is None:
+                continue
+            if element.text is not None:
+                if '\r' in str(element.text):
+                    return str(element.text).replace('\r', '\n')
+                else:
+                    return str(element.text)
+        return None
+    except Exception as e:
+        logging.info(f"An error occurred: {e}")
+        return None
+
+
+def get_pan_number_second_file(db_config,cin):
+    try:
+        setup_logging()
+        connection = mysql.connector.connect(**db_config)
+        cursor = connection.cursor()
+        connection.autocommit = True
+        mgt_file_query = "select * from documents where cin = %s and form_data_extraction_needed = 'Y' and document like '%%MGT%%' and form_data_extraction_status = 'Success'"
+        values = (cin,)
+        logging.info(mgt_file_query % values)
+        cursor.execute(mgt_file_query,values)
+        mgt_result = cursor.fetchall()
+        cursor.close()
+        connection.close()
+        if len(mgt_result) == 2:
+            logging.info("Fetching pan number from second file")
+            second_file = mgt_result[1]
+            logging.info(second_file)
+            path = second_file[8]
+            xml_file_path = str(path).replace('.pdf','.xml')
+            filename = second_file[4]
+            if 'MGT-7A'.lower() in str(filename).lower():
+                parent_node = 'ZMCA_MGT_7A'
+                child_node = 'IT_PAN_OF_COMPNY'
+            else:
+                parent_node = 'ZMCA_NCA_MGT_7'
+                child_node = 'IT_PAN_OF_COMPNY'
+            try:
+                xml_tree = Et.parse(xml_file_path)
+                xml_root = xml_tree.getroot()
+                # xml_str = Et.tostring(xml_root, encoding='unicode')
+            except Exception as e:
+                raise Exception("Below exception occurred while reading xml file " + '\n' + str(e))
+            pan_number = get_single_value_from_xml(xml_root,parent_node,child_node)
+            return pan_number
+        else:
+            logging.info(f"Only one Success MGT File found for {cin}")
+            return None
+    except Exception as e:
+        logging.error(f"Error in fetching pan number from second file {e}")
+        return None
 
 
 def update_database_single_value_GST(db_config, table_name, cin_column_name, cin_value,company_name_column_name,company_name, column_name, column_value,gst_number):
@@ -115,7 +180,7 @@ def insert_gst_number(db_config,config_dict,cin,company,root_path):
             raise Exception(error_message)
 
         payload = json.dumps({
-            "panNumber": pan_number
+            "pan": pan_number
         })
         headers = {
             'Subscriptionkey': config_dict['api_subscription_key'],
@@ -125,10 +190,34 @@ def insert_gst_number(db_config,config_dict,cin,company,root_path):
         if response == '':
             logging.info(f"No response from API")
             raise Exception(f"No Response from API for cin {cin}")
+        try:
+            json_response = response.json()
+            details = json_response['gstinList']
+            message = details['message']
+            logging.info(message)
+            if str(message).lower() == 'gstin not found':
+                logging.info("GSTin not found so fetching pan number from second file")
+                new_pan_number = get_pan_number_second_file(db_config,cin)
+                logging.info(f"New Pan Number {new_pan_number}")
+                if new_pan_number is not None:
+                    payload = json.dumps({
+                        "pan": new_pan_number
+                    })
+                    headers = {
+                        'Subscriptionkey': config_dict['api_subscription_key'],
+                        'Content-Type': 'application/json'
+                    }
+                    response = requests.request("POST", url, headers=headers, data=payload)
+                    if response == '':
+                        logging.info(f"No response from API")
+                        raise Exception(f"No Response from API for cin {cin}")
+        except Exception as e:
+            logging.info(f"Exception in fetching gst number from second pan number {e}")
+
         if response.status_code == 200:
             try:
                 json_response = response.json()
-                result = json_response['result']
+                result = json_response['gstinList']
                 logging.info(json_response)
             except Exception as e:
                 logging.info(response)
@@ -150,6 +239,7 @@ def insert_gst_number(db_config,config_dict,cin,company,root_path):
             cin_column_name = config_dict['cin_column_name']
             company_column_name = config_dict['company_column_name']
             for df in output_df:
+                logging.info(df)
                 gstin = df[df['Field_name'] == 'gstin']['Value'].values[0]
                 tables_list = df[df.columns[2]].unique()
                 for table in tables_list:
@@ -199,6 +289,7 @@ def insert_gst_number(db_config,config_dict,cin,company,root_path):
             connection = mysql.connector.connect(**db_config)
             cursor = connection.cursor()
             update_query = "update orders set gst_exception_message = %s where cin = %s"
+            error = str(error)
             values_cin = (error, cin)
             logging.info(update_query % values_cin)
             cursor.execute(update_query, values_cin)
@@ -245,32 +336,36 @@ def fetch_gst_details(config_dict,gst_number,status):
         response = requests.request("POST", url, headers=headers, data=payload)
         if response.status_code == 200:
             gst_json_response = response.json()
-            gst_details_result = gst_json_response[config_dict['gst_result_keyword']][config_dict['gst_result_keyword']][config_dict['gstn_detailed_keyword']]
+            gst_details_result = gst_json_response[config_dict['gst_result_keyword']]
             for index,row in df_map.iterrows():
                 field_name = str(row.iloc[0]).strip()
                 json_node = str(row.iloc[1]).strip()
                 table = str(row.iloc[2]).strip()
                 column = str(row.iloc[3]).strip()
                 if field_name == config_dict['filings_keyword']:
-                    value = gst_json_response[config_dict['gst_result_keyword']][config_dict['gst_result_keyword']][json_node]
-                    for entry in value:
-                        # Convert the dateOfFiling to yyyy-mm-dd format
-                        try:
-                            entry["dateOfFiling"] = datetime.strptime(entry["dateOfFiling"], "%d/%m/%Y").strftime(
-                                "%Y-%m-%d")
-                        except:
-                            pass
-                        try:
-                            entry["return_type"] = entry.pop("gstType", entry["gstType"])
-                            entry["date_of_filing"] = entry.pop("dateOfFiling", entry["dateOfFiling"])
-                            entry["financial_year"] = entry.pop("filingYear", entry["filingYear"])
-                            entry["tax_period"] = entry.pop("monthOfFiling", entry["monthOfFiling"])
-                            entry["status"] = entry.pop("gstStatus", entry["gstStatus"])
-                        except Exception as e:
-                            logging.info(f"Exception in updating key names {e}")
-                            continue
-                    value = json.dumps(value)
-                    value = value.replace("'", '"')
+                    try:
+                        value = gst_json_response[config_dict['filing_node_keyword']][json_node][0]
+                        for entry in value:
+                            # Convert the dateOfFiling to yyyy-mm-dd format
+                            try:
+                                entry["DateOfFiling"] = datetime.strptime(entry["DateOfFiling"], "%d/%m/%Y").strftime(
+                                    "%Y-%m-%d")
+                            except:
+                                pass
+                            try:
+                                entry["return_type"] = entry.pop("ReturnType", entry["ReturnType"])
+                                entry["date_of_filing"] = entry.pop("DateOfFiling", entry["DateOfFiling"])
+                                entry["financial_year"] = entry.pop("FinYear", entry["FinYear"])
+                                entry["tax_period"] = entry.pop("ReturnPeriod", entry["ReturnPeriod"])
+                                entry["methodOfFilling"] = entry.pop("ModeOfFiling", entry["ModeOfFiling"])
+                                #entry["status"] = entry.pop("gstStatus", entry["gstStatus"])
+                            except Exception as e:
+                                logging.info(f"Exception in updating key names {e}")
+                                continue
+                        value = json.dumps(value)
+                        value = value.replace("'", '"')
+                    except Exception as e:
+                        value = []
                 elif field_name == config_dict['gstin_keyword']:
                     value = gst_number
                 elif field_name == config_dict['status_keyword']:
@@ -278,14 +373,14 @@ def fetch_gst_details(config_dict,gst_number,status):
                 else:
                     value = gst_details_result[json_node]
                     if field_name == config_dict['state_keyword'] or field_name == config_dict['state_jurisdiction_keyword']:
-                        pattern = re.compile(r'STATE - ([\w\s]+)(?:,|$)')
+                        pattern = re.compile(r'State - ([\w\s]+)(?:,|$)')
                         # Use the findall method to extract the state information
                         matches = pattern.findall(value)
                         # logging.info the result
                         if matches:
                             value = matches[0]
                     elif field_name == config_dict['centre_jurisdiction_keyword']:
-                        pattern = re.compile(r'COMMISSIONERATE - (\w+)')
+                        pattern = re.compile(r'Commissionerate - (\w+)')
                         # Use the findall method to extract the state information
                         matches = pattern.findall(value)
                         # logging.info the result
@@ -293,6 +388,12 @@ def fetch_gst_details(config_dict,gst_number,status):
                             value = matches[0]
                     elif field_name == config_dict['nature_of_business_activities_keyword']:
                         value = '\n'.join(value)
+                    elif field_name == 'date_of_registration':
+                        try:
+                            value = datetime.strptime(value, "%d/%m/%Y").strftime(
+                                "%Y-%m-%d")
+                        except:
+                            pass
                     elif field_name == 'legal_business_name' or field_name == 'trade_name':
                         try:
                             value = value.replace("'", '')

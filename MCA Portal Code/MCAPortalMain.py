@@ -1,6 +1,6 @@
 import traceback
 import os
-import datetime
+from datetime import datetime
 from DBFunctions import connect_to_database
 from DBFunctions import fetch_order_data_from_table
 from DBFunctions import get_db_credentials
@@ -35,6 +35,11 @@ from DirectorsTable import directors_table
 from DirectorsTable import directors_shareholdings_table
 from FilesTable import files_table
 from FinancialsTable import aoc_files_table
+from FilesTable import change_of_name_table
+from InsertDocumentDetailsFromFolder import insert_document_details
+from MCAPortalMainFunctions import open_onedrive
+from MCAPortalMainFunctions import update_end_time
+from MCAPortalMainFunctions import update_exception_order
 
 
 def main():
@@ -52,6 +57,9 @@ def main():
                 cin = None
                 receipt_number = None
                 company_name = None
+                driver = None
+                exception_message = ''
+                root_path = config_dict['Root path']
                 for downloaddata in downloadData:
                     try:
                         cin = downloaddata[2]
@@ -60,19 +68,34 @@ def main():
                         company_name = downloaddata[3]
                         workflow_status = downloaddata[5]
                         download_status = downloaddata[67]
+                        manual_download_status = downloaddata[77]
                         logging.info(workflow_status)
                         emails = config_dict['to_email']
                         emails = str(emails).split(',')
                         if (workflow_status == 'Payment_success' or workflow_status == 'XML_Pending') and download_status == 'N':
                             logging.info(f"Starting to download for {cin}")
                             update_locked_by(db_config, cin)
-                            subject_start = str(config_dict['subject_start']).format(cin, receipt_number)
-                            body_start = str(config_dict['Body_start']).format(cin, receipt_number, company_name)
                             try:
-                                send_email(config_dict, subject_start, body_start, emails, None)
+                                one_drive_path = config_dict['one_drive_path']
+                                open_onedrive(one_drive_path)
                             except Exception as e:
-                                logging.info(f"Error sending email {e}")
-                            Download_Status, driver, exception_message = Login_and_Download(config_dict, downloaddata)
+                                logging.info(f"Error opening one drive {e}")
+                            if manual_download_status == 'Y':
+                                subject_start = str(config_dict['subject_start_manual']).format(cin,receipt_number)
+                                body_start = str(config_dict['Body_start']).format(cin, receipt_number, company_name)
+                                try:
+                                    send_email(config_dict, subject_start, body_start, emails, None)
+                                except Exception as e:
+                                    logging.info(f"Error sending email {e}")
+                                Download_Status,exception_message = insert_document_details(db_config,cin,root_path,company_name)
+                            else:
+                                subject_start = str(config_dict['subject_start']).format(cin, receipt_number)
+                                body_start = str(config_dict['Body_start']).format(cin, receipt_number, company_name)
+                                try:
+                                    send_email(config_dict, subject_start, body_start, emails, None)
+                                except Exception as e:
+                                    logging.info(f"Error sending email {e}")
+                                Download_Status, driver, exception_message = Login_and_Download(config_dict, downloaddata)
                             if Download_Status:
                                 logging.info("Downloaded Successfully")
                                 # update_status(user,'XML_Pending',db_config,cin)
@@ -83,25 +106,47 @@ def main():
                                     sign_out(driver, config_dict, downloaddata)
                                 except:
                                     pass
-                            else:
-                                retry_counter_db = get_retry_count(db_config, cin)
-                                if retry_counter_db is not None:
-                                    if retry_counter_db == '':
-                                        retry_counter_db = 0
+                                if manual_download_status == 'Y':
+                                    subject_end = str(config_dict['subject_end_manual']).format(cin, receipt_number)
+                                    body_end = str(config_dict['Body_end_manual']).format(cin, receipt_number, company_name)
                                 else:
-                                    retry_counter_db = 0
+                                    subject_end = str(config_dict['subject_end']).format(cin, receipt_number)
+                                    body_end = str(config_dict['Body_end']).format(cin, receipt_number,
+                                                                                          company_name)
                                 try:
-                                    retry_counter_db = int(retry_counter_db)
-                                    retry_counter_db = retry_counter_db + 1
-                                except:
-                                    pass
-                                logging.info("Not Downloaded")
-                                update_locked_by_empty(db_config, cin)
+                                    send_email(config_dict, subject_end, body_end, emails, None)
+                                except Exception as e:
+                                    logging.info(f"Error sending email {e}")
+                            else:
                                 update_modified_date(db_config, cin)
-                                update_retry_count(db_config,cin,retry_counter_db)
-                                if retry_counter_db > 3:
-                                    update_process_status('Exception',db_config,cin)
+                                update_locked_by_empty(db_config, cin)
+                                update_exception_order(db_config,cin,exception_message)
                                 if str(exception_message).lower() != 'already logged in':
+                                    retry_counter_db = get_retry_count(db_config, cin)
+                                    if retry_counter_db is not None:
+                                        if retry_counter_db == '':
+                                            retry_counter_db = 0
+                                    else:
+                                        retry_counter_db = 0
+                                    try:
+                                        retry_counter_db = int(retry_counter_db)
+                                        retry_counter_db = retry_counter_db + 1
+                                    except:
+                                        pass
+                                    logging.info("Not Downloaded")
+                                    update_retry_count(db_config, cin, retry_counter_db)
+                                    if retry_counter_db > 3:
+                                        update_process_status('Exception', db_config, cin)
+                                        exception_subject = str(config_dict['Exception_subject']).format(cin,
+                                                                                                         receipt_number)
+                                        exception_body = str(config_dict['Exception_message']).format(cin,
+                                                                                                      receipt_number,
+                                                                                                      company_name,
+                                                                                                      exception_message)
+                                        try:
+                                            send_email(config_dict, exception_subject, exception_body, emails, None)
+                                        except Exception as e:
+                                            logging.info(f"Error sending email {e}")
                                     try:
                                         sign_out(driver, config_dict, downloaddata)
                                     except:
@@ -122,6 +167,14 @@ def main():
                     company_name = None
                     hidden_attachments = []
                     emails = []
+                    for CinLock in CinDBData:
+                        try:
+                            download_status = CinLock[67]
+                            cin = CinLock[2]
+                            if download_status == 'Y':
+                                update_locked_by(db_config, cin)
+                        except:
+                            continue
                     for CinData in CinDBData:
                         try:
                             cin = CinData[2]
@@ -163,6 +216,10 @@ def main():
                                 if json_loader:
                                     logging.info("JSON Loader generated succesfully")
                                     update_json_loader_db(CinData, config_dict)
+                                    try:
+                                        update_end_time(db_config,cin)
+                                    except Exception as e:
+                                        print(f"Exception occurred while updating end time {e}")
                                     cin_complete_subject = str(config_dict['cin_Completed_subject']).format(cin,receipt_number)
                                     table = FinalTable(db_config,cin)
                                     financials_Table = financials_table(db_config,cin)
@@ -170,7 +227,8 @@ def main():
                                     shareholdings_table = directors_shareholdings_table(db_config,cin)
                                     files_Table = files_table(db_config,cin)
                                     aoc_table = aoc_files_table(db_config,cin)
-                                    cin_completed_body = str(config_dict['cin_Completed_body']).format(cin,receipt_number,company_name,table,aoc_table,financials_Table,directors_Table,files_Table,shareholdings_table)
+                                    name_history_table = change_of_name_table(db_config,cin)
+                                    cin_completed_body = str(config_dict['cin_Completed_body']).format(cin,receipt_number,company_name,table,aoc_table,financials_Table,directors_Table,files_Table,shareholdings_table,name_history_table)
                                     update_process_status('Completed',db_config,cin)
                                     update_locked_by_empty(db_config,cin)
                                     config_transactional_log_path = config_dict['config_transactional_log_path']

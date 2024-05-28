@@ -538,13 +538,13 @@ def update_form_extraction_status(db_config, cin, CompanyName):
                                 JOIN (
                                     SELECT id
                                     FROM documents
-                                    WHERE document LIKE '%MGT%' AND `cin` = '{}' AND `company` = '{}' AND Category = 'Annual Returns and Balance Sheet eForms'
+                                    WHERE document LIKE '%MGT%' AND `cin` = '{}' AND `company` = '{}' AND LOWER(Category) like '%annual returns%'
                                     ORDER BY STR_TO_DATE(document_date_year, '%d-%m-%Y') DESC
-                                    LIMIT 1
+                                    LIMIT 2
                                     FOR UPDATE
                                 ) AS t2 ON t1.id = t2.id
                                 SET t1.form_data_extraction_needed = 'Y'
-                                WHERE t1.document LIKE '%MGT%' AND `cin` = '{}' AND `company` = '{}' AND Category = 'Annual Returns and Balance Sheet eForms';
+                                WHERE t1.document LIKE '%MGT%' AND `cin` = '{}' AND `company` = '{}' AND LOWER(Category) like '%annual returns%';
 
                                 COMMIT;""".format(cin, CompanyName, cin, CompanyName)
             logging.info(update_query_MGT)
@@ -583,13 +583,20 @@ WHERE d1.cin = '{}' AND d1.document LIKE '%MSME%';""".format(cin, cin)
 JOIN (
     SELECT MAX(STR_TO_DATE(document_date_year, '%d-%m-%Y')) AS latest_date
     FROM documents
-    WHERE cin = '{}' AND document LIKE '%AOC-4%' AND document not like '%AOC-4 CSR%' AND document not like '%AOC-4(XBRL)%'
+    WHERE cin = '{}' 
+    AND document LIKE '%AOC-4%' 
+    AND document NOT LIKE '%AOC-4 CSR%' 
+    AND document NOT LIKE '%AOC-4(XBRL)%'
     GROUP BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y'))
     ORDER BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y')) DESC
     LIMIT 4
-) AS d2 ON STR_TO_DATE(d1.document_date_year, '%d-%m-%Y') = d2.latest_date
+) AS d2 ON YEAR(STR_TO_DATE(d1.document_date_year, '%d-%m-%Y')) = YEAR(d2.latest_date)
 SET d1.form_data_extraction_needed = 'Y'
-WHERE d1.cin = '{}' AND d1.document LIKE '%AOC-4%' AND d1.document not LIKE '%AOC-4 CSR%' AND d1.document not LIKE '%AOC-4(XBRL)%';""".format(cin, cin)
+WHERE d1.cin = '{}' 
+AND d1.document LIKE '%AOC-4%' 
+AND d1.document NOT LIKE '%AOC-4 CSR%' 
+AND d1.document NOT LIKE '%AOC-4(XBRL)%';
+""".format(cin, cin)
             logging.info(update_query_AOC)
             cursor.execute(update_query_AOC)
             connection.commit()
@@ -602,16 +609,21 @@ WHERE d1.cin = '{}' AND d1.document LIKE '%AOC-4%' AND d1.document not LIKE '%AO
             connection = mysql.connector.connect(**db_config)
             cursor = connection.cursor()
             update_query_AOC_xbrl = """UPDATE documents AS d1
-        JOIN (
-            SELECT MAX(STR_TO_DATE(document_date_year, '%d-%m-%Y')) AS latest_date
-            FROM documents
-            WHERE cin = '{}' AND document LIKE '%AOC-4(XBRL)%' AND document not like '%AOC-4 CSR%'
-            GROUP BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y'))
-            ORDER BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y')) DESC
-            LIMIT 4
-        ) AS d2 ON STR_TO_DATE(d1.document_date_year, '%d-%m-%Y') = d2.latest_date
-        SET d1.form_data_extraction_needed = 'Y'
-        WHERE d1.cin = '{}' AND d1.document LIKE '%AOC-4(XBRL)%' AND d1.document not LIKE '%AOC-4 CSR%';""".format(cin, cin)
+JOIN (
+    SELECT MAX(STR_TO_DATE(document_date_year, '%d-%m-%Y')) AS latest_date
+    FROM documents
+    WHERE cin = '{}'
+    AND document LIKE '%AOC-4(XBRL)%'
+    AND document NOT LIKE '%AOC-4 CSR%'
+    GROUP BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y'))
+    ORDER BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y')) DESC
+    LIMIT 4
+) AS d2 ON YEAR(STR_TO_DATE(d1.document_date_year, '%d-%m-%Y')) = YEAR(d2.latest_date)
+SET d1.form_data_extraction_needed = 'Y'
+WHERE d1.cin = '{}'
+AND d1.document LIKE '%AOC-4(XBRL)%'
+AND d1.document NOT LIKE '%AOC-4 CSR%';
+""".format(cin, cin)
             logging.info(update_query_AOC_xbrl)
             cursor.execute(update_query_AOC_xbrl)
             connection.commit()
@@ -648,13 +660,16 @@ WHERE d1.cin = '{}' AND d1.document LIKE '%AOC-4%' AND d1.document not LIKE '%AO
 JOIN (
     SELECT MAX(STR_TO_DATE(document_date_year, '%d-%m-%Y')) AS latest_date
     FROM documents
-    WHERE cin = '{}' AND document LIKE '%XBRL document in respect Consolidated%'
+    WHERE cin = '{}'
+    AND document LIKE '%XBRL document in respect Consolidated%'
     GROUP BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y'))
     ORDER BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y')) DESC
     LIMIT 4
-) AS d2 ON STR_TO_DATE(d1.document_date_year, '%d-%m-%Y') = d2.latest_date
+) AS d2 ON YEAR(STR_TO_DATE(d1.document_date_year, '%d-%m-%Y')) = YEAR(d2.latest_date)
 SET d1.form_data_extraction_needed = 'Y'
-WHERE d1.cin = '{}' AND d1.document LIKE '%XBRL document in respect Consolidated%';""".format(cin, cin)
+WHERE d1.cin = '{}'
+AND d1.document LIKE '%XBRL document in respect Consolidated%'
+""".format(cin, cin)
             logging.info(update_query_Xbrl_consolidated)
             cursor.execute(update_query_Xbrl_consolidated)
             connection.commit()
@@ -662,13 +677,16 @@ WHERE d1.cin = '{}' AND d1.document LIKE '%XBRL document in respect Consolidated
 JOIN (
     SELECT MAX(STR_TO_DATE(document_date_year, '%d-%m-%Y')) AS latest_date
     FROM documents
-    WHERE cin = '{}' AND document LIKE '%XBRL financial statements%'
+    WHERE cin = '{}'
+    AND document LIKE '%XBRL financial statements%'
     GROUP BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y'))
     ORDER BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y')) DESC
     LIMIT 4
-) AS d2 ON STR_TO_DATE(d1.document_date_year, '%d-%m-%Y') = d2.latest_date
+) AS d2 ON YEAR(STR_TO_DATE(d1.document_date_year, '%d-%m-%Y')) = YEAR(d2.latest_date)
 SET d1.form_data_extraction_needed = 'Y'
-WHERE d1.cin = '{}' AND d1.document LIKE '%XBRL financial statements%';""".format(cin, cin)
+WHERE d1.cin = '{}'
+AND d1.document LIKE '%XBRL financial statements%'
+""".format(cin, cin)
             logging.info(update_query_Xbrl)
             cursor.execute(update_query_Xbrl)
             connection.commit()
@@ -826,7 +844,7 @@ WHERE d1.cin = '{}' AND d1.document LIKE '%Form8%' AND Category = 'Annual Return
         try:
             connection = mysql.connector.connect(**db_config)
             cursor = connection.cursor()
-            Certificate_of_Incorporation_Consequent_query = "UPDATE documents set form_data_extraction_needed = 'Y' where LOWER(document) LIKE '%%certificate of incorporation consequent%%' and `cin`=%s"
+            Certificate_of_Incorporation_Consequent_query = "UPDATE documents set form_data_extraction_needed = 'Y' where LOWER(document) LIKE '%%certificate of incorporation%%' and `cin`=%s"
             value_Certificate_of_Incorporation = (cin,)
             logging.info(Certificate_of_Incorporation_Consequent_query % value_Certificate_of_Incorporation)
             cursor.execute(Certificate_of_Incorporation_Consequent_query, value_Certificate_of_Incorporation)
@@ -839,7 +857,7 @@ WHERE d1.cin = '{}' AND d1.document LIKE '%Form8%' AND Category = 'Annual Return
         try:
             connection = mysql.connector.connect(**db_config)
             cursor = connection.cursor()
-            INC22_query = "UPDATE documents set form_data_extraction_needed = 'Y' where document LIKE '%%INC-22%%' and `cin`=%s"
+            INC22_query = "UPDATE documents set form_data_extraction_needed = 'Y' where (document LIKE '%%INC-22%%' or document LIKE '%%INC-28%%') and `cin`=%s"
             value_INC22_query = (cin,)
             logging.info(INC22_query % value_INC22_query)
             cursor.execute(INC22_query, value_INC22_query)
@@ -848,6 +866,108 @@ WHERE d1.cin = '{}' AND d1.document LIKE '%Form8%' AND Category = 'Annual Return
             connection.close()
         except Exception as e:
             logging.info(f"Exception occured for form 18  status updating {e}")
+
+        try:
+            connection = mysql.connector.connect(**db_config)
+            cursor = connection.cursor()
+            copy_financial_query = "UPDATE documents set form_data_extraction_needed = 'Y' where LOWER(document) LIKE '%%copy of financial%%' and `cin`=%s"
+            value_copy_financial_query = (cin,)
+            logging.info(copy_financial_query % value_copy_financial_query)
+            cursor.execute(copy_financial_query, value_copy_financial_query)
+            connection.commit()
+            cursor.close()
+            connection.close()
+        except Exception as e:
+            logging.info(f"Exception occured for form 18  status updating {e}")
+
+        try:
+            connection = mysql.connector.connect(**db_config)
+            cursor = connection.cursor()
+            update_query_AOC_cfs = """UPDATE documents AS d1
+    JOIN (
+        SELECT MAX(STR_TO_DATE(document_date_year, '%d-%m-%Y')) AS latest_date
+        FROM documents
+        WHERE cin = '{}'
+        AND document LIKE '%AOC-4 CSR%'
+        GROUP BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y'))
+        ORDER BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y')) DESC
+        LIMIT 4
+    ) AS d2 ON YEAR(STR_TO_DATE(d1.document_date_year, '%d-%m-%Y')) = YEAR(d2.latest_date)
+    SET d1.form_data_extraction_needed = 'Y'
+    WHERE d1.cin = '{}'
+    AND d1.document LIKE '%AOC-4 CSR%';
+    """.format(cin, cin)
+            logging.info(update_query_AOC_cfs)
+            cursor.execute(update_query_AOC_cfs)
+            connection.commit()
+            cursor.close()
+            connection.close()
+        except Exception as e:
+            logging.info(f"Exception occured for AOC{e}")
+
+        try:
+            connection = mysql.connector.connect(**db_config)
+            cursor = connection.cursor()
+            update_query_pas = """UPDATE documents AS d1
+    JOIN (
+        SELECT MAX(STR_TO_DATE(document_date_year, '%d-%m-%Y')) AS latest_date
+        FROM documents
+        WHERE cin = '{}'
+        AND document LIKE '%PAS-3%'
+        GROUP BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y'))
+        ORDER BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y')) DESC
+        LIMIT 2
+    ) AS d2 ON YEAR(STR_TO_DATE(d1.document_date_year, '%d-%m-%Y')) = YEAR(d2.latest_date)
+    SET d1.form_data_extraction_needed = 'Y'
+    WHERE d1.cin = '{}'
+    AND d1.document LIKE '%PAS-3%';
+    """.format(cin, cin)
+            logging.info(update_query_pas)
+            cursor.execute(update_query_pas)
+            connection.commit()
+            cursor.close()
+            connection.close()
+        except Exception as e:
+            logging.info(f"Exception occured for AOC{e}")
+
+        try:
+            connection = mysql.connector.connect(**db_config)
+            cursor = connection.cursor()
+            update_query_sh = """UPDATE documents AS d1
+    JOIN (
+        SELECT MAX(STR_TO_DATE(document_date_year, '%d-%m-%Y')) AS latest_date
+        FROM documents
+        WHERE cin = '{}'
+        AND document LIKE '%SH-7%'
+        GROUP BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y'))
+        ORDER BY YEAR(STR_TO_DATE(document_date_year, '%d-%m-%Y')) DESC
+        LIMIT 2
+    ) AS d2 ON YEAR(STR_TO_DATE(d1.document_date_year, '%d-%m-%Y')) = YEAR(d2.latest_date)
+    SET d1.form_data_extraction_needed = 'Y'
+    WHERE d1.cin = '{}'
+    AND d1.document LIKE '%SH-7%';
+    """.format(cin, cin)
+            logging.info(update_query_sh)
+            cursor.execute(update_query_sh)
+            connection.commit()
+            cursor.close()
+            connection.close()
+        except Exception as e:
+            logging.info(f"Exception occured for AOC{e}")
+
+        try:
+            connection = mysql.connector.connect(**db_config)
+            cursor = connection.cursor()
+            aoa_query = "UPDATE documents set form_data_extraction_needed = 'Y' where (LOWER(document) LIKE '%%aoa%%' or LOWER(document) LIKE '%%moa%%') and `cin`=%s"
+            value_aoa_query = (cin,)
+            logging.info(aoa_query % value_aoa_query)
+            cursor.execute(aoa_query, value_aoa_query)
+            connection.commit()
+            cursor.close()
+            connection.close()
+        except Exception as e:
+            logging.info(f"Exception occured for form 18  status updating {e}")
+
     except Exception as e:
         logging.info(f"Error updating login status in the database: {str(e)}")
         return False
@@ -1022,7 +1142,7 @@ def download_captcha_and_enter_text(CompanyName, driver, file_path, filename, Ci
             connection.close()
             return True
         else:
-            if 'XBRL financial statements' in filename:
+            if 'XBRL financial statements' in filename or 'copy of financial' in str(filename).lower():
                 other_attachments_directory = os.path.dirname(file_path)
                 if os.path.exists(other_attachments_directory):
                     files = [os.path.join(other_attachments_directory, file) for file in os.listdir(other_attachments_directory)]
@@ -1101,8 +1221,24 @@ def download_captcha_and_enter_text(CompanyName, driver, file_path, filename, Ci
                         connection.close()
                         return True
                     else:
-                        logging.info("Not Downloaded successfully")
-                        return False
+                        file_path = str(file_path).replace('.PDF', '.OCT')
+                        if os.path.exists(file_path):
+                            connection = mysql.connector.connect(**dbconfig)
+                            cursor = connection.cursor()
+                            update_query = 'update documents set Download_Status=%s where cin=%s and document=%s and company=%s and path_index IS NULL'
+                            path_update_query = 'update documents set document_download_path=%s where cin=%s and document=%s and company=%s and path_index IS NULL'
+                            values_update = ('Downloaded', Cin, filename, CompanyName)
+                            values_path_update = (file_path, Cin, filename, CompanyName)
+                            logging.info(values_update)
+                            cursor.execute(update_query, values_update)
+                            cursor.execute(path_update_query, values_path_update)
+                            connection.commit()
+                            cursor.close()
+                            connection.close()
+                            return True
+                        else:
+                            logging.info("Not Downloaded successfully")
+                            return False
                 except Exception as e:
                     logging.info("Not Downloaded successfully")
                     return False

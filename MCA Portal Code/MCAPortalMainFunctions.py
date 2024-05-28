@@ -55,6 +55,51 @@ from DBFunctions import update_locked_by_empty
 import requests
 import json
 import time
+from AOC_XBRL_HiddenAttachment_Generation import xbrl_xml_attachment
+import subprocess
+import pyautogui
+from DBFunctions import get_run_xbrl_status
+from ReInitialize_Session import session_restart
+from datetime import datetime
+
+
+def update_start_time(db_config,cin):
+    try:
+        current_datetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        connection = mysql.connector.connect(**db_config)
+        cursor = connection.cursor()
+        connection.autocommit = True
+        check_query = f"SELECT python_pro_startdate FROM orders WHERE cin = '{cin}'"
+        cursor.execute(check_query)
+        result = cursor.fetchone()
+        if result is not None and result[0] is None:
+            update_query = f"update orders set python_pro_startdate = '{current_datetime}' where cin = '{cin}'"
+            print(update_query)
+            cursor.execute(update_query)
+        cursor.close()
+        connection.close()
+    except Exception as e:
+        print(f"Error updating start time {e}")
+
+
+def update_end_time(db_config,cin):
+    try:
+        current_datetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        connection = mysql.connector.connect(**db_config)
+        cursor = connection.cursor()
+        connection.autocommit = True
+        check_query = f"SELECT python_pro_enddate FROM orders WHERE cin = '{cin}'"
+        cursor.execute(check_query)
+        result = cursor.fetchone()
+        if result is not None and result[0] is None:
+            update_query = f"update orders set python_pro_enddate = '{current_datetime}' where cin = '{cin}'"
+            print(update_query)
+            cursor.execute(update_query)
+        cursor.close()
+        connection.close()
+    except Exception as e:
+        print(f"Error updating end time {e}")
+
 
 def sign_out(driver,config_dict,CinData):
     try:
@@ -103,6 +148,10 @@ def Login_and_Download(config_dict,CinData):
         if last_logged_in_user is None or last_logged_in_user != User:
             username, password, Status = fetch_user_credentials_from_db(db_config, User)
             if Status == "Pass":
+                try:
+                    update_start_time(db_config,Cin)
+                except Exception as e:
+                    print(f"Exception occurred while updating start time {e}")
                 Login, driver,options,exception_message = login_to_website(Url, chrome_driver_path, username, password, db_config)
             else:
                 logging.warning("Already Logged in")
@@ -125,11 +174,20 @@ def Login_and_Download(config_dict,CinData):
             logging.info(f"Navigated succesfully to {CompanyName}")
         else:
             raise Exception(f"Failed to Navigate to {CompanyName}")
-        category_list = ['Annual Returns and Balance Sheet eForms','Certificates','Charge Documents','Change in Directors','Incorporation Documents','LLP Forms(Conversion of company to LLP)','Other eForm Documents','Other Attachments']
+        category_list = ['Annual Returns and Balance Sheet eForms','Certificates','Other Attachments','Change in Directors','Incorporation Documents','LLP Forms(Conversion of company to LLP)','Other eForm Documents','Charge Documents']
         insertion_counter = 0
         if db_insertion_status != 'Y':
             for item in category_list:
                 try:
+                    try:
+                        username_input = driver.find_element(By.XPATH, '//input[@type="text" and @id="userName"]')
+                        if username_input:
+                            logging.info(f"Session expired so logging again")
+                            reinitialize_session,driver = session_restart(Url,chrome_driver_path,username,password,db_config,Cin,CompanyName)
+                            if reinitialize_session:
+                                logging.info(f"Reinitialized session")
+                    except Exception as e:
+                        pass
                     category_selection = select_category(item,driver)
                     if category_selection:
                         download_status = insert_Download_Details(driver, Cin, CompanyName, db_config, item)
@@ -152,6 +210,16 @@ def Login_and_Download(config_dict,CinData):
                 logging.info("Successfully changed form extraction status")
         for category in category_list:
             try:
+                try:
+                    username_input = driver.find_element(By.XPATH, '//input[@type="text" and @id="userName"]')
+                    if username_input:
+                        logging.info(f"Session expired so logging again")
+                        reinitialize_session, driver = session_restart(Url, chrome_driver_path, username, password,
+                                                                       db_config, Cin, CompanyName)
+                        if reinitialize_session:
+                            logging.info(f"Reinitialized session")
+                except Exception as e:
+                    pass
                 category_selection = select_category(category, driver)
                 if category_selection:
                     file_download = download_documents(driver, db_config, Cin, CompanyName, category, root_path, options)
@@ -159,13 +227,19 @@ def Login_and_Download(config_dict,CinData):
                     continue
                 if file_download:
                     print(f"Downloaded for {category} ")
+                    if category == 'Annual Returns and Balance Sheet eForms':
+                        run_xbrl_status = get_run_xbrl_status(db_config, Cin)
+                        if str(run_xbrl_status).lower() != 'y':
+                            xbrl_attachment = xbrl_xml_attachment(db_config,Cin,CompanyName)
+                            if xbrl_attachment:
+                                logging.info(f"Successfully inserted XBRL Hidden attachments for {Cin}")
                 else:
                     continue
             except Exception as e:
                 print(f"Excpetion occured while downloading{e}")
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor()
-        download_file_details = "select * from documents where cin = %s and form_data_extraction_needed='Y' and Download_Status='Pending'"
+        download_file_details = "select * from documents where cin = %s and form_data_extraction_needed='Y' and Download_Status='Pending' and LOWER(document) NOT LIKE '%%copy of financial%%'"
         values = (Cin,)
         cursor.execute(download_file_details,values)
         download_files = cursor.fetchall()
@@ -174,7 +248,7 @@ def Login_and_Download(config_dict,CinData):
         time.sleep(2)
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor()
-        all_file_details = "select * from documents where cin = %s and form_data_extraction_needed='Y'"
+        all_file_details = "select * from documents where cin = %s and form_data_extraction_needed='Y'  and LOWER(document) NOT LIKE '%%copy of financial%%'"
         cursor.execute(all_file_details, values)
         all_files = cursor.fetchall()
         cursor.close()
@@ -209,6 +283,7 @@ def Login_and_Download(config_dict,CinData):
     else:
         return True,driver,None
 
+
 def XMLGeneration(db_config,CinData,config_dict):
     try:
         setup_logging()
@@ -232,6 +307,10 @@ def XMLGeneration(db_config,CinData,config_dict):
                         continue
                     if 'Fresh Certificate of Incorporation'.lower() in str(file_name).lower():
                         update_xml_extraction_status(Cin, file_name, config_dict, 'Success')
+                        continue
+                    if 'copy of financial' in str(file_name).lower() or 'pas-3' in str(file_name).lower() or 'sh-7' in str(file_name).lower() or 'inc-28' in str(file_name).lower() or 'aoa' in str(file_name).lower() or 'moa' in str(file_name).lower():
+                        update_xml_extraction_status(Cin, file_name, config_dict, 'Success')
+                        update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                         continue
                     folder_path = os.path.dirname(pdf_path)
                     xml_file_path, PDF_to_XML = PDFtoXML(pdf_path, file_name)
@@ -308,7 +387,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
         AOC_XBRL_first_file_found = False
         AOC_4_NBFC_first_file_found = False
         Form8_first_file_found = False
-
+        mgt_processed = False
         for xml in xml_files_to_insert:
             try:
                 path = xml[8]
@@ -316,7 +395,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                 file_name = xml[4]
                 xml_file_path = str(path).replace('.pdf', '.xml')
                 output_excel_path = str(path).replace('.pdf', '.xlsx')
-                if 'MGT'.lower() in str(file_name).lower():
+                if 'MGT'.lower() in str(file_name).lower() and not mgt_processed:
                     logging.info(f"Going to extract for {file_name}")
                     Sheet_name = "MGT"
                     config_dict_MGT, config_status = create_main_config_dictionary(excel_file, Sheet_name)
@@ -328,6 +407,15 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                     mgt_7_db_insertion = mgt7_xml_to_db(db_config, config_dict_MGT, map_file_path, map_file_sheet_name, xml_file_path,output_excel_path, Cin, CompanyName)
                     if mgt_7_db_insertion:
                         update_db_insertion_status(Cin,file_name,config_dict,'Success')
+                        mgt_processed = True
+                        db_connection = mysql.connector.connect(**db_config)
+                        db_cursor = db_connection.cursor()
+                        db_connection.autocommit = True
+                        mgt_update_query = "update documents set DB_insertion_status='Success' where document like '%MGT%' and cin='{}' and form_data_extraction_needed = 'Y'".format(Cin)
+                        logging.info(mgt_update_query)
+                        db_cursor.execute(mgt_update_query)
+                        db_cursor.close()
+                        db_connection.close()
                     db_connection = mysql.connector.connect(**db_config)
                     db_cursor = db_connection.cursor()
                     dir_check_query = "select * from documents where cin = %s and form_data_extraction_needed = 'Y' and LOWER(document) like '%%dir-12%%'"
@@ -404,6 +492,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                         else:
                             AOC_4_NBFC_first_file_found = True
                     elif 'AOC-4 CSR'.lower() in str(file_name).lower():
+                        update_db_insertion_status(Cin, file_name, config_dict, 'Success')
                         continue
                     elif 'CFS'.lower() in str(file_name).lower():
                         logging.info("Going to AOC 4 CFS")
@@ -756,7 +845,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
                 logging.info(line.strip())
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor()
-        db_insert_check_query = "select * from documents where cin=%s and form_data_extraction_needed='Y' and DB_insertion_status='Pending' and Download_Status='Downloaded' and document != 'Form 8'"
+        db_insert_check_query = "select * from documents where cin=%s and form_data_extraction_needed='Y' and DB_insertion_status='Pending' and Download_Status='Downloaded' and document != 'Form 8' and document_download_path not like '%%.OCT%%'"
         values_check = (Cin,)
         print(db_insert_check_query % values_check)
         cursor.execute(db_insert_check_query,values_check)
@@ -885,6 +974,31 @@ def update_completed_status_api(orderid,config_dict):
         return True
 
 
+def open_onedrive(one_drive_path):
+    try:
+        # Open OneDrive application
+        subprocess.Popen([one_drive_path])  # Replace "/path/to/onedrive.exe" with the actual path to your OneDrive executable
+
+        # Wait for 2 minutes (120 seconds)
+        time.sleep(10)
+
+        # Simulate Alt + F4 keyboard shortcut to close the window
+        pyautogui.hotkey('alt', 'f4')
+
+        print("OneDrive window closed successfully.")
+    except Exception as e:
+        print("An error occurred:", str(e))
 
 
+def update_exception_order(db_config,cin,exception_message):
+    try:
+        connection = mysql.connector.connect(**db_config)
+        cursor = connection.cursor()
+        connection.autocommit = True
+        query = f"Update orders set bot_comments = '{exception_message}' where cin = '{cin}'"
+        cursor.execute(query)
+        cursor.close()
+        connection.close()
+    except Exception as e:
+        print(f"Exception {e} occurred while updating")
 

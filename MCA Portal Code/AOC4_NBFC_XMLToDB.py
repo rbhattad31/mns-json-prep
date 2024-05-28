@@ -619,22 +619,35 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             logging.info(f'Exception {e} occurred while extracting data from xml for table {table_node_name}')
             continue
         table_df = pd.DataFrame(table_in_list)
-        table_df.dropna(inplace=True)
+        # table_df.dropna(inplace=True)
+        table_df.dropna(how='all', inplace=True)
         logging.info(table_df)
         if field_name == 'nbfc_financials_auditor':
             column_json_node_list = [x.strip() for x in column_json_node.split(',')]
             logging.info(column_json_node_list)
             column_child_node_list = [x.strip() for x in child_nodes.split(',')]
             table_df.columns = column_child_node_list
-            first_row_df = table_df.iloc[[0]]
-
+            try:
+                first_row_df = table_df.iloc[[0]]
+            except Exception as e:
+                continue
             row_dicts = first_row_df.to_dict(orient='records')
 
             auditor_json = None
             for row_dict in row_dicts:
-                row_dict["ADDRESS"] = row_dict.pop("ADDRESS_LINE_I") + ", " + row_dict.pop(
-                    "ADDRESS_LINE_II") + ", " + row_dict.pop("CITY") + ", " + row_dict.pop(
-                    "STATE") + ", " + row_dict.pop("COUNTRY") + ", " + row_dict.pop("PIN_CODE")
+                row_dict["address"] = (
+                        str(row_dict.pop("ADDRESS_LINE_I", "")) +
+                        ", " +
+                        str(row_dict.pop("ADDRESS_LINE_II", "")) +
+                        ", " +
+                        str(row_dict.pop("CITY", "")) +
+                        ", " +
+                        str(row_dict.pop("STATE", "")) +
+                        ", " +
+                        str(row_dict.pop("COUNTRY", "")) +
+                        ", " +
+                        str(row_dict.pop("PIN_CODE", ""))
+                )
                 # row_dict["ADDRESS"] = {
                 #     "ADDRESS_LINE_I": row_dict.pop("ADDRESS_LINE_I"),
                 #     "ADDRESS_LINE_II": row_dict.pop("ADDRESS_LINE_II"),

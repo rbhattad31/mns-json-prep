@@ -15,6 +15,7 @@ import re
 from CaptureTextUsingOCR import extract_text_from_pdf
 import sys
 import traceback
+from difflib import SequenceMatcher
 
 def check_name_probability(db_config,cin,input_name):
     setup_logging()
@@ -34,19 +35,15 @@ def check_name_probability(db_config,cin,input_name):
         # Convert names to lowercase
         input_name = input_name.lower()
         dbname = dbname.lower()
-
         # Find intersection and union
         intersection = set(input_name) & set(dbname)
         union = set(input_name) | set(dbname)
-
         # Calculate Jaccard similarity coefficient
         jaccard_similarity = len(intersection) / len(union)
-
         # Convert to percentage
         percentage_match = jaccard_similarity * 100
-
         # Output the result as a number
-        logging.info(f"Percentage Match of {input_name} is {percentage_match}")
+        logging.info(f"Percentage Match of {input_name} with {dbname} is {percentage_match}")
         if percentage_match > 75:
             return dbname,din,designation,director
 
@@ -177,7 +174,7 @@ def get_hidden_attachment(input_pdf_path, output_path,file_name_hidden_pdf):
         item_name_dict[each_item] = doc.embfile_info(each_item)["filename"]
 
     for item_name, file_name in item_name_dict.items():
-        if 'shareholders' in str(file_name).lower() or 'shareholder' in str(file_name).lower() or 'share holders' in str(file_name).lower() or 'share holder' in str(file_name).lower() or 'los' in str(file_name).lower() or 'shareholding' in str(file_name).lower() or 'share' in str(file_name).lower() or 'shl' in str(file_name).lower():
+        if 'shareholders' in str(file_name).lower() or 'shareholder' in str(file_name).lower() or 'share holders' in str(file_name).lower() or 'share holder' in str(file_name).lower() or 'los' in str(file_name).lower() or 'shareholding' in str(file_name).lower() or 'share' in str(file_name).lower() or 'shl' in str(file_name).lower() or 'sharholders' in str(file_name).lower() or 'sh' in str(file_name).lower():
             out_pdf =  output_path + "\\" + file_name
             logging.info(out_pdf)
             fData = doc.embfile_get(item_name)
@@ -185,7 +182,6 @@ def get_hidden_attachment(input_pdf_path, output_path,file_name_hidden_pdf):
                 outfile.write(fData)
             return out_pdf
     return None
-
 
 
 def fetch_address_din_using_open_ai(text,config_dict):

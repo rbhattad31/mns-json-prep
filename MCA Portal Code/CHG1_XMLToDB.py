@@ -247,6 +247,7 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         status_list = [x.strip() for x in config_dict['status_list'].split(',')]
         status_dict = dict(zip(status_abbreviation_list, status_list))
         logging.info(f'{status_dict=}')
+
         try:
             status_row_index = single_df[single_df['Column_Name'] == config_dict['status_column_name']].index[0]
         except IndexError as index_error:
@@ -339,6 +340,10 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
         logging.info(f"Exception occured in updating charge id {e}")
     sql_tables_list = single_df[single_df.columns[5]].unique()
     # for each distinct table value, filter the df with table value and find columns
+    property_type_abbreviation_list = [x.strip() for x in config_dict['property_type_abbreviation_list'].split(',')]
+    property_type_list = [x.strip() for x in config_dict['property_type_list'].split(',')]
+    property_type_dict = dict(zip(property_type_abbreviation_list, property_type_list))
+    logging.info(property_type_dict)
     for sql_table_name in sql_tables_list:
 
         # filter only table
@@ -483,7 +488,27 @@ def xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, xml_fi
             # create json dict with keys of field name and values for the same column name entries
             json_dict = column_df.set_index(table_df.columns[0])['Value'].to_dict()
             # Convert the dictionary to a JSON string
-            json_string = json.dumps(json_dict)
+            logging.info(json_dict)
+            digit_count = sum(c.isdigit() for c in file_name)
+            if column_name == config_dict['property_type_column_name']:
+                type_list = []
+                other_description = json_dict.get('property_type_other_description')
+                if 'form 8' in str(file_name).lower() or digit_count == 7:
+                    json_dict = {key: property_type_dict.get(key, key) for key, value in json_dict.items() if
+                                 str(value).lower() != '2one' and key != 'property_type_other_description' and str(value).lower() != 'none'}
+                else:
+                    json_dict = {key: property_type_dict.get(key, key) for key, value in json_dict.items() if str(value).lower() != 'none' and key != 'property_type_other_description' and str(value).lower() != '2one'}
+                logging.info(json_dict)
+                for key,value in json_dict.items():
+                    type_list.append(value)
+                if str(other_description).lower() != 'none':
+                    logging.info(f"Found Others.Description is {other_description}")
+                    type_list.append(other_description)
+                property_types = ",".join(type_list)
+                json_dict = {'property_type':property_types}
+                json_string = json.dumps(json_dict)
+            else:
+                json_string = json.dumps(json_dict)
             # logging.info(json_string)
             date_column_name = config_dict['date_column_name']
             amount_column_name = config_dict['amount_column_name']
@@ -549,4 +574,3 @@ def chg1_xml_to_db(db_config, config_dict, map_file_path, map_file_sheet_name, x
         return False
     else:
         return True
-
