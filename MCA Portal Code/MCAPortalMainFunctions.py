@@ -63,17 +63,17 @@ from ReInitialize_Session import session_restart
 from datetime import datetime
 
 
-def update_start_time(db_config,cin):
+def update_start_time(db_config,cin,database_id):
     try:
         current_datetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor()
         connection.autocommit = True
-        check_query = f"SELECT python_pro_startdate FROM orders WHERE cin = '{cin}'"
+        check_query = f"SELECT python_pro_startdate FROM orders WHERE cin = '{cin}' and id = {database_id}"
         cursor.execute(check_query)
         result = cursor.fetchone()
         if result is not None and result[0] is None:
-            update_query = f"update orders set python_pro_startdate = '{current_datetime}' where cin = '{cin}'"
+            update_query = f"update orders set python_pro_startdate = '{current_datetime}' where cin = '{cin}' and id = {database_id}"
             print(update_query)
             cursor.execute(update_query)
         cursor.close()
@@ -82,17 +82,17 @@ def update_start_time(db_config,cin):
         print(f"Error updating start time {e}")
 
 
-def update_end_time(db_config,cin):
+def update_end_time(db_config,cin,database_id):
     try:
         current_datetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor()
         connection.autocommit = True
-        check_query = f"SELECT python_pro_enddate FROM orders WHERE cin = '{cin}'"
+        check_query = f"SELECT python_pro_enddate FROM orders WHERE cin = '{cin}' and id = {database_id}"
         cursor.execute(check_query)
         result = cursor.fetchone()
         if result is not None and result[0] is None:
-            update_query = f"update orders set python_pro_enddate = '{current_datetime}' where cin = '{cin}'"
+            update_query = f"update orders set python_pro_enddate = '{current_datetime}' where cin = '{cin}' and id = {database_id}"
             print(update_query)
             cursor.execute(update_query)
         cursor.close()
@@ -141,15 +141,16 @@ def Login_and_Download(config_dict,CinData):
         Url = config_dict['Url']
         Cin, CompanyName, User = CinData[2], CinData[3], CinData[15]
         workflow_status = CinData[5]
+        database_id = CinData[0]
         db_insertion_status = CinData[68]
         db_config = get_db_credentials(config_dict)
-        update_locked_by(db_config,Cin)
+        update_locked_by(db_config,Cin,database_id)
         last_logged_in_user = None
         if last_logged_in_user is None or last_logged_in_user != User:
             username, password, Status = fetch_user_credentials_from_db(db_config, User)
             if Status == "Pass":
                 try:
-                    update_start_time(db_config,Cin)
+                    update_start_time(db_config,Cin,database_id)
                 except Exception as e:
                     print(f"Exception occurred while updating start time {e}")
                 Login, driver,options,exception_message = login_to_website(Url, chrome_driver_path, username, password, db_config)
@@ -157,7 +158,7 @@ def Login_and_Download(config_dict,CinData):
                 logging.warning("Already Logged in")
                 # update_status(User,"Exception",db_config)
                 exception_message = "Already Logged in"
-                update_locked_by_empty(db_config, Cin)
+                update_locked_by_empty(db_config, Cin,database_id)
                 return False,None,exception_message
             print(Login)
             if Login == "Pass":
@@ -165,7 +166,7 @@ def Login_and_Download(config_dict,CinData):
                 last_logged_in_user = User
             else:
                 # update_status(User, "Login Failed", db_config,Cin)
-                update_locked_by_empty(db_config,Cin)
+                update_locked_by_empty(db_config,Cin,database_id)
                 return False,None,exception_message
         else:
             logging.info("Already Logged in so carrying on with the same credentials")
@@ -202,7 +203,7 @@ def Login_and_Download(config_dict,CinData):
                     continue
             if len(category_list) == insertion_counter:
                 #update_status(User, 'download_insertion_success', db_config, Cin)
-                update_download_insertion_status(db_config,Cin)
+                update_download_insertion_status(db_config,Cin,database_id)
             else:
                 raise Exception(f"Download Insertion failed for {Cin}")
             update_extraction_status = update_form_extraction_status(db_config, Cin, CompanyName)
@@ -228,7 +229,7 @@ def Login_and_Download(config_dict,CinData):
                 if file_download:
                     print(f"Downloaded for {category} ")
                     if category == 'Annual Returns and Balance Sheet eForms':
-                        run_xbrl_status = get_run_xbrl_status(db_config, Cin)
+                        run_xbrl_status = get_run_xbrl_status(db_config, Cin,database_id)
                         if str(run_xbrl_status).lower() != 'y':
                             xbrl_attachment = xbrl_xml_attachment(db_config,Cin,CompanyName)
                             if xbrl_attachment:
@@ -253,7 +254,7 @@ def Login_and_Download(config_dict,CinData):
         all_files = cursor.fetchall()
         cursor.close()
         connection.close()
-        check_files_and_update(Cin,db_config)
+        check_files_and_update(Cin,db_config,database_id)
         time.sleep(2)
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor()
@@ -922,13 +923,13 @@ def json_loader_generation(cindata,dbconfig,config_dict,excel_file_path):
         return True,json_file_path,None
 
 
-def update_download_status(db_config,cin):
+def update_download_status(db_config,cin,database_id):
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
     try:
-        query = "UPDATE orders SET document_download_status = 'Y' WHERE cin=%s"
+        query = "UPDATE orders SET document_download_status = 'Y' WHERE cin=%s and id = %s"
         logging.info(query)
-        cursor.execute(query, (cin,))
+        cursor.execute(query, (cin,database_id))
         connection.commit()
     except Exception as e:
         print(f"Error updating login status in the database: {str(e)}")
@@ -936,13 +937,13 @@ def update_download_status(db_config,cin):
         cursor.close()
         connection.close()
 
-def update_download_insertion_status(db_config,cin):
+def update_download_insertion_status(db_config,cin,database_id):
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
     try:
-        query = "UPDATE orders SET document_db_insertion_status = 'Y' WHERE cin=%s"
+        query = "UPDATE orders SET document_db_insertion_status = 'Y' WHERE cin=%s and id = %s"
         logging.info(query)
-        cursor.execute(query, (cin,))
+        cursor.execute(query, (cin,database_id))
         connection.commit()
     except Exception as e:
         print(f"Error updating login status in the database: {str(e)}")

@@ -61,13 +61,13 @@ def fetch_workflow_status(db_config,cin):
     connection.close()
     return workflow_status
 
-def update_process_status(Status,db_config,cin):
+def update_process_status(Status,db_config,cin, database_id):
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
     try:
-        query = "UPDATE orders SET process_status = %s WHERE cin=%s"
+        query = "UPDATE orders SET process_status = %s WHERE cin=%s and id = %s"
         print(query)
-        cursor.execute(query, (Status,cin))
+        cursor.execute(query, (Status,cin,database_id))
         connection.commit()
     except Exception as e:
         print(f"Error updating login status in the database: {str(e)}")
@@ -75,13 +75,13 @@ def update_process_status(Status,db_config,cin):
         cursor.close()
         connection.close()
 
-def update_status(user,Status,db_config,cin):
+def update_status(user,Status,db_config,cin,database_id):
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
     try:
-        query = "UPDATE orders SET workflow_status = %s WHERE payment_by_user = %s and cin=%s"
+        query = "UPDATE orders SET workflow_status = %s WHERE payment_by_user = %s and cin=%s and id = %s"
         print(query)
-        cursor.execute(query, (Status,user,cin))
+        cursor.execute(query, (Status,user,cin,database_id))
         connection.commit()
     except Exception as e:
         print(f"Error updating login status in the database: {str(e)}")
@@ -89,14 +89,13 @@ def update_status(user,Status,db_config,cin):
         cursor.close()
         connection.close()
 
-def update_locked_by(dbconfig,Cin):
+def update_locked_by(dbconfig,Cin,database_id):
     connection = mysql.connector.connect(**dbconfig)
     cursor = connection.cursor()
     try:
-        update_locked_query = "update orders set python_locked_by = %s where cin=%s"
-        #user = os.getlogin()
-        user = 'Python-Machine-141'
-        values = (user, Cin)
+        update_locked_query = "update orders set python_locked_by = %s where cin=%s and id = %s"
+        user = os.environ.get('SystemName')
+        values = (user, Cin,database_id)
         cursor.execute(update_locked_query, values)
         connection.commit()
     except Exception as e:
@@ -105,12 +104,12 @@ def update_locked_by(dbconfig,Cin):
         cursor.close()
         connection.close()
 
-def update_locked_by_empty(dbconfig,Cin):
+def update_locked_by_empty(dbconfig,Cin,database_id):
     connection = mysql.connector.connect(**dbconfig)
     cursor = connection.cursor()
     try:
-        update_locked_query = "update orders set python_locked_by = '' where cin=%s"
-        values = (Cin,)
+        update_locked_query = "update orders set python_locked_by = '' where cin=%s and id = %s"
+        values = (Cin,database_id)
         cursor.execute(update_locked_query, values)
         connection.commit()
     except Exception as e:
@@ -196,13 +195,11 @@ def update_xml_extraction_status(Cin,Filename,config_dict,Status):
 def get_xml_to_insert(Cin,config_dict):
     db_config = get_db_credentials(config_dict)
     connection, cursor = connect_to_database(db_config)
-    query = "SELECT * FROM documents where cin=%s and Download_Status='Downloaded' and form_data_extraction_status='Success' and DB_insertion_status='Pending' and form_data_extraction_needed = 'Y'"
-    value = (Cin,)
-    print(query % value)
-    cursor.execute(query,value)
+    query = f"SELECT * FROM documents where cin='{Cin}' and Download_Status='Downloaded' and form_data_extraction_status='Success' and DB_insertion_status='Pending' and form_data_extraction_needed = 'Y' ORDER BY STR_TO_DATE(document_date_year, '%d-%m-%Y') DESC"
+    print(query)
+    cursor.execute(query)
     files_to_insert = cursor.fetchall()
     return files_to_insert
-
 
 def update_database_single_value(db_config, table_name, cin_column_name, cin_value,company_name_column_name,company_name, column_name, column_value,name,date):
     db_connection = mysql.connector.connect(**db_config)
@@ -273,11 +270,12 @@ def update_db_insertion_status(Cin,Filename,config_dict,Status):
 
 def update_json_loader_db(cindata,config_dict):
     db_config = get_db_credentials(config_dict)
+    database_id = cindata[0]
     cin = cindata[2]
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
-    update_loader_query = "update orders set workflow_status='Loader_generated' where cin=%s"
-    values = (cin,)
+    update_loader_query = "update orders set workflow_status='Loader_generated' where cin=%s and id = %s"
+    values = (cin,database_id)
     cursor.execute(update_loader_query,values)
     print(update_loader_query % values)
     connection.commit()
@@ -285,7 +283,7 @@ def update_json_loader_db(cindata,config_dict):
     connection.close()
 
 
-def check_files_and_update(cin,db_config):
+def check_files_and_update(cin,db_config,database_id):
     try:
         non_llp_files_type = ['AOC-4','AOC-4 NBFC','AOC-4 CFS NBFC','XBRL','CHG-1','DIR-12','MSME','MGT-7','CHANGE OF NAME']
         llp_file_types = ['Form8','Form11','CHANGE OF NAME','FiLLiP']
@@ -315,8 +313,8 @@ def check_files_and_update(cin,db_config):
                     python_comments += comment
                     python_comments = python_comments + " "
 
-        update_query = 'update orders set python_comments = %s where cin = %s'
-        update_query_values = (python_comments,cin)
+        update_query = 'update orders set python_comments = %s where cin = %s and id = %s'
+        update_query_values = (python_comments,cin,database_id)
         print(update_query % update_query_values)
         cursor.execute(update_query,update_query_values)
         cursor.close()
@@ -346,7 +344,7 @@ def fetch_order_download_data_from_table(connection):
             setup_logging()
             cursor = connection.cursor()
             # Construct the SQL query
-            query = "SELECT * FROM orders where process_status=%s and payment_by_user!='' and document_download_status = 'N' and (workflow_status = 'Payment_success' or workflow_status = 'XML_Pending') and (python_locked_by = '' or python_locked_by is NULL) order by modified_date LIMIT 1"
+            query = "SELECT * FROM orders where process_status= %s and payment_by_user!='' and document_download_status = 'N' and (workflow_status = 'XML_Pending' or workflow_status = 'Payment_success') and (python_locked_by = '' or python_locked_by is NULL) order by (CASE WHEN workflow_status = 'XML_Pending' THEN 0 ELSE 1 END),(CASE WHEN created_date > NOW() - INTERVAL 1 HOUR THEN 0 ELSE 1 END),modified_date,pad_pro_startdate LIMIT 1"
             #value1 = ("Download_Pending")
             cursor.execute(query, ('InProgress',))
             logging.info(query, ('InProgress',))
@@ -365,15 +363,15 @@ def fetch_order_download_data_from_table(connection):
         return None
 
 
-def update_modified_date(db_config,cin):
+def update_modified_date(db_config,cin,database_id):
     setup_logging()
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
     try:
-        update_locked_query = "update orders set modified_date = %s where cin=%s"
+        update_locked_query = "update orders set modified_date = %s where cin=%s and id = %s"
         current_date = datetime.now()
         today_date = current_date.strftime("%Y-%m-%d %H:%M:%S")
-        values = (today_date, cin)
+        values = (today_date, cin, database_id)
         logging.info(update_locked_query % values)
         cursor.execute(update_locked_query, values)
         connection.commit()
@@ -383,15 +381,14 @@ def update_modified_date(db_config,cin):
         cursor.close()
         connection.close()
         
-        
 
-def update_retry_count(db_config,cin,retry_counter):
+def update_retry_count(db_config,cin,retry_counter,database_id):
     setup_logging()
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
     try:
-        update_retry_counter_query = "update orders set retry_counter = %s where cin=%s"
-        values = (retry_counter, cin)
+        update_retry_counter_query = "update orders set retry_counter = %s where cin=%s and id = %s"
+        values = (retry_counter, cin,database_id)
         logging.info(update_retry_counter_query % values)
         cursor.execute(update_retry_counter_query, values)
         connection.commit()
@@ -402,13 +399,13 @@ def update_retry_count(db_config,cin,retry_counter):
         connection.close()
 
 
-def get_retry_count(db_config,cin):
+def get_retry_count(db_config,cin,database_id):
     setup_logging()
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
     try:
-        retry_counter_query = "select retry_counter from orders where cin = %s"
-        values = (cin,)
+        retry_counter_query = "select retry_counter from orders where cin = %s and id = %s"
+        values = (cin,database_id)
         logging.info(retry_counter_query % values)
         cursor.execute(retry_counter_query, values)
         result = cursor.fetchone()[0]
@@ -416,6 +413,26 @@ def get_retry_count(db_config,cin):
         return result
     except Exception as e:
         logging.info(f"Excpetion occured while updating retry counter by {e}")
+        return None
+    finally:
+        cursor.close()
+        connection.close()
+
+
+def get_run_xbrl_status(db_config,cin,database_id):
+    setup_logging()
+    connection = mysql.connector.connect(**db_config)
+    cursor = connection.cursor()
+    try:
+        run_xbrl_query = "select run_xbrl from orders where cin = %s and id = %s"
+        values = (cin,database_id)
+        logging.info(run_xbrl_query % values)
+        cursor.execute(run_xbrl_query, values)
+        result = cursor.fetchone()[0]
+        logging.info(f"Run xbrl flag is {result}")
+        return result
+    except Exception as e:
+        logging.info(f"Excpetion occured while getting run xbel status {e}")
         return None
     finally:
         cursor.close()
