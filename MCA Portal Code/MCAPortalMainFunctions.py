@@ -61,6 +61,7 @@ import pyautogui
 from DBFunctions import get_run_xbrl_status
 from ReInitialize_Session import session_restart
 from datetime import datetime
+from SendEmail import send_email
 
 
 def update_start_time(db_config,cin,database_id):
@@ -142,6 +143,7 @@ def Login_and_Download(config_dict,CinData):
         Cin, CompanyName, User = CinData[2], CinData[3], CinData[15]
         workflow_status = CinData[5]
         database_id = CinData[0]
+        receipt_number = CinData[1]
         db_insertion_status = CinData[68]
         db_config = get_db_credentials(config_dict)
         update_locked_by(db_config,Cin,database_id)
@@ -153,6 +155,14 @@ def Login_and_Download(config_dict,CinData):
                     update_start_time(db_config,Cin,database_id)
                 except Exception as e:
                     print(f"Exception occurred while updating start time {e}")
+                try:
+                    subject_start = str(config_dict['subject_start']).format(Cin, receipt_number)
+                    body_start = str(config_dict['Body_start']).format(Cin, receipt_number, CompanyName)
+                    emails = config_dict['to_email']
+                    emails = str(emails).split(',')
+                    send_email(config_dict, subject_start, body_start, emails, None)
+                except Exception as e:
+                    logging.info(f"Error sending email {e}")
                 Login, driver,options,exception_message = login_to_website(Url, chrome_driver_path, username, password, db_config)
             else:
                 logging.warning("Already Logged in")

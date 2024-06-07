@@ -87,12 +87,6 @@ def main():
                                     logging.info(f"Error sending email {e}")
                                 Download_Status,exception_message = insert_document_details(db_config,cin,root_path,company_name,database_id)
                             else:
-                                subject_start = str(config_dict['subject_start']).format(cin, receipt_number)
-                                body_start = str(config_dict['Body_start']).format(cin, receipt_number, company_name)
-                                try:
-                                    send_email(config_dict, subject_start, body_start, emails, None)
-                                except Exception as e:
-                                    logging.info(f"Error sending email {e}")
                                 Download_Status, driver, exception_message = Login_and_Download(config_dict, downloaddata)
                             if Download_Status:
                                 logging.info("Downloaded Successfully")
