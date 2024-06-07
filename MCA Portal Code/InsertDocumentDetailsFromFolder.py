@@ -23,7 +23,7 @@ def convert_date_format(date):
     return f"{date[:2]}-{date[2:4]}-{year}"
 
 
-def insert_document_details(db_config,cin,root_path,company_name):
+def insert_document_details(db_config,cin,root_path,company_name,database_id):
     try:
         cin_folder_path = os.path.join(root_path,cin)
         if os.path.exists(cin_folder_path):
@@ -84,7 +84,7 @@ def insert_document_details(db_config,cin,root_path,company_name):
                 except Exception as e:
                     print(f"Exception occurred in folder {folder} {e}")
             update_extraction_status = update_form_extraction_status(db_config, cin, company_name)
-            run_xbrl_status = get_run_xbrl_status(db_config,cin)
+            run_xbrl_status = get_run_xbrl_status(db_config,cin,database_id)
             if str(run_xbrl_status).lower() != 'y':
                 xbrl_hidden_xml_attachment = xbrl_xml_attachment(db_config,cin,company_name)
                 if xbrl_hidden_xml_attachment:
