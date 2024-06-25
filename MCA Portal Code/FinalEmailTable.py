@@ -3,7 +3,7 @@ from tabulate import tabulate
 from bs4 import BeautifulSoup
 
 
-def FinalTable(db_config,cin):
+def FinalTable(db_config,cin,database_id):
     try:
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor()
@@ -35,10 +35,10 @@ def FinalTable(db_config,cin):
                 dinstatusceck_status,dinstatusceck_comment,
                 director_shareholding_status,director_shareholding_comments
             FROM orders
-            WHERE cin = %s
+            WHERE cin = %s and id = %s
         """
 
-        cursor.execute(query, (cin,))
+        cursor.execute(query, (cin,database_id))
         result = cursor.fetchone()
 
         # Close the database connection

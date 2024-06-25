@@ -62,6 +62,7 @@ from DBFunctions import get_run_xbrl_status
 from ReInitialize_Session import session_restart
 from datetime import datetime
 from SendEmail import send_email
+from DBFunctions import update_bot_comments_empty
 
 
 def update_start_time(db_config,cin,database_id):
@@ -153,6 +154,7 @@ def Login_and_Download(config_dict,CinData):
             if Status == "Pass":
                 try:
                     update_start_time(db_config,Cin,database_id)
+                    update_bot_comments_empty(db_config,Cin,database_id)
                 except Exception as e:
                     print(f"Exception occurred while updating start time {e}")
                 try:
@@ -1001,12 +1003,12 @@ def open_onedrive(one_drive_path):
         print("An error occurred:", str(e))
 
 
-def update_exception_order(db_config,cin,exception_message):
+def update_exception_order(db_config, cin, exception_message, database_id):
     try:
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor()
         connection.autocommit = True
-        query = f"Update orders set bot_comments = '{exception_message}' where cin = '{cin}'"
+        query = f"Update orders set bot_comments = '{exception_message}' where cin = '{cin}' and id = {database_id}"
         cursor.execute(query)
         cursor.close()
         connection.close()
