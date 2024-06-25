@@ -437,3 +437,33 @@ def get_run_xbrl_status(db_config,cin,database_id):
     finally:
         cursor.close()
         connection.close()
+
+
+def update_bot_comments_empty(db_config, cin, database_id):
+    setup_logging()
+    connection = mysql.connector.connect(**db_config)
+    cursor = connection.cursor()
+    try:
+        update_comments_query = f"update orders set bot_comments = '' where cin = '{cin}' and id = {database_id}"
+        cursor.execute(update_comments_query)
+        connection.commit()
+    except Exception as e:
+        logging.error(f"Exception occurred while updating locked by {e}")
+    finally:
+        cursor.close()
+        connection.close()
+
+
+def update_main_table_fields_empty(db_config, cin, database_id):
+    setup_logging()
+    connection = mysql.connector.connect(**db_config)
+    cursor = connection.cursor()
+    try:
+        update_comments_query = f"update orders set bot_comments = '',retry_counter = '',exception_type = '' where cin = '{cin}' and id = {database_id}"
+        cursor.execute(update_comments_query)
+        connection.commit()
+    except Exception as e:
+        logging.error(f"Exception occurred while updating locked by {e}")
+    finally:
+        cursor.close()
+        connection.close()

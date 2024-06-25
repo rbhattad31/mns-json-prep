@@ -21,6 +21,7 @@ from selenium.common.exceptions import NoSuchWindowException
 from logging_config import setup_logging
 import logging
 
+
 current_date = datetime.now()
 today_date = current_date.strftime('%d/%m/%Y %H:%M:%S')
 user_name = os.getlogin()
@@ -327,7 +328,11 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath,options
                             # If a dot is found, remove everything after it
                             filename = parts[0]
                         logging.info(filename)
-                        download_filepath = os.path.join(folder_path, filename)
+                        if 'copy of financial' in str(filename).lower():
+                            logging.info(f"Taking main download path for copy of financials")
+                            download_filepath = os.path.join(rootpath,Cin,filename)
+                        else:
+                            download_filepath = os.path.join(folder_path, filename)
                         filepath = download_filepath + '.pdf'
                         if index_id == '' or index_id is None:
                             file_xpath = f'//a[contains(text(),"{filename}")]'
@@ -358,7 +363,11 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath,options
                                 except Exception as e:
                                     logging.info(f"Error for change of name x path {e}")
                                     continue
-                            file_directory = os.path.dirname(filepath)
+                            if 'copy of financial' in str(filename).lower():
+                                logging.info(f"Taking main directory for copy of financial")
+                                file_directory = os.path.join(rootpath, Cin)
+                            else:
+                                file_directory = os.path.dirname(filepath)
                             duplicate_file_path = ''
                         else:
                             duplicate_folder_path = rf"{rootpath}\{Cin}\duplicates"
@@ -378,7 +387,6 @@ def download_documents(driver,dbconfig,Cin,CompanyName,Category,rootpath,options
                             file_download_button.click()
                             time.sleep(10)
                             file_directory = os.path.dirname(duplicate_folder_file)
-
                         file_directory = file_directory
                         logging.info(file_directory)
                         params = {
@@ -1010,6 +1018,7 @@ def download_captcha_and_enter_text(CompanyName, driver, file_path, filename, Ci
         window_handles = driver.window_handles
         new_window_handle = window_handles[-1]
         driver.switch_to.window(new_window_handle)
+        time.sleep(1)
         for attempt in range(1, retry_count + 1):
             try:
                 captcha_image = WebDriverWait(driver, 10).until(
@@ -1060,6 +1069,7 @@ def download_captcha_and_enter_text(CompanyName, driver, file_path, filename, Ci
                         break
                 except:
                     break
+
             except Exception as e:
                 logging.info(e)
                 logging.info(f"Failed attempt {attempt} to download captcha and enter text")
@@ -1118,23 +1128,34 @@ def download_captcha_and_enter_text(CompanyName, driver, file_path, filename, Ci
         if os.path.exists(file_path):
             connection = mysql.connector.connect(**dbconfig)
             cursor = connection.cursor()
+            if 'copy of financial' in str(file_path).lower():
+                logging.info(f"Moving copy of financial from Main to other attachments folder")
+                old_file_path_copy_financial = file_path
+                download_filename_cf = os.path.basename(old_file_path_copy_financial)
+                root_dir = os.path.dirname(old_file_path_copy_financial)
+                file_path = os.path.join(root_dir,category,download_filename_cf)
+                if '.pdf' not in file_path:
+                    file_path = file_path + '.pdf'
+                shutil.move(old_file_path_copy_financial,file_path)
             if index_id == '' or index_id is None:
-                logging.info("Downloaded for duplicate")
+                logging.info("Downloaded")
                 update_query = 'update documents set Download_Status=%s where cin=%s and document=%s and company=%s and path_index IS NULL'
                 path_update_query = 'update documents set document_download_path=%s where cin=%s and document=%s and company=%s and path_index IS NULL'
                 values_update = ('Downloaded', Cin, filename, CompanyName)
                 values_path_update = (file_path, Cin, filename, CompanyName)
-                logging.info(values_update)
+                logging.info(update_query % values_update)
+                logging.info(path_update_query % values_path_update)
                 cursor.execute(update_query, values_update)
                 cursor.execute(path_update_query, values_path_update)
                 connection.commit()
             else:
-                logging.info("Downloaded successfully")
+                logging.info("Downloaded successfully for duplicate")
                 update_query = 'update documents set Download_Status=%s where cin=%s and document=%s and company=%s and path_index = %s'
                 path_update_query = 'update documents set document_download_path=%s where cin=%s and document=%s and company=%s and path_index = %s'
                 values_update = ('Downloaded', Cin, filename, CompanyName, index_id)
                 values_path_update = (file_path, Cin, filename, CompanyName, index_id)
-                logging.info(values_update)
+                logging.info(update_query % values_update)
+                logging.info(path_update_query % values_path_update)
                 cursor.execute(update_query, values_update)
                 cursor.execute(path_update_query, values_path_update)
                 connection.commit()

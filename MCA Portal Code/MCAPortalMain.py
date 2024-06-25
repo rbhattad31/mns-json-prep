@@ -36,6 +36,7 @@ from InsertDocumentDetailsFromFolder import insert_document_details
 from MCAPortalMainFunctions import open_onedrive
 from MCAPortalMainFunctions import update_end_time
 from MCAPortalMainFunctions import update_exception_order
+from DBFunctions import update_main_table_fields_empty
 
 
 def main():
@@ -112,7 +113,7 @@ def main():
                             else:
                                 update_modified_date(db_config, cin,database_id)
                                 update_locked_by_empty(db_config, cin,database_id)
-                                update_exception_order(db_config,cin,exception_message)
+                                update_exception_order(db_config,cin,exception_message,database_id)
                                 if str(exception_message).lower() != 'already logged in':
                                     retry_counter_db = get_retry_count(db_config, cin,database_id)
                                     if retry_counter_db is not None:
@@ -216,7 +217,7 @@ def main():
                                     except Exception as e:
                                         print(f"Exception occurred while updating end time {e}")
                                     cin_complete_subject = str(config_dict['cin_Completed_subject']).format(cin,receipt_number)
-                                    table = FinalTable(db_config,cin)
+                                    table = FinalTable(db_config,cin,database_id)
                                     financials_Table = financials_table(db_config,cin)
                                     directors_Table = directors_table(db_config,cin)
                                     shareholdings_table = directors_shareholdings_table(db_config,cin)
@@ -226,6 +227,7 @@ def main():
                                     cin_completed_body = str(config_dict['cin_Completed_body']).format(cin,receipt_number,company_name,table,aoc_table,financials_Table,directors_Table,files_Table,shareholdings_table,name_history_table)
                                     update_process_status('Completed',db_config,cin,database_id)
                                     update_locked_by_empty(db_config,cin,database_id)
+                                    update_main_table_fields_empty(db_config,cin,database_id)
                                     config_transactional_log_path = config_dict['config_transactional_log_path']
                                     root_path = config_dict['Root path']
                                     transaction_log_path = generate_transactional_log(db_config,config_transactional_log_path,root_path)
