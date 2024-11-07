@@ -367,7 +367,17 @@ def XMLGeneration(db_config,CinData,config_dict):
         print(f"Exception Occured {e}")
         return False,[]
     else:
-        return True,hidden_attachments_list
+        connection = mysql.connector.connect(**db_config)
+        cursor = connection.cursor()
+        xml_check_query = "select * from documents where cin=%s and form_data_extraction_needed='Y' and form_data_extraction_status in ('Pending','Failure') and Download_Status='Downloaded' and document != 'Form 8' and document_download_path not like '%%.OCT%%'"
+        values_check = (Cin,)
+        print(xml_check_query % values_check)
+        cursor.execute(xml_check_query, values_check)
+        result_xml_pending = cursor.fetchall()
+        if len(result_xml_pending) < 5:
+            return True, hidden_attachments_list
+        else:
+            return False, []
 
 
 def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):

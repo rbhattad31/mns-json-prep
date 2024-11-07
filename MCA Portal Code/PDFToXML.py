@@ -392,7 +392,7 @@ def fetch_form_extraction_file_data_from_table(connection,Cin,Company):
             # Construct the SQL query
             connection.commit()
             time.sleep(5)
-            query = "select * from documents where cin=%s and company=%s and form_data_extraction_needed='Y' and Download_Status='Downloaded' and form_data_extraction_status='Pending'"
+            query = "select * from documents where cin=%s and company=%s and form_data_extraction_needed='Y' and Download_Status='Downloaded' and form_data_extraction_status in ('Pending','Failure')"
             values = (Cin,Company)
             logging.info(query % values)
             cursor.execute(query,values)
