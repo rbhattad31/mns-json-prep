@@ -344,10 +344,10 @@ def fetch_order_download_data_from_table(connection):
             setup_logging()
             cursor = connection.cursor()
             # Construct the SQL query
-            query = "SELECT * FROM orders where process_status= %s and payment_by_user!='' and document_download_status = 'N' and (workflow_status = 'XML_Pending' or workflow_status = 'Payment_success') and (python_locked_by = '' or python_locked_by is NULL) order by (CASE WHEN workflow_status = 'XML_Pending' THEN 0 ELSE 1 END),(CASE WHEN created_date > NOW() - INTERVAL 1 HOUR THEN 0 ELSE 1 END),modified_date,pad_pro_startdate LIMIT 1"
+            query = "SELECT * FROM orders where process_status in ('InProgress','Exception') and payment_by_user!='' and document_download_status = 'N' and (workflow_status = 'XML_Pending' or workflow_status = 'Payment_success') and (python_locked_by = '' or python_locked_by is NULL) order by (CASE WHEN workflow_status = 'XML_Pending' THEN 0 ELSE 1 END),(CASE WHEN created_date > NOW() - INTERVAL 1 HOUR THEN 0 ELSE 1 END),modified_date,pad_pro_startdate LIMIT 1"
             #value1 = ("Download_Pending")
-            cursor.execute(query, ('InProgress',))
-            logging.info(query, ('InProgress',))
+            logging.info(query)
+            cursor.execute(query)
             # Get the column names from the cursor description
             column_names = [desc[0] for desc in cursor.description]
 

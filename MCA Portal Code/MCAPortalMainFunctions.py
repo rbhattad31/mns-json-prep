@@ -369,7 +369,7 @@ def XMLGeneration(db_config,CinData,config_dict):
     else:
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor()
-        xml_check_query = "select * from documents where cin=%s and form_data_extraction_needed='Y' and form_data_extraction_status in ('Pending','Failure') and Download_Status='Downloaded' and document != 'Form 8' and document_download_path not like '%%.OCT%%'"
+        xml_check_query = "select * from documents where cin=%s and form_data_extraction_needed='Y' and form_data_extraction_status in ('Pending','Failure') and Download_Status='Downloaded' and document != 'Form 8' and document != 'Form 32' and document_download_path not like '%%.OCT%%'"
         values_check = (Cin,)
         print(xml_check_query % values_check)
         cursor.execute(xml_check_query, values_check)
