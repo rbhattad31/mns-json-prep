@@ -65,6 +65,7 @@ def main():
                         receipt_number = downloaddata[1]
                         user = downloaddata[15]
                         company_name = downloaddata[3]
+                        process_status = downloaddata[4]
                         workflow_status = downloaddata[5]
                         download_status = downloaddata[67]
                         manual_download_status = downloaddata[77]
@@ -74,6 +75,9 @@ def main():
                         if (workflow_status == 'Payment_success' or workflow_status == 'XML_Pending') and download_status == 'N':
                             logging.info(f"Starting to download for {cin}")
                             update_locked_by(db_config, cin ,database_id)
+                            if str(process_status).lower() == 'exception':
+                                update_process_status('InProgress', db_config, cin, database_id)
+                                update_retry_count(db_config, cin, '', database_id)
                             try:
                                 one_drive_path = config_dict['one_drive_path']
                                 open_onedrive(one_drive_path)
