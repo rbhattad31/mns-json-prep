@@ -342,9 +342,10 @@ def fetch_order_download_data_from_table(connection):
     try:
         if connection:
             setup_logging()
+            user = os.environ.get('SystemName')
             cursor = connection.cursor()
             # Construct the SQL query
-            query = "SELECT * FROM orders where process_status in ('InProgress','Exception') and payment_by_user!='' and document_download_status = 'N' and (workflow_status = 'XML_Pending' or workflow_status = 'Payment_success') and (python_locked_by = '' or python_locked_by is NULL) order by (CASE WHEN workflow_status = 'XML_Pending' THEN 0 ELSE 1 END),(CASE WHEN created_date > NOW() - INTERVAL 1 HOUR THEN 0 ELSE 1 END),modified_date,pad_pro_startdate LIMIT 1"
+            query = f"SELECT * FROM orders where process_status in ('InProgress','Exception') and payment_by_user!='' and document_download_status = 'N' and (workflow_status = 'XML_Pending' or workflow_status = 'Payment_success') and (python_locked_by = '' or python_locked_by is NULL or python_locked_by in ('{user}') ) order by (CASE WHEN workflow_status = 'XML_Pending' THEN 0 ELSE 1 END),(CASE WHEN created_date > NOW() - INTERVAL 1 HOUR THEN 0 ELSE 1 END),modified_date,pad_pro_startdate LIMIT 1"
             #value1 = ("Download_Pending")
             logging.info(query)
             cursor.execute(query)
