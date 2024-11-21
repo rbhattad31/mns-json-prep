@@ -25,14 +25,15 @@ def connect_to_database(db_config):
 
 def fetch_order_data_from_table(connection):
     try:
+        user = os.environ.get('SystemName')
         if connection:
             setup_logging()
             cursor = connection.cursor()
             # Construct the SQL query
-            query = "SELECT * FROM orders where process_status=%s and workflow_status in ('XML_Pending','db_insertion_pending','Loader_pending') and (python_locked_by = '' or python_locked_by is NULL)"
+            query = f"SELECT * FROM orders where process_status= 'InProgress' and workflow_status in ('XML_Pending','db_insertion_pending','Loader_pending') and (python_locked_by = '' or python_locked_by is NULL or python_locked_by in ('{user}'))"
             #value1 = ("Download_Pending")
-            cursor.execute(query, ('InProgress',))
-            logging.info(query, ('InProgress',))
+            logging.info(query)
+            cursor.execute(query)
             # Get the column names from the cursor description
             column_names = [desc[0] for desc in cursor.description]
 
