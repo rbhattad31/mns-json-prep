@@ -895,7 +895,7 @@ def insert_fields_into_db(hiddenattachmentslist,config_dict,CinData,excel_file):
 
 def json_loader_generation(cindata,dbconfig,config_dict,excel_file_path):
     try:
-        root_path = config_dict['Root path']
+        root_path = config_dict['json_root_path']
         Cin, CompanyName, User,receiptno = cindata[2], cindata[3], cindata[15],cindata[1]
         if len(Cin) == 21:
             json_config_path = config_dict['config_json_path_nonllp']
